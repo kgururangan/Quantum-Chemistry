@@ -1,4 +1,6 @@
-function [L1,L2,lccsd_resid] = lccsd(omega,R,t1,t2,HBar,Dia,Dijab,sys,opts)
+function [L1,L2,lccsd_resid] = lccsd(omega,R,t1,t2,HBar,sys,opts)
+
+% we're using abij ordering for L1 and L2 now!
 
     fprintf('\n==============++Entering Left-CCSD Routine++=================\n')
     
@@ -22,37 +24,36 @@ function [L1,L2,lccsd_resid] = lccsd(omega,R,t1,t2,HBar,Dia,Dijab,sys,opts)
         flag_ground = 1;
     else
         LAMBDA = R;
-        %LAMBDA = rand(HBar_dim,1);
         flag_ground = 0;
     end
 
 
-    it = 0; flag_conv = 0;
+    it = 0; flag_conv = 0; 
     while it < maxit
         
         % get current L1 and L2
-        L1 = reshape(LAMBDA(1:Nov),Nocc,Nunocc);
-        L2 = reshape(LAMBDA(Nov+1:end),Nocc,Nocc,Nunocc,Nunocc);
+        L1 = reshape(LAMBDA(1:Nov),Nunocc,Nocc);
+        L2 = reshape(LAMBDA(Nov+1:end),Nunocc,Nunocc,Nocc,Nocc);
         
         % build LH diagrammatically with MP denominator separated out
-        [X_ia, X_ijab] = build_L_HBar(L1, L2, HBar, omega, FM, VM, flag_ground, 1);
-        
+        flag_jacobi = 1;
+        [X_ia, X_ijab] = build_L_HBar(L1, L2, HBar, flag_ground, flag_jacobi);
+%         
 %         X_ia = X_ia - omega*L1;
 %         X_ijab = X_ijab - omega*L2;
 
         % update L1 and L2 by Jacobi
-        [L1,L2] = update_l1_l2(X_ia, X_ijab, omega, HBar, Dia, Dijab, FM, VM, occ, unocc);
-%         L1 = update_l1(L1, L2, HBar, FM, VM, omega, occ, unocc, flag_ground);
-%         L2 = update_l2(L1, L2, HBar, FM, VM, omega, occ, unocc, flag_ground);
+        [L1,L2] = update_l1_l2(X_ia, X_ijab, omega, HBar, occ, unocc);
         LAMBDA = cat(1,L1(:),L2(:));
         
         % buid LH - omega*L residual measure (use full LH)
-        [LH1,LH2] = build_L_HBar(L1, L2, HBar, omega, FM, VM, flag_ground, 0);
+        flag_jacobi = 0;
+        [LH1,LH2] = build_L_HBar(L1, L2, HBar, flag_ground, flag_jacobi);
         LH = cat(1,LH1(:),LH2(:));
         LAMBDA_resid = LH - omega*LAMBDA;
         
-        % get lcc energy
-        E_lcc = lcc_energy(LH,t1,t2,VM,FM,occ,unocc) + omega;
+        % get lcc energy - returns Ecorr + omega
+        E_lcc = lcc_energy(LH,t1,t2,VM,FM,occ,unocc);
         
         % check exit condition
         lccsd_resid = norm(LAMBDA_resid);

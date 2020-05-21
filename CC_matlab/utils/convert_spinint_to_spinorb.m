@@ -3,11 +3,39 @@ function [T_out] = convert_spinint_to_spinorb(T, sys)
     Nocc = sys.Nocc_alpha + sys.Nocc_beta;
     Nvir = sys.Nvir_alpha + sys.Nvir_beta;
     
-    iocc_alpha = sys.iocc_alpha;
-    iocc_beta = sys.iocc_beta;
+    iocc_alpha = zeros(1,sys.Nocc_alpha); 
+    iocc_beta = zeros(1,sys.Nocc_beta);
+    ivir_alpha = zeros(1,sys.Nvir_alpha);
+    ivir_beta = zeros(1,sys.Nvir_beta);
     
-    ivir_beta = sys.ivir_beta - Nocc;
-    ivir_alpha = sys.ivir_alpha - Nocc;
+    % THIS ONLY ACCOMODATES CLOSED SHELL CASE!
+    cta = 1; ctb = 1;
+    for i = 1:2*min(sys.Nocc_alpha,sys.Nocc_beta)
+        if mod(i,2) == 1 % alpha
+            iocc_alpha(cta) = i;
+            cta = cta + 1;
+        else % beta
+            iocc_beta(ctb) = i;
+            ctb = ctb + 1;
+        end
+    end
+    
+    cta = 1; ctb = 1;
+    for i = 1:2*min(sys.Nvir_alpha,sys.Nvir_beta)
+        if mod(i,2) == 1 % alpha
+            ivir_alpha(cta) = i;
+            cta = cta + 1;
+        else % beta
+            ivir_beta(ctb) = i;
+            ctb = ctb + 1;
+        end
+    end
+    
+    %iocc_alpha = sys.iocc_alpha;
+    %iocc_beta = sys.iocc_beta;
+    
+    %ivir_beta = sys.ivir_beta - Nocc;
+    %ivir_alpha = sys.ivir_alpha - Nocc;
     
     if length(T) == 2 % t1a, t1b
         

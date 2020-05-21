@@ -1,4 +1,10 @@
-function [lambda1, lambda2] = build_L_HBar(L1, L2, HBar, omega, FM, VM, flag_ground, flag_jacobi)
+function [lambda1, lambda2] = build_L_HBar(L1, L2, HBar, flag_ground, flag_jacobi)
+
+% Left-CC equations are derived and coded using L1(i,a) and L2(i,j,a,b)
+% ordering but results must be permuted to L1(a,i) and L2(a,b,i,j) in order
+% to give meaningful results when taking L'*R since R is stored as R1(a,i)
+% and R2(a,b,i,j).
+
 
     addpath(genpath('/Users/karthik/Dropbox/Hartree Fock/hartree_fock/v4/utils'));
        
@@ -6,6 +12,9 @@ function [lambda1, lambda2] = build_L_HBar(L1, L2, HBar, omega, FM, VM, flag_gro
     Zocc = ones(Nocc)-eye(Nocc);
     Zunocc = ones(Nunocc)-eye(Nunocc);
     occ = 1:Nocc; unocc = Nocc+1:(Nocc+Nunocc);
+    
+    % permute abij into ijab
+    L1 = permute(L1,[2,1]); L2 = permute(L2,[3,4,1,2]);
     
     %eps_occ = diag(FM(occ,occ)); eps_unocc = diag(FM(unocc,unocc));
 
@@ -22,10 +31,6 @@ function [lambda1, lambda2] = build_L_HBar(L1, L2, HBar, omega, FM, VM, flag_gro
     if flag_jacobi == 1
         D2_L1 = einsum(HBar{1}{2,2}.*Zunocc,L1,'ea,ie->ia');
         D3_L1 = -einsum(HBar{1}{1,1}.*Zocc,L1,'im,ma->ia');
-        
-        % MP partioning
-%         D2L1 = einsum(HBar{1}{2,2} - diag(eps_unocc),L1,'ea,ie->ia');
-%         D3L1 = -einsum(HBar{1}{1,1} - diag(eps_occ),L1,'im,ma->ia');
     else
         D2_L1 = einsum(HBar{1}{2,2},L1,'ea,ie->ia');
         D3_L1 = -einsum(HBar{1}{1,1},L1,'im,ma->ia');
@@ -38,7 +43,9 @@ function [lambda1, lambda2] = build_L_HBar(L1, L2, HBar, omega, FM, VM, flag_gro
     
     
     lambda1 = D1_L1 + D2_L1 + D3_L1 + D4_L1 + D5_L1 + D6_L1 + D7_L1;
-    %lambda1 = lambda1 - omega*lambda1;
+
+    % permute ijab into abij
+    lambda1 = permute(lambda1,[2,1]);
     
         
     % LAMBDA 2 equations
@@ -74,12 +81,6 @@ function [lambda1, lambda2] = build_L_HBar(L1, L2, HBar, omega, FM, VM, flag_gro
              einsum(HBar{1}{2,2}.*Zunocc,L2,'eb,ijea->ijab');
         D10_L2 = -einsum(HBar{1}{1,1}.*Zocc,L2,'im,mjab->ijab') + ...
                einsum(HBar{1}{1,1}.*Zocc,L2,'jm,miab->ijab');
-           
-        % MP paritioning
-%         D9L2 = einsum(HBar{1}{2,2}-diag(eps_unocc),L2,'ea,ijeb->ijab') - ...
-%              einsum(HBar{1}{2,2}-diag(eps_unocc),L2,'eb,ijea->ijab');
-%         D10L2 = -einsum(HBar{1}{1,1}-diag(eps_occ),L2,'im,mjab->ijab') + ...
-%                einsum(HBar{1}{1,1}-diag(eps_occ),L2,'jm,miab->ijab');
     else
         D9_L2 = einsum(HBar{1}{2,2},L2,'ea,ijeb->ijab') - ...
              einsum(HBar{1}{2,2},L2,'eb,ijea->ijab');
@@ -96,8 +97,9 @@ function [lambda1, lambda2] = build_L_HBar(L1, L2, HBar, omega, FM, VM, flag_gro
     lambda2 = D1_L2 + D2_L2 + D3_L2 + D4_L2 + D5_L2 +...
               D6_L2 + D7_L2 + D8_L2 + D9_L2 + D10_L2 +...
               D11_L2;
-          
-    %lambda2 = lambda2 - omega*lambda2;
+    
+    % permute ijab into abij
+    lambda2 = permute(lambda2,[3,4,1,2]);
           
 end
 

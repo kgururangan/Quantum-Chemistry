@@ -1,0 +1,97 @@
+function [LAMBDA] = lefteomccsd(omega,Rvec,HBar,t1,t2,sys,opts)
+% we're using abij ordering for L1 and L2 now!
+
+    fprintf('\n=============++Entering Left-EOMCCSD Routine++================\n')
+    
+    tic
+
+    tol = opts.tol;
+    diis_size = opts.diis_size;
+    maxit = opts.maxit;
+    nroot = length(omega);
+    occ = sys.occ; unocc = sys.unocc;
+    VM = sys.VM; FM = sys.FM;
+    
+    Nocc = length(occ); Nunocc = length(unocc);
+    Nov = Nocc*Nunocc; Noovv = Nov^2;
+    HBar_dim = Nov + Noovv;
+
+    LAMBDA_list = cell(1,nroot);
+    LAMBA_resid_list = cell(1,nroot);
+    lccsd_resid = zeros(1,nroot);
+    
+    for j = 1:nroot
+        LAMBDA_list{j} = zeros(HBar_dim, diis_size);
+        LAMBDA_resid_list{j} = zeros(HBar_dim, diis_size); 
+    end
+
+    LAMBDA = Rvec;
+
+    it = 0; flag_conv = 0; flag_ground = 0;
+    while it < maxit
+        
+        fprintf('\nIter-%d:\n', it)
+        fprintf('-------------------------------------------------------\n')
+        
+        for j = 1:nroot
+            
+            % get current L1 and L2
+            L1 = reshape(LAMBDA(1:Nov,j),Nunocc,Nocc);
+            L2 = reshape(LAMBDA(Nov+1:end,j),Nunocc,Nunocc,Nocc,Nocc);
+
+            % build LH diagrammatically with MP denominator separated out
+            flag_jacobi = 1;
+            [X_ia, X_ijab] = build_L_HBar(L1, L2, HBar, flag_ground, flag_jacobi);
+
+            % update L1 and L2 by Jacobi
+            [L1,L2] = update_l1_l2(X_ia, X_ijab, omega(j), HBar, occ, unocc);
+            LAMBDA(:,j) = cat(1,L1(:),L2(:));
+
+            % buid LH - omega*L residual measure (use full LH)
+            flag_jacobi = 0;
+            [LH1,LH2] = build_L_HBar(L1, L2, HBar, flag_ground, flag_jacobi);
+            LH = cat(1,LH1(:),LH2(:));
+            LAMBDA_resid = LH - omega(j)*LAMBDA(:,j);
+
+            % get lcc energy - returns Ecorr + omega
+            E_lcc = lcc_energy(LH,t1,t2,VM,FM,occ,unocc);
+
+            % check exit condition
+            lccsd_resid(j) = norm(LAMBDA_resid);
+
+            % append trial and residual vectors to diis lists
+            LAMBDA_list{j}(:,mod(it,diis_size)+1) = LAMBDA(:,j);
+            LAMBDA_resid_list{j}(:,mod(it,diis_size)+1) = LAMBDA_resid;
+
+            % diis extrapolate
+            if it >= diis_size
+               LAMBDA(:,j) = diis_xtrap(LAMBDA_list{j},LAMBDA_resid_list{j});
+            end
+            
+            fprintf('   Root = %d     e = %4.10f     |r| = %4.10f\n',j,E_lcc,lccsd_resid(j));
+
+        
+        end
+        
+        % biorthonormalize to right eigenvectors
+        % note |R| = 1, so this necesarily enforces |L| = 1
+        LAMBDA = LAMBDA/(LAMBDA'*Rvec);
+        
+        if all(lccsd_resid < tol)
+            flag_conv = 1;
+        end
+        
+        it = it + 1;
+        
+    end
+    
+    if flag_conv == 1
+        fprintf('\nLeft-EOMCCSD successfully converged in %d iterations (%4.2f seconds)\n',it,toc);
+    else
+        fprintf('\nLeft-EOMCCSD failed to converged in %d iterations\n',maxit)
+    end
+         
+
+end
+
+
