@@ -1,0 +1,283 @@
+clear all
+close all
+clc
+
+% the driving principle behind SF in this model is a lambda or a sequential
+% configuration of energies
+
+num_chromophore = 2; % can (feasibly..?) do up to 4 chromophores without crashing
+chromophore_spacing = 0.1;
+omega_ge = 5;
+effective_chromophore_charge = ones(1,num_chromophore);
+
+spin_cons = 1;
+dets = get_ci_vecs(num_chromophore,spin_cons);
+n_det = size(dets,1);
+% [TODO] parsing only compatible with n_chrompohore = 2 for now
+dets_char = parse_determinants(dets,num_chromophore); 
+
+%visualize_CI_vec(dets,dets_char,3)
+
+idx_S = find(dets_char == 1);
+idx_CT = find(dets_char == 2);
+idx_TT = find(dets_char == 3);
+
+Proj = zeros(3,n_det);
+Proj(1,idx_S) = 1/sqrt(length(idx_S));
+Proj(2,idx_CT) = 1/sqrt(length(idx_CT));
+Proj(3,idx_TT) = 1/sqrt(12);  % spin-adapted??
+%1/sqrt(3)*( <00|1-111>|1-1>|11> + <00|111-1>|11>|1-1> - <00|1010>|10>|10>)
+
+%% Get atomic gaussian orbitals and integrals
+% xi_gnd = {[3.425250914, 0.6239137298, 0.168855404], [3.425250914, 0.6239137298, 0.168855404]};
+% xi_exc = {[3.425250914, 0.6239137298, 0.168855404]*5,[3.425250914, 0.6239137298, 0.168855404]*5};
+% xi_gnd = 0.1, xi_exc = 10 gives a nice plot
+% cm_gnd = {[0.15432896729459913, 0.5353281422812658, 0.44463454218443965], [0.15432896729459913, 0.5353281422812658, 0.44463454218443965]};
+% cm_exc = {[0.15432896729459913, 0.5353281422812658, 0.44463454218443965], [0.15432896729459913, 0.5353281422812658, 0.44463454218443965]};
+
+ff1 = 0.1; ff2 = 10;
+xi_gnd = {[ff1],[ff1]};
+xi_exc = {[ff2],[ff2]};
+cm_gnd = {[1.0],[1.0]};
+cm_exc = {[1.0],[1.0]};
+
+origin = [0,0,0];
+
+[orbs, Rat, idx_gnd, idx_exc] = build_orbitals(num_chromophore, xi_gnd, cm_gnd, xi_exc, cm_exc, origin, chromophore_spacing, 1);
+
+% calculate spatial overlap integrals, 1- and 2-body
+[Smat, Tmat, Vmat, VVmat] = spatial_integrals_v2(orbs,Rat,effective_chromophore_charge);
+Zmat = Tmat + Vmat; % kinetic energy + electron-nuclear potential energy
+% VVMat = electron-electron repulsion
+Zmat(idx_exc, idx_exc) = Zmat(idx_exc, idx_exc) + omega_ge*eye(length(idx_exc)); % artificially add bandgap to 1-body matrix
+
+% Hartree fock routine... not working!!!
+[Fock, C, P, EHF] = scf(Zmat, VVmat, Smat); % need uhf not rhf?
+[Vp,Occp] = eig(P);
+
+xR = linspace(-5,5,100);
+G = zeros(length(orbs),length(xR));
+for i = 1:length(orbs)
+    G(i,:) = gaussian_orbital(orbs{i},xR,1);
+end
+MO = C*G;
+NO = Vp*MO;
+
+figure(2)
+subplot(221)
+plot(xR,MO); hold on
+plot([0,chromophore_spacing],[0,0],'bo','MarkerSize',20,'MarkerFaceColor',[1,0,0]); hold off
+subplot(223)
+plot(xR,NO); hold on
+plot([0,chromophore_spacing],[0,0],'bo','MarkerSize',20,'MarkerFaceColor',[1,0,0]); hold off
+
+C = eye(length(orbs));
+
+[Zmat] = ao_to_mo(Zmat,C);  [Smat] = ao_to_mo(Smat,C);  [VVmat] = ao_to_mo(VVmat,C);
+% [Zmat] = ao_to_mo(Zmat,Vp); [Smat] = ao_to_mo(Smat,Vp); [VVmat] = ao_to_mo(VVmat,Vp);
+
+Z = spatial_to_spinorb(Zmat);
+V = spatial_to_spinorb(VVmat);
+S = spatial_to_spinorb(Smat);
+
+
+%% Build FCI Hamiltonian
+Hfci = build_fci_hamiltonian(dets,Z,V,S);
+[CI_vec, D] = eig(Hfci - EHF*eye(size(Hfci,1)));
+E = diag(D);
+
+figure(2)
+subplot(2,2,[2,4])
+plot(1:length(E),E,'bo')
+
+%% Project onto S, CT, and TT subspace
+PHP = Proj*Hfci*Proj';
+[CI_vec_P, D] = eig(PHP);
+EP = diag(D);
+PHP
+CI_vec_P;
+
+for i = 1:3
+    [~,idx(i)] = max(abs(CI_vec_P(i,:)));
+end
+% assign S (=1), CT (=2), and TT (=3) character to each eigenvector
+CI_vec_P = CI_vec_P(:,idx);
+
+EP = EP(idx)
+
+figure(1)
+subplot(221)
+imagesc([1,2,3],[1,2,3],abs(CI_vec_P))
+title(sprintf('E(S) = %4.2f, E(CT) = %4.2f, E(TT) = %4.2f',EP(1),EP(2),EP(3)));
+colorbar
+colormap(bluewhitered)
+set(gca,'FontSize',14,'Linewidth',2,'xtick',[1,2,3],'xticklabels',{'S','CT','TT'},'ytick',[1,2,3],'yticklabels',{'S','CT','TT'})
+CI_vec_P
+    
+%% Solve redfield equations
+Hatocm = 1.7998e+05; c = 3e-2; % cm/ps
+npts_per = 30;
+tau_max = 300; 
+Nteval = tau_max*npts_per; dt = tau_max/Nteval;
+tau = 0:dt:tau_max; % Ha^-1
+taus = tau*Hatocm/c; % ps
+
+kbT = 0;
+omega_max = max(EP);
+domega = omega_max/512;
+omega_c = omega_max/20*ones(1,size(PHP,1));
+gamma_i = 2*ones(1,size(PHP,1));
+xin = [omega_c; gamma_i]; xin = xin(:);
+fprintf('   Constructing Redfield tensor...\n')
+tic
+[Red_exc, GammaPop, JJ, Q] = RedfieldTensor(xin, domega, omega_max, tau_max, npts_per, EP, CI_vec_P, kbT);
+fprintf('   Redfield tensor constructed in %4.1f seconds\n',toc)
+
+figure(1)
+subplot(222)
+plot(domega:domega:omega_max,JJ{1},'Linewidth',2)
+xlabel('E_{system} / Ha')
+ylabel('Bath Interaction Energy / Ha')
+title('Spectral Density')
+set(gca,'FontSize',14,'Linewidth',2,'Box','off')
+
+GammaPop = real(GammaPop)
+
+%% Integrate equations and plot
+
+rho = zeros(3,length(tau));
+rho(:,1) = [1,0,0];
+for i = 2:length(tau)
+    rho(:,i) = expm(GammaPop*tau(i))*rho(:,1);
+end
+
+figure(1)
+subplot(2,2,[3:4])
+plot(taus,rho,'Linewidth',2)
+xlabel('t / ps')
+ylabel('Population')
+title('Redfield Dynamics')
+ll = legend('Singlet','CT','Triplet');
+set(ll,'FontSize',13,'Location','NorthEast');
+set(gca,'FontSize',14,'Linewidth',2,'Box','off')
+%axis([-inf,inf,0,1])
+
+figure(3)
+for p = 1:3
+    for q = 1:3
+        for r = 1:3
+            for s = 1:3
+                plot(tau,squeeze(real(Q(p,q,r,s,:))))
+                hold on
+            end
+        end
+    end
+end
+hold off
+
+% rhoM = zeros(3,3,length(tau));
+% rhoM(1,1,1) = 1;
+% 
+% rho = zeros(9,length(tau));
+% rho(:,1) = reshape(rhoM(:,:,1),9,1);
+% rho_site = zeros(9,length(tau));
+% temp = CI_vec_P*reshape(rho(:,1),3,3)*CI_vec_P';
+% rho_site(:,1) = temp(:);
+% 
+% R_rs = reshape(Red_exc, 9, 9);
+% for i = 2:length(tau)
+%     rho(:,i) = expm(R_rs*tau(i))*rho(:,1);
+%     temp = CI_vec_P*reshape(rho(:,i),3,3)*CI_vec_P';
+%     rho_site(:,i) = temp(:);
+%     rhoM(:,:,i) = reshape(rho_site(:,i),3,3);
+% end
+
+% hold on
+% for i = 1:3
+%     plot(tau,squeeze(rhoM(i,i,:)))
+% end
+% hold off
+% 
+%% Simulate 2D spectrum
+
+addpath(genpath('/Users/harellab/Dropbox/Hartree Fock/hartree_fock/CT_Hamiltonian'));
+addpath(genpath('/Users/harellab/Dropbox/Hartree Fock/hartree_fock/Redfield'));
+
+fprintf('Simulating 2DES spectrum...\n')
+
+Hatocm = 1.7998e+05;
+omega_e = Hatocm*EP;
+
+N2 = 128;
+N4 = 128;
+N3 = length(tau);
+
+Gamma_sqc = 100000;
+
+omega_2 = linspace(min(omega_e)-0.1*min(omega_e),max(omega_e)+0.1*max(omega_e),N2);
+omega_4 = linspace(-max(omega_e)-0.1*max(omega_e),min(omega_e)+0.1*min(omega_e),N4);
+
+Hg = 0; 
+[Vg,Dg] = eig(Hg); omega_g = diag(Dg);
+
+Ne = length(PHP);
+Ng = length(Hg);
+
+MatEG = zeros(Ne,Ng); 
+for a = 1:Ne
+    for g = 1:Ng
+        if a ~= 2
+            MatEG(a,g) = sum(CI_vec_P(:,a).*Vg(:,g));
+        else
+           MatEG(a,g) = 0;
+        end
+    end
+end
+MatGE = MatEG';
+
+GMprocc = zeros(N2*N4,Ng,Ne,Ne,Ne,Ne);
+Ptese = zeros(Ng,Ne,Ne,Ne,Ne);
+
+for beta = 1:Ng
+for a = 1:Ne
+    for b = 1:Ne
+        for c = 1:Ne
+            for d = 1:Ne
+
+                %pre = MatGE(1,Ie(a))*MatEG(Ie(c),Ig(beta))...
+                %*MatGE(Ig(beta),Ie(d))*MatEG(Ie(b),1)*rho_eq(1,1);
+
+                pre = MatEG(a,1)*MatEG(b,1)*MatGE(beta,c)*MatGE(beta,d);
+                %pre = 1;
+                Ptese(beta,a,b,c,d) = pre;
+
+                % omega_2 spectrum
+                f2 = lineshape(omega_2,omega_e(a)-omega_g(1),Gamma_sqc,'lorentzian');
+                % omega_4 spectrum
+                f4 = lineshape(omega_4,omega_g(beta)-omega_e(d),Gamma_sqc,'lorentzian');
+
+                GMprocc(:,beta,a,b,c,d) = pre*kron(f4,f2);
+
+            end
+        end
+    end
+end
+end
+
+GMproc = reshape(squeeze(sum(GMprocc,2)),N2*N4,Ne^4);
+Ptese  = reshape(squeeze(sum(Ptese,1)),1,Ne^4);
+%Lkvib = reshape(squeeze(sum(sum(sum(GMprocc,3),5),6)),N2*N4,Ne^2);
+
+GMprocESE = GMproc;
+[TM,Ev] = TM_matrix_v2(reshape(Red_exc,Ne^2,Ne^2),tau,0,'expm'); % use the excitonic redfield tensor for spectrum dynamics
+
+I4WMt = GMprocESE*TM;
+I4WMt = reshape(I4WMt,N2,N4,N3);
+
+figure(1)
+for i = 1:50:size(I4WMt,3)
+    contourf(omega_2,omega_4,squeeze(abs(I4WMt(:,:,i))))
+    pause(0.01)
+end
+%scrollImagesc_plots(omega_2,omega_4,real(I4WMt))
+
