@@ -1,2 +1,23 @@
 # Quantum-Chemistry
-Collection of codes used for quantum chemistry calculations, including Hartree-Fock, Coupled Cluster (CCSD), and other various things
+Collection of codes used for quantum chemistry calculations, including Hartree-Fock, Coupled Cluster (CCSD), equation-of-motion CC (EOMCC), and other things. These are all my own codes developed for learning and testing purposes.
+
+Contents of Repository:
+
+CC_matlab - most up-to-date set of coupled-cluster codes. Performs spinorbital (left-)CCSD and (left-)EOMCCSD (using davidson diagonalization routine in Davidson_methods folder) with method-of-moments (MM) CC methods CR-CC(2,3) and CR-EOMCC(2,3) forthcoming. Also containes spin-integrated open-shell CCSD method contained in UCCSD folders. Spin-integrated EOM and MMCC methods also under construction. Routines can be run using one- and two-body molecular orbital integrals inputs (along with system parameters like number of occupied and unoccupied alpha/beta electrons) which can be found in CC_matlab_tests. Run routines as shown in main.m
+
+CT_Hamiltonian - collection of codes used for crude modeling of charge-transfer processes in dimers
+
+Davidson_matlab_test - Matlab implementation of davidson diagonalization routines. Used in EOMCC matlab codes
+
+gaussian_integrals - Fortran implementation of McMurchie-Davidson atomic orbital integral evaluation scheme. I largely translated the Python implementation originally written by Joshua Goings https://github.com/jjgoings/McMurchie-Davidson
+
+hf_python_v* - My initial Python implementation of Hartree-Fock (with integral routines directly taken from Joshua Goings again) which lead into spinorbital CCSD and EOMCCSD. Big and unwieldy code which is streamlined and properly implemented in CC_matlab (however, it's useful for generated one- and two-body integrals needed to run the Matlab version).
+
+Davidson_test - Python implementation of Davidson routine (use Matlab versions as they are more stable)
+
+Permutation Sign - Useful function for evaluating the sign of a permutation
+
+Tensor Contraction - An exercise in unravelling the amazing Numpy einsum function and writing my own einsum from scratch
+
+Wicks_Theorem_v2 - An attempt at creating a Wick's Theorem evaluation engine for automated equation derivation in coupled-cluster methods. Not exactly complete (or fast) but can evaluate fully-contracted second-quantized expressions and classify the results in Hugenholtz diagrams
+
