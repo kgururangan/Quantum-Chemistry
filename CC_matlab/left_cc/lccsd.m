@@ -1,4 +1,4 @@
-function [L1,L2,lccsd_resid] = lccsd(omega,R,t1,t2,HBar,sys,opts)
+function [L1,L2,lccsd_resid] = lccsd(t1,t2,HBar,sys,opts)
 
 % we're using abij ordering for L1 and L2 now!
 
@@ -11,36 +11,32 @@ function [L1,L2,lccsd_resid] = lccsd(omega,R,t1,t2,HBar,sys,opts)
     tol = opts.tol;
     diis_size = opts.diis_size;
     maxit = opts.maxit;
+    Nocc = sys.Nocc; Nunocc = sys.Nunocc;
+    doubles_dim = sys.doubles_dim;
+    posv1 = sys.posv1;
+    posv2 = sys.posv2;
     
-    Nocc = length(occ); Nunocc = length(unocc);
-    Nov = Nocc*Nunocc; Noovv = Nov^2;
-    HBar_dim = Nov + Noovv;
+    size_L1 = [Nunocc, Nocc];
+    size_L2 = [Nunocc, Nunocc, Nocc, Nocc];
     
-    LAMBDA_list = zeros(HBar_dim, diis_size); 
-    LAMBDA_resid_list = zeros(HBar_dim, diis_size);
+    LAMBDA_list = zeros(doubles_dim, diis_size); 
+    LAMBDA_resid_list = zeros(doubles_dim, diis_size);
     
-    if omega == 0.0
-        LAMBDA = cat(1,t1(:),t2(:));
-        flag_ground = 1;
-    else
-        LAMBDA = R;
-        flag_ground = 0;
-    end
+    LAMBDA = cat(1,t1(:),t2(:));
+    flag_ground = 1;
+    omega = 0.0;
 
 
     it = 0; flag_conv = 0; 
     while it < maxit
         
         % get current L1 and L2
-        L1 = reshape(LAMBDA(1:Nov),Nunocc,Nocc);
-        L2 = reshape(LAMBDA(Nov+1:end),Nunocc,Nunocc,Nocc,Nocc);
+        L1 = reshape(LAMBDA(posv1),size_L1);
+        L2 = reshape(LAMBDA(posv2),size_L2);
         
         % build LH diagrammatically with MP denominator separated out
         flag_jacobi = 1;
         [X_ia, X_ijab] = build_L_HBar(L1, L2, HBar, flag_ground, flag_jacobi);
-%         
-%         X_ia = X_ia - omega*L1;
-%         X_ijab = X_ijab - omega*L2;
 
         % update L1 and L2 by Jacobi
         [L1,L2] = update_l1_l2(X_ia, X_ijab, omega, HBar, occ, unocc);
@@ -50,10 +46,10 @@ function [L1,L2,lccsd_resid] = lccsd(omega,R,t1,t2,HBar,sys,opts)
         flag_jacobi = 0;
         [LH1,LH2] = build_L_HBar(L1, L2, HBar, flag_ground, flag_jacobi);
         LH = cat(1,LH1(:),LH2(:));
-        LAMBDA_resid = LH - omega*LAMBDA;
+        LAMBDA_resid = LH;
         
         % get lcc energy - returns Ecorr + omega
-        E_lcc = lcc_energy(LH,t1,t2,VM,FM,occ,unocc);
+        E_lcc = lcc_energy(LAMBDA,LH,t1,t2,sys);
         
         % check exit condition
         lccsd_resid = norm(LAMBDA_resid);
@@ -69,12 +65,6 @@ function [L1,L2,lccsd_resid] = lccsd(omega,R,t1,t2,HBar,sys,opts)
         % diis extrapolate
         if it >= diis_size
            LAMBDA = diis_xtrap(LAMBDA_list,LAMBDA_resid_list);
-        end
-        
-        % biorthonormalize to right eigenvectors
-        % note |R| = 1, so this necesarily enforces |L| = 1
-        if flag_ground ~= 1
-            LAMBDA = LAMBDA./(LAMBDA'*R);
         end
 
         % Print status

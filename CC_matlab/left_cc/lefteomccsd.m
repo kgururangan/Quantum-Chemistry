@@ -1,4 +1,4 @@
-function [LAMBDA,lccsd_resid] = lefteomccsd(omega,Rvec,HBar,t1,t2,sys,opts)
+function [LAMBDA,E_lcc,lccsd_resid] = lefteomccsd(omega,Rvec,HBar,t1,t2,sys,opts)
 % we're using abij ordering for L1 and L2 now!
 
     fprintf('\n=============++Entering Left-EOMCCSD Routine++================\n')
@@ -9,12 +9,8 @@ function [LAMBDA,lccsd_resid] = lefteomccsd(omega,Rvec,HBar,t1,t2,sys,opts)
     diis_size = opts.diis_size;
     maxit = opts.maxit;
     nroot = length(omega);
-    occ = sys.occ; unocc = sys.unocc;
-    VM = sys.VM; FM = sys.FM;
-    
-    Nocc = length(occ); Nunocc = length(unocc);
-    Nov = Nocc*Nunocc; Noovv = Nov^2;
-    HBar_dim = Nov + Noovv;
+
+    Nunocc = sys.Nunocc; Nocc = sys.Nocc;
 
     LAMBDA_list = cell(1,nroot);
     LAMBDA_resid_list = cell(1,nroot);
@@ -22,11 +18,11 @@ function [LAMBDA,lccsd_resid] = lefteomccsd(omega,Rvec,HBar,t1,t2,sys,opts)
     E_lcc = zeros(1,nroot);
     
     for j = 1:nroot
-        LAMBDA_list{j} = zeros(HBar_dim, diis_size);
-        LAMBDA_resid_list{j} = zeros(HBar_dim, diis_size); 
+        LAMBDA_list{j} = zeros(sys.doubles_dim, diis_size);
+        LAMBDA_resid_list{j} = zeros(sys.doubles_dim, diis_size); 
     end
 
-    LAMBDA = Rvec;
+    LAMBDA = Rvec(:,1:nroot);
 
     it = 0; flag_conv = 0; flag_ground = 0;
     while it < maxit && flag_conv == 0
@@ -37,15 +33,15 @@ function [LAMBDA,lccsd_resid] = lefteomccsd(omega,Rvec,HBar,t1,t2,sys,opts)
         for j = 1:nroot
             
             % get current L1 and L2
-            L1 = reshape(LAMBDA(1:Nov,j),Nunocc,Nocc);
-            L2 = reshape(LAMBDA(Nov+1:end,j),Nunocc,Nunocc,Nocc,Nocc);
+            L1 = reshape(LAMBDA(sys.posv1,j),Nunocc,Nocc);
+            L2 = reshape(LAMBDA(sys.posv2,j),Nunocc,Nunocc,Nocc,Nocc);
 
             % build LH diagrammatically with MP denominator separated out
             flag_jacobi = 1;
             [X_ia, X_ijab] = build_L_HBar(L1, L2, HBar, flag_ground, flag_jacobi);
 
             % update L1 and L2 by Jacobi
-            [L1,L2] = update_l1_l2(X_ia, X_ijab, omega(j), HBar, occ, unocc);
+            [L1,L2] = update_l1_l2(X_ia, X_ijab, omega(j), HBar, sys.occ, sys.unocc);
             LAMBDA(:,j) = cat(1,L1(:),L2(:));
 
             % buid LH - omega*L residual measure (use full LH)
@@ -55,8 +51,7 @@ function [LAMBDA,lccsd_resid] = lefteomccsd(omega,Rvec,HBar,t1,t2,sys,opts)
             LAMBDA_resid = LH - omega(j)*LAMBDA(:,j);
 
             % get lcc energy - returns Ecorr + omega
-            E_lcc(j) = lcc_energy(LH,t1,t2,VM,FM,occ,unocc);
-            %E_lcc(j) = norm(LH);
+            E_lcc(j) = lcc_energy(LAMBDA(:,j),LH,t1,t2,sys);
 
             % check exit condition
             lccsd_resid(j) = norm(LAMBDA_resid);
@@ -72,9 +67,8 @@ function [LAMBDA,lccsd_resid] = lefteomccsd(omega,Rvec,HBar,t1,t2,sys,opts)
 
         end
         
-        % biorthonormalize to right eigenvectors
-        % note |R| = 1, so this necesarily enforces |L| = 1
-        LAMBDA = LAMBDA/(LAMBDA'*Rvec);
+        % biorthonormalize to right eigenvectors using full matrices
+        LAMBDA = LAMBDA/(LAMBDA'*Rvec(:,1:nroot));
         
         % print status
         for j = 1:nroot
@@ -91,12 +85,14 @@ function [LAMBDA,lccsd_resid] = lefteomccsd(omega,Rvec,HBar,t1,t2,sys,opts)
     
     % build final residuals
     for j = 1:nroot
-        [x1, x2] = build_L_HBar(reshape(LAMBDA(1:Nov,j),Nunocc,Nocc), reshape(LAMBDA(Nov+1:end,j),Nunocc,Nunocc,Nocc,Nocc),...
-                        HBar, 0, 0);
+        [L1, L2] = build_L_HBar(reshape(LAMBDA(sys.posv1,j),Nunocc,Nocc),...
+                                reshape(LAMBDA(sys.posv2,j),Nunocc,Nunocc,Nocc,Nocc),...
+                                HBar, 0, 0);
                     
-        xchk = cat(1,x1(:),x2(:));
+        LH = cat(1,L1(:),L2(:));
     
-        lccsd_resid(j) = norm(xchk - omega(j)*LAMBDA(:,j));
+        lccsd_resid(j) = norm(LH - omega(j)*LAMBDA(:,j));
+        E_lcc(j) = real(lcc_energy(LAMBDA(:,j),LH,t1,t2,sys));
     end
     
     if flag_conv == 1
