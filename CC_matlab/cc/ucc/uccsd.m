@@ -131,6 +131,13 @@ function [t1a,t1b,t2a,t2b,t2c,Ecorr] = uccsd(sys,opts)
         
     end
     
+    t1a = reshape(T1A,size(t1a));
+    t1b = reshape(T1B,size(t1b));
+    t2a = reshape(T2A,size(t2a));
+    t2b = reshape(T2B,size(t2b));
+    t2c = reshape(T2C,size(t2c));
+    Ecorr = ucc_energy(t1a,t1b,t2a,t2b,t2c,sys);
+    
     
     if flag_conv == 1
         fprintf('\nUCCSD successfully converged in %d iterations (%4.2f seconds)\n',it,toc);
