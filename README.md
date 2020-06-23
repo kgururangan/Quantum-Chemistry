@@ -3,7 +3,16 @@ Collection of codes used for quantum chemistry calculations, including Hartree-F
 
 Contents of Repository:
 
-CC_matlab - most up-to-date set of coupled-cluster codes. Performs spinorbital (left-)CCSD and (left-)EOMCCSD (using davidson diagonalization routine in Davidson_methods folder) with method-of-moments (MM) CC methods CR-CC(2,3) and CR-EOMCC(2,3) forthcoming. Also containes spin-integrated open-shell CCSD method contained in UCCSD folders. Spin-integrated EOM and MMCC methods also under construction. Routines can be run using one- and two-body molecular orbital integrals inputs (along with system parameters like number of occupied and unoccupied alpha/beta electrons) which can be found in CC_matlab_tests. Run routines as shown in main.m
+CC_matlab - most up-to-date set of coupled-cluster codes. Available calculations:
+  CCSD (spinorbital)
+  UCCSD (spin-integrated)
+  CCSDT (spinorbital)
+  CCSDT(III) (spinorbital)
+  Left-CCSD (spinorbital)
+  EOM-CCSD (spinorbital)
+  Left-EOMCCSD (spinorbital)
+  
+Routines can be run using one- and two-body molecular orbital integrals inputs (along with system parameters like number of occupied and unoccupied alpha/beta electrons) which can be found in CC_matlab_tests. Run routines as shown in main.m
 
 CT_Hamiltonian - collection of codes used for crude modeling of charge-transfer processes in dimers
 
