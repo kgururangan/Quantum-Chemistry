@@ -66,7 +66,7 @@ B=reshape(B, prod(sB(iB)), []);
 C=A*B;
 output_shape=[sA(dimsA),sB(dimsB)];
 if length(output_shape)>1
-    C=reshape(C,[sA(dimsA),sB(dimsB)]);
+    C=squeeze(reshape(C,[sA(dimsA),sB(dimsB)]));
     if final_permutation
         C=permute(C,final_permutation);
     end
@@ -76,54 +76,55 @@ end
 
 
 function [iA, iB, final_permutation]=parse(s, sA, sB)
-msg='argument should be a string of the form ''ijk,kjl->il''';
-if ~ischar(s)
-    error(msg)
-end
+% msg='argument should be a string of the form ''ijk,kjl->il''';
+
+% if ~ischar(s)
+%     error(msg)
+% end
 
 %assert that every index appear exactly twice
-ss=join(split(s,{',','->'}));
-ss=ss{1};
-for i=1:length(ss)
-    if length(find(ss==ss(i)))~=2
-        error(['problem with index %s. '...
-               'Each index should appear exactly twice'], ss(i))
-    end
-end
+% ss=join(split(s,{',','->'}));
+% ss=ss{1};
+% for i=1:length(ss)
+%     if length(find(ss==ss(i)))~=2
+%         error(['problem with index %s. '...
+%                'Each index should appear exactly twice'], ss(i))
+%     end
+% end
 
 %split input and output indices
 s=split(s,'->');
-if length(s)~=2 
-    error(msg)
-end
+% if length(s)~=2 
+%     error(msg)
+% end
 
 %split input indices
 in=s{1};
 out=s{2};
 in=split(in,',');
-if length(in)~=2
-    error(msg)
-end
+% if length(in)~=2
+%     error(msg)
+% end
 inA=in{1};
 inB=in{2};
 
-if length(inA)~=length(sA)
-    error(['''%s'' has %d dimensions while the '...
-        'first argument has %d'],inA, length(inA), length(sA))
-end
-if length(inB)~=length(sB)
-    error(['''%s'' has %d dimensions while the '...
-        'second argument has %d'],inB, length(inB), length(sB))
-end
-if length(unique(inA))~=length(inA)
-    error('''%s'' has a double index',inA)
-end
-if length(unique(inB))~=length(inB)
-    error('''%s'' has a double index',inB)
-end
-if length(unique(out))~=length(out)
-    error('''%s'' has a double index',out)
-end
+% if length(inA)~=length(sA)
+%     error(['''%s'' has %d dimensions while the '...
+%         'first argument has %d'],inA, length(inA), length(sA))
+% end
+% if length(inB)~=length(sB)
+%     error(['''%s'' has %d dimensions while the '...
+%         'second argument has %d'],inB, length(inB), length(sB))
+% end
+% if length(unique(inA))~=length(inA)
+%     error('''%s'' has a double index',inA)
+% end
+% if length(unique(inB))~=length(inB)
+%     error('''%s'' has a double index',inB)
+% end
+% if length(unique(out))~=length(out)
+%     error('''%s'' has a double index',out)
+% end
 
 final_permutation=[];
 iA=[];
@@ -145,4 +146,8 @@ for i=1:length(inB)
     end
 end
 [~, final_permutation]=sort(final_permutation);
+end
+
+function C = OuterProduct(A, B)  % version 5
+    C = reshape(A(:) * B(:).', [size(A), size(B)]);
 end

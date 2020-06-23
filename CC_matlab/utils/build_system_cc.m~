@@ -49,12 +49,8 @@ function [sys] = build_system_cc(e1int,e2int,Nelec,NFZ_core,NFZ_vir,Nact_h,Nact_
     sys.Norb = 2*Norb;
     sys.FM = FM;
     sys.VM = VM;
-    sys.occ_list = occ;
-    sys.unocc_list = unocc;
-    sys.act_h_list = iact_h;
-    sys.act_p_list = iact_p;
-    sys.frzc_list = 1:2*NFZ_core;
-    sys.frzv_list = [sys.Norb-NFZ_vir+1:sys.Norb];
+    sys.occ = occ;
+    sys.unocc = unocc;
     sys.Nocc = Nocc;
     sys.Nunocc = Nunocc;
     sys.Nelec = Nelec;
@@ -130,8 +126,7 @@ function [sys] = build_system_cc(e1int,e2int,Nelec,NFZ_core,NFZ_vir,Nact_h,Nact_
     sys.VPPPH = VM(iact_p,iact_p,iact_p,iact_h);
     sys.VPPPP = VM(iact_p,iact_p,iact_p,iact_p);
     
-    % tons of other active/core or active/core/occ or active/core/unocc 
-    % slicings that are added as needed
+    % tons of other active/core or active/core/occ,unocc 
     sys.VHHvP = VM(iact_h,iact_h,unocc,iact_p);
     sys.VHoPP = VM(iact_h,occ,iact_p,iact_p);
     

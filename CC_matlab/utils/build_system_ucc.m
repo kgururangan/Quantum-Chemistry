@@ -1,17 +1,5 @@
-function [sys] = build_system_v2(onebody,twobody,Nocc_alpha,Nocc_beta)
+function [sys] = build_system_ucc(e1int,e2int,Nocc_alpha,Nocc_beta)
 
-% This function is used to convert spatial orbital twobody.inp and
-% onebody.inp matrices into the system struct used in UCC codes
-
-    flag_input = 1;
-    % Convert twobody.inp from chemist to physicist notation
-    if flag_input == 0 % unprocessed onebody.inp and twobody.inp
-        e2int = einsum(twobody,'pqrs->prqs');
-        e1int = onebody;
-    else % processed files
-        e1int = onebody;
-        e2int = twobody;
-    end
         
     Norb = size(e1int,1);
     
@@ -21,7 +9,6 @@ function [sys] = build_system_v2(onebody,twobody,Nocc_alpha,Nocc_beta)
     iocc_beta = 1:Nocc_beta;
     ivir_alpha = Nocc_alpha+1:Norb;
     ivir_beta = Nocc_beta+1:Norb;
-    
 
     % populate system structure for spin-integrated post-HF methods
     sys.Nelec = Nelec;
@@ -34,7 +21,7 @@ function [sys] = build_system_v2(onebody,twobody,Nocc_alpha,Nocc_beta)
     sys.iocc_beta = iocc_beta;
     sys.ivir_beta = ivir_beta;
     
-    
+    % build antisymmetrized twobody integrals
     VA = e2int - permute(e2int,[1,2,4,3]);
     VB = e2int;
     VC = e2int - permute(e2int,[1,2,4,3]);
