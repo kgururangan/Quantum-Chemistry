@@ -14,7 +14,7 @@ CC_matlab - most up-to-date set of coupled-cluster codes. Available calculations
   
 Routines can be run using one- and two-body molecular orbital integrals inputs (along with system parameters like number of occupied and unoccupied alpha/beta electrons) which can be found in CC_matlab_tests. Run routines as shown in main.m
 
-Numerov - Matlab implementation of the Numerov-Cooley algorithm for numerically solving the 1D Schrodinger equation. The main.m script applies this method to solve for the 1D vibrational eigenstates of an H2 stretching motion using a simple Restricted Hartree-Fock potential energy surface.
+Numerov - Matlab implementation of the Numerov-Cooley algorithm for numerically integrating the 1D Schrodinger equation. The main.m script applies this method to solve for the 1D vibrational eigenstates of the H2 stretching motion using a simple restricted Hartree-Fock (RHF) potential energy surface.
 
 CT_Hamiltonian - collection of codes used for crude modeling of charge-transfer processes in dimers
 
