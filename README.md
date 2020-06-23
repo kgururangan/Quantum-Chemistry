@@ -5,19 +5,19 @@ Contents of Repository:
 
 CC_matlab - most up-to-date set of coupled-cluster codes. Available calculations:
 
-  CCSD (spinorbital)
+    - CCSD (spinorbital)
   
-  UCCSD (spin-integrated)
+    - UCCSD (spin-integrated)
   
-  CCSDT (spinorbital)
+    - CCSDT (spinorbital)
   
-  CCSDT(III) (spinorbital)
+    - CCSDT(III) (spinorbital)
   
-  Left-CCSD (spinorbital)
+    - Left-CCSD (spinorbital)
   
-  EOM-CCSD (spinorbital)
+    - EOM-CCSD (spinorbital)
   
-  Left-EOMCCSD (spinorbital)
+    - Left-EOMCCSD (spinorbital)
   
   
 Routines can be run using one- and two-body molecular orbital integrals inputs (along with system parameters like number of occupied and unoccupied alpha/beta electrons) which can be found in CC_matlab_tests. Run routines as shown in main.m
