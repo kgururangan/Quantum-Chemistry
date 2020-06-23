@@ -1,6 +1,6 @@
-function [omega, B] = get_cis_guess(FM,VM,occ,unocc,nroot,nvec_per_root)
+function [omega, B] = get_cis_guess(sys,nroot,nvec_per_root)
 
-    HSS = build_cis_hamiltonian(FM,VM,occ,unocc);
+    HSS = build_cis_hamiltonian(sys.FM,sys.VM,sys.occ,sys.unocc);
     
     [V,E] = eig(HSS); omega = diag(E); [omega,idx] = sort(omega,'ascend');
     
