@@ -6,17 +6,11 @@ Contents of Repository:
 CC_matlab - most up-to-date set of coupled-cluster codes. Available calculations:
 
     - CCSD (spinorbital)
-  
     - UCCSD (spin-integrated)
-  
     - CCSDT (spinorbital)
-  
-    - CCSDT(III) (spinorbital)
-  
+    - Active-space CCSDT(III) (spinorbital)
     - Left-CCSD (spinorbital)
-  
     - EOM-CCSD (spinorbital)
-  
     - Left-EOMCCSD (spinorbital)
   
   
