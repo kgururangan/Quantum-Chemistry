@@ -1,5 +1,5 @@
 # Quantum-Chemistry
-Collection of codes used for quantum chemistry calculations, including Hartree-Fock, Coupled Cluster (CCSD), equation-of-motion CC (EOMCC), and other things. These are all my own codes developed for learning and testing purposes.
+Collection of codes used for quantum chemistry calculations based on Hartree-Fock and Coupled Cluster (CC) methodologies. These are all my own codes developed for learning and testing purposes.
 
 Contents of Repository:
 
