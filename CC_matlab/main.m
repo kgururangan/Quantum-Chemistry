@@ -39,42 +39,42 @@ ccopts.tol = 1e-9;
 [T1] = convert_spinint_to_spinorb({t1a,t1b},sys_ucc);
 [T2] = convert_spinint_to_spinorb({t2a,t2b,t2c},sys_ucc);
 
-%% Checking UCCSD results with Jun's
-
-E1A_exact = 9.944089519854425E-011;
-E1B_exact = 9.944091634197451E-011;
-E2A_exact =    -1.118149855483151E-002;
-E2C_exact =    -1.118149857437544E-002;
-E2B_exact =    -0.193074895116479;
-E1A1A_exact =   -7.721105018602925E-005;
-E1A1B_exact =   5.956425520525440E-004;
-E1B1B_exact =   -7.721105255510347E-005;
-Ecorr_exact = E1A_exact + E1B_exact + E2A_exact + E2B_exact + E2C_exact + E1A1A_exact + E1B1B_exact + E1A1B_exact;
-
-E1A = einsum_kg(sys_ucc.fa_ov,t1a,'me,em->');
-E1B = einsum_kg(sys_ucc.fb_ov,t1b,'me,em->');
-E2A = 0.25*einsum_kg(sys_ucc.vA_oovv,t2a,'mnef,efmn->');
-E2C = 0.25*einsum_kg(sys_ucc.vC_oovv,t2c,'mnef,efmn->');
-E2B = einsum_kg(sys_ucc.vB_oovv,t2b,'mnef,efmn->');
-E1A1A = 0.5*einsum_kg(einsum_kg(sys_ucc.vA_oovv,t1a,'mnef,fn->me'),t1a,'me,em->');
-E1B1B = 0.5*einsum_kg(einsum_kg(sys_ucc.vC_oovv,t1b,'mnef,fn->me'),t1b,'me,em->');
-E1A1B = einsum_kg(einsum_kg(sys_ucc.vB_oovv,t1a,'mnef,em->nf'),t1b,'nf,fn->');
-
-Ecorr = E1A + E1B + E2A + E2B + E2C + E1A1A + E1B1B + E1A1B;
-
-fprintf('E1A error = %4.12f\n',E1A_exact - E1A)
-fprintf('E1B error = %4.12f\n',E1B_exact - E1B)
-fprintf('E2A error = %4.12f\n',E2A_exact - E2A)
-fprintf('E2C error = %4.12f\n',E2C_exact - E2C)
-fprintf('E2B error = %4.12f\n',E2B_exact - E2B)
-fprintf('E1A1A error = %4.12f\n',E1A1A_exact - E1A1A)
-fprintf('E1B1B error = %4.12f\n',E1B1B_exact - E1B1B)
-fprintf('E1A1B error = %4.12f\n',E1A1B_exact - E1A1B)
-fprintf('Ecorr error = %4.12f\n',Ecorr_exact - Ecorr)
+% %% Checking UCCSD results with Jun's
+% 
+% E1A_exact = 9.944089519854425E-011;
+% E1B_exact = 9.944091634197451E-011;
+% E2A_exact =    -1.118149855483151E-002;
+% E2C_exact =    -1.118149857437544E-002;
+% E2B_exact =    -0.193074895116479;
+% E1A1A_exact =   -7.721105018602925E-005;
+% E1A1B_exact =   5.956425520525440E-004;
+% E1B1B_exact =   -7.721105255510347E-005;
+% Ecorr_exact = E1A_exact + E1B_exact + E2A_exact + E2B_exact + E2C_exact + E1A1A_exact + E1B1B_exact + E1A1B_exact;
+% 
+% E1A = einsum_kg(sys_ucc.fa_ov,t1a,'me,em->');
+% E1B = einsum_kg(sys_ucc.fb_ov,t1b,'me,em->');
+% E2A = 0.25*einsum_kg(sys_ucc.vA_oovv,t2a,'mnef,efmn->');
+% E2C = 0.25*einsum_kg(sys_ucc.vC_oovv,t2c,'mnef,efmn->');
+% E2B = einsum_kg(sys_ucc.vB_oovv,t2b,'mnef,efmn->');
+% E1A1A = 0.5*einsum_kg(einsum_kg(sys_ucc.vA_oovv,t1a,'mnef,fn->me'),t1a,'me,em->');
+% E1B1B = 0.5*einsum_kg(einsum_kg(sys_ucc.vC_oovv,t1b,'mnef,fn->me'),t1b,'me,em->');
+% E1A1B = einsum_kg(einsum_kg(sys_ucc.vB_oovv,t1a,'mnef,em->nf'),t1b,'nf,fn->');
+% 
+% Ecorr = E1A + E1B + E2A + E2B + E2C + E1A1A + E1B1B + E1A1B;
+% 
+% fprintf('E1A error = %4.12f\n',E1A_exact - E1A)
+% fprintf('E1B error = %4.12f\n',E1B_exact - E1B)
+% fprintf('E2A error = %4.12f\n',E2A_exact - E2A)
+% fprintf('E2C error = %4.12f\n',E2C_exact - E2C)
+% fprintf('E2B error = %4.12f\n',E2B_exact - E2B)
+% fprintf('E1A1A error = %4.12f\n',E1A1A_exact - E1A1A)
+% fprintf('E1B1B error = %4.12f\n',E1B1B_exact - E1B1B)
+% fprintf('E1A1B error = %4.12f\n',E1A1B_exact - E1A1B)
+% fprintf('Ecorr error = %4.12f\n',Ecorr_exact - Ecorr)
 
         
 
-%% Ground-state CC
+%% CCSD
 
 ccopts.diis_size = 3;
 ccopts.maxit = 100;
@@ -82,9 +82,11 @@ ccopts.tol = 1e-9;
 
 [t1,t2,Ecorr_ccsd] = ccsd(sys_cc,ccopts);
 
+%% CCSDT
+
 % CCSDT errors on order of 10^-5... be VERY careful checking all antisymmetrizers with einsum!
-%[t1,t2,t3,Ecorr_ccsdt] = ccsdt(sys_cc,ccopts);
-[t1,t2,t3,Ecorr_ccsdt3] = ccsdt3(sys_cc,ccopts);
+[t1,t2,t3,Ecorr_ccsdt] = ccsdt(sys_cc,ccopts);
+%[t1,t2,t3,Ecorr_ccsdt3] = ccsdt3(sys_cc,ccopts);
 
 
 %% Build HBar
@@ -99,6 +101,9 @@ ccopts.tol = 1e-9;
 
 [lambda1,lambda2,lcc_resid] = lccsd(t1,t2,HBar,sys_cc,ccopts);
 
+%% CR-CC(2,3)
+
+[crcc23A, crcc23B, crcc23C, crcc23D] = crcc23(t1,t2,lambda1,lambda2,HBar,sys_cc);
 
 %% EOM-CCSD
 
