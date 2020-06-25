@@ -1,13 +1,17 @@
-function [sys] = build_system_cc(e1int,e2int,Nelec,NFZ_core,NFZ_vir,Nact_h,Nact_p)
+function [sys] = build_system_cc(e1int,e2int,Vnuc,Nocc_a,Nocc_b,NFZ_core,NFZ_vir,Nact_h,Nact_p)
+
+    Nelec = Nocc_a + Nocc_b;
 
     if ~exist('NFZ_core','var')
         NFZ_core = 0;
-    end
+    else
+        assert(NFZ_core < (Nelec)/2, 'ERROR MSG: Number of frozen core orbitals exceeds number of occupied spinorbitals!')
+    end      
     
     if ~exist('NFZ_vir','var')
         NFZ_vir = 0;
     end
-    
+
     if ~exist('Nact_h','var')
         Nact_h = 10000;
     end
@@ -15,6 +19,33 @@ function [sys] = build_system_cc(e1int,e2int,Nelec,NFZ_core,NFZ_vir,Nact_h,Nact_
     if ~exist('Nact_p','var')
         Nact_p = 10000;
     end
+
+    % Calculate the scf energy
+    hf_energy = 0.0;
+    for i = 1:Nocc_a
+        hf_energy = hf_energy + e1int(i,i);
+    end
+    for i = 1:Nocc_b
+        hf_energy = hf_energy + e1int(i,i);
+    end
+    for i = 1:Nocc_a
+        for j = 1:Nocc_b
+            hf_energy = hf_energy + e2int(i,j,i,j);
+        end
+    end
+    for i = 1:Nocc_a
+        for j = 1:Nocc_a
+            hf_energy = hf_energy + 0.5*(e2int(i,j,i,j)-e2int(i,j,j,i));
+        end
+    end
+    for i = 1:Nocc_b
+        for j = 1:Nocc_b
+            hf_energy = hf_energy + 0.5*(e2int(i,j,i,j)-e2int(i,j,j,i));
+        end
+    end
+
+    sys.Escf = hf_energy + Vnuc;
+        
 
     ZM = spatial_to_spinorb(e1int);
     
@@ -38,6 +69,7 @@ function [sys] = build_system_cc(e1int,e2int,Nelec,NFZ_core,NFZ_vir,Nact_h,Nact_
             end
         end
     end
+
     
     % active space
     M1 = min(Nocc,2*Nact_h);
@@ -58,6 +90,8 @@ function [sys] = build_system_cc(e1int,e2int,Nelec,NFZ_core,NFZ_vir,Nact_h,Nact_
     sys.Nocc = Nocc;
     sys.Nunocc = Nunocc;
     sys.Nelec = Nelec;
+    sys.Nocc_a = Nocc_a;
+    sys.Nocc_b = Nocc_b;
     sys.nfzc = 2*NFZ_core;
     sys.nfzv = 2*NFZ_vir;
     sys.Nact_h = M1;
