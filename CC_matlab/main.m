@@ -5,9 +5,9 @@ close all
 format long
 
 addpath(genpath('/Users/karthik/Dropbox/Hartree Fock/hartree_fock/v4/CC_matlab'));
-addpath(genpath('/Users/karthik/Dropbox/Davidson_methods/davidson_cheb_test/Davidson_matlab_test'));
-addpath(genpath('/Users/karthik/Dropbox/Davidson_methods/davidson_cheb_test/GDav'));
-addpath(genpath('/Users/karthik/Dropbox/Davidson_methods/davidson_cheb_test/Bchdav'));
+%addpath(genpath('/Users/karthik/Dropbox/Davidson_methods/davidson_cheb_test/Davidson_matlab_test'));
+%addpath(genpath('/Users/karthik/Dropbox/Davidson_methods/davidson_cheb_test/GDav'));
+%addpath(genpath('/Users/karthik/Dropbox/Davidson_methods/davidson_cheb_test/Bchdav'));
 
 addpath(genpath('/Users/karthik/Desktop/CC_matlab_tests/h2o-pvdz/'));
 addpath(genpath('/Users/karthik/Desktop/CC_matlab_tests/h2o-631g/'));
@@ -15,62 +15,65 @@ addpath(genpath('/Users/karthik/Desktop/CC_matlab_tests/h2-pvdz/'));
 addpath(genpath('/Users/karthik/Desktop/CC_matlab_tests/rectangle-d2h-pvdz/'));
 
 %%
-%load h2o-pvdz-integrals.mat
+workpath = '/Users/karthik/Desktop/CC_matlab_tests/h2o-631g/stretched/';
+[e1int, e2int, Vnuc, Norb] = load_integrals(workpath);
+Nocc_a = 5;
+Nocc_b = 5;
+Nelec = 10;
+
+%%
+%load h2o-pvdz.mat
 %load h2-pvdz-integrals.mat
-load h2o-631g-stretched-integrals
-%load h2o-631g-eom-ccpy
+load h2o-631g-stretched
+%load h2o-631g
 %load rectangle-pvdz-d2h
 
 nfzc = 0; nfzv = 0; nact_h = 200; nact_p = 200;
 
 sys_ucc = build_system_ucc(e1int,e2int,Nocc_a,Nocc_b);
-sys_cc = build_system_cc(e1int,e2int,Nelec,nfzc,nfzv,nact_h,nact_p);
+sys_cc = build_system_cc(e1int,e2int,Vnuc,Nocc_a,Nocc_b,nfzc,nfzv,nact_h,nact_p);
 
 %% UCCSD
 
-% update: 4/6/20 - 
-% there is still something wrong with UCC - errors on order of 10^-6... but accurate for the most part...
-% problem seems to lie primarily in T2B with some errors in T2A and T2C
-
 ccopts.diis_size = 3;
 ccopts.maxit = 100;
-ccopts.tol = 1e-9;
+ccopts.tol = 1e-10;
 [t1a,t1b,t2a,t2b,t2c,Ecorr_ucc] = uccsd(sys_ucc,ccopts);
 [T1] = convert_spinint_to_spinorb({t1a,t1b},sys_ucc);
 [T2] = convert_spinint_to_spinorb({t2a,t2b,t2c},sys_ucc);
 
-% %% Checking UCCSD results with Jun's
-% 
-% E1A_exact = 9.944089519854425E-011;
-% E1B_exact = 9.944091634197451E-011;
-% E2A_exact =    -1.118149855483151E-002;
-% E2C_exact =    -1.118149857437544E-002;
-% E2B_exact =    -0.193074895116479;
-% E1A1A_exact =   -7.721105018602925E-005;
-% E1A1B_exact =   5.956425520525440E-004;
-% E1B1B_exact =   -7.721105255510347E-005;
-% Ecorr_exact = E1A_exact + E1B_exact + E2A_exact + E2B_exact + E2C_exact + E1A1A_exact + E1B1B_exact + E1A1B_exact;
-% 
-% E1A = einsum_kg(sys_ucc.fa_ov,t1a,'me,em->');
-% E1B = einsum_kg(sys_ucc.fb_ov,t1b,'me,em->');
-% E2A = 0.25*einsum_kg(sys_ucc.vA_oovv,t2a,'mnef,efmn->');
-% E2C = 0.25*einsum_kg(sys_ucc.vC_oovv,t2c,'mnef,efmn->');
-% E2B = einsum_kg(sys_ucc.vB_oovv,t2b,'mnef,efmn->');
-% E1A1A = 0.5*einsum_kg(einsum_kg(sys_ucc.vA_oovv,t1a,'mnef,fn->me'),t1a,'me,em->');
-% E1B1B = 0.5*einsum_kg(einsum_kg(sys_ucc.vC_oovv,t1b,'mnef,fn->me'),t1b,'me,em->');
-% E1A1B = einsum_kg(einsum_kg(sys_ucc.vB_oovv,t1a,'mnef,em->nf'),t1b,'nf,fn->');
-% 
-% Ecorr = E1A + E1B + E2A + E2B + E2C + E1A1A + E1B1B + E1A1B;
-% 
-% fprintf('E1A error = %4.12f\n',E1A_exact - E1A)
-% fprintf('E1B error = %4.12f\n',E1B_exact - E1B)
-% fprintf('E2A error = %4.12f\n',E2A_exact - E2A)
-% fprintf('E2C error = %4.12f\n',E2C_exact - E2C)
-% fprintf('E2B error = %4.12f\n',E2B_exact - E2B)
-% fprintf('E1A1A error = %4.12f\n',E1A1A_exact - E1A1A)
-% fprintf('E1B1B error = %4.12f\n',E1B1B_exact - E1B1B)
-% fprintf('E1A1B error = %4.12f\n',E1A1B_exact - E1A1B)
-% fprintf('Ecorr error = %4.12f\n',Ecorr_exact - Ecorr)
+% % Checking UCCSD results with Jun's
+
+E1A_exact = 9.944089519854425E-011;
+E1B_exact = 9.944091634197451E-011;
+E2A_exact =    -1.118149855483151E-002;
+E2C_exact =    -1.118149857437544E-002;
+E2B_exact =    -0.193074895116479;
+E1A1A_exact =   -7.721105018602925E-005;
+E1A1B_exact =   5.956425520525440E-004;
+E1B1B_exact =   -7.721105255510347E-005;
+Ecorr_exact = E1A_exact + E1B_exact + E2A_exact + E2B_exact + E2C_exact + E1A1A_exact + E1B1B_exact + E1A1B_exact;
+
+E1A = einsum_kg(sys_ucc.fa_ov,t1a,'me,em->');
+E1B = einsum_kg(sys_ucc.fb_ov,t1b,'me,em->');
+E2A = 0.25*einsum_kg(sys_ucc.vA_oovv,t2a,'mnef,efmn->');
+E2C = 0.25*einsum_kg(sys_ucc.vC_oovv,t2c,'mnef,efmn->');
+E2B = einsum_kg(sys_ucc.vB_oovv,t2b,'mnef,efmn->');
+E1A1A = 0.5*einsum_kg(einsum_kg(sys_ucc.vA_oovv,t1a,'mnef,fn->me'),t1a,'me,em->');
+E1B1B = 0.5*einsum_kg(einsum_kg(sys_ucc.vC_oovv,t1b,'mnef,fn->me'),t1b,'me,em->');
+E1A1B = einsum_kg(einsum_kg(sys_ucc.vB_oovv,t1a,'mnef,em->nf'),t1b,'nf,fn->');
+
+Ecorr = E1A + E1B + E2A + E2B + E2C + E1A1A + E1B1B + E1A1B;
+
+fprintf('E1A error = %4.12f\n',E1A_exact - E1A)
+fprintf('E1B error = %4.12f\n',E1B_exact - E1B)
+fprintf('E2A error = %4.12f\n',E2A_exact - E2A)
+fprintf('E2C error = %4.12f\n',E2C_exact - E2C)
+fprintf('E2B error = %4.12f\n',E2B_exact - E2B)
+fprintf('E1A1A error = %4.12f\n',E1A1A_exact - E1A1A)
+fprintf('E1B1B error = %4.12f\n',E1B1B_exact - E1B1B)
+fprintf('E1A1B error = %4.12f\n',E1A1B_exact - E1A1B)
+fprintf('Ecorr error = %4.12f\n',Ecorr_exact - Ecorr)
 
         
 
@@ -78,7 +81,7 @@ ccopts.tol = 1e-9;
 
 ccopts.diis_size = 3;
 ccopts.maxit = 100;
-ccopts.tol = 1e-9;
+ccopts.tol = 1e-8;
 
 [t1,t2,Ecorr_ccsd] = ccsd(sys_cc,ccopts);
 
@@ -91,7 +94,8 @@ ccopts.tol = 1e-9;
 
 %% Build HBar
 
-[HBar] = build_HBar(t1,t2,sys_cc); 
+%[HBar] = build_HBar(t1,t2,sys_cc); 
+[HBar] = build_HBar_debug(t1,t2,sys_cc);
 
 %% Left-CCSD 
 
@@ -103,12 +107,13 @@ ccopts.tol = 1e-9;
 
 %% CR-CC(2,3)
 
-[crcc23A, crcc23B, crcc23C, crcc23D] = crcc23(t1,t2,lambda1,lambda2,HBar,sys_cc);
+%[crcc23A, crcc23B, crcc23C, crcc23D] = crcc23(t1,t2,lambda1,lambda2,HBar,sys_cc);
+[Ecorr_crcc23A,Ecorr_crcc23B,Ecorr_crcc23C,Ecorr_crcc23D] = crcc23_opt(t1,t2,lambda1,lambda2,HBar,sys_cc);
 
 %% EOM-CCSD
 
 eomopts.nroot = 3;
-eomopts.maxit = 1000;
+eomopts.maxit = 100;
 eomopts.tol = 1e-6;
 eomopts.nvec_per_root = 1;
 eomopts.max_nvec_per_root = 5;
@@ -138,19 +143,9 @@ eomopts.thresh_vec = 10*eomopts.tol;
 
 %% Left-EOMCCSD 
 
-ccopts.maxit = 100;
-ccopts.diis_size = 3;
-ccopts.tol = 10*eomopts.tol; % can only converge Left-EOM to the same tolerance as we converged right EOM
+lccopts.maxit = 100;
+lccopts.diis_size = 3;
+lccopts.tol = eomopts.tol; % can only converge Left-EOM to the same tolerance as we converged right EOM
 
-[Lvec,omega_lcc,eom_lcc_resid] = lefteomccsd(omega,Rvec,HBar,t1,t2,sys_cc,ccopts);
-
-
-
-%%
-
-
-
-
-
-
+[Lvec,omega_lcc,eom_lcc_resid] = lefteomccsd(omega,Rvec,HBar,t1,t2,sys_cc,lccopts);
 
