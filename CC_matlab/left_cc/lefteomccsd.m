@@ -1,7 +1,7 @@
 function [LAMBDA,E_lcc,lccsd_resid] = lefteomccsd(omega,Rvec,HBar,t1,t2,sys,opts)
 % we're using abij ordering for L1 and L2 now!
 
-    fprintf('\n=============++Entering Left-EOMCCSD Routine++================\n')
+    fprintf('\n==================================++Entering Left-EOM-CCSD Routine++===========================\n')
     
     tic
 
@@ -24,13 +24,15 @@ function [LAMBDA,E_lcc,lccsd_resid] = lefteomccsd(omega,Rvec,HBar,t1,t2,sys,opts
 
     LAMBDA = Rvec(:,1:nroot);
 
+    idx_not_converged = 1:nroot;
+
     it = 0; flag_conv = 0; flag_ground = 0;
     while it < maxit && flag_conv == 0
         
         fprintf('\nIter-%d:\n', it)
         fprintf('-------------------------------------------------------\n')
         
-        for j = 1:nroot
+        for j = idx_not_converged
             
             % get current L1 and L2
             L1 = reshape(LAMBDA(sys.posv1,j),Nunocc,Nocc);
@@ -41,7 +43,7 @@ function [LAMBDA,E_lcc,lccsd_resid] = lefteomccsd(omega,Rvec,HBar,t1,t2,sys,opts
             [X_ia, X_ijab] = build_L_HBar(L1, L2, HBar, flag_ground, flag_jacobi);
 
             % update L1 and L2 by Jacobi
-            [L1,L2] = update_l1_l2(X_ia, X_ijab, omega(j), HBar, sys.occ, sys.unocc);
+            [L1,L2] = update_l1_l2(X_ia, X_ijab, omega(j), HBar);
             LAMBDA(:,j) = cat(1,L1(:),L2(:));
 
             % buid LH - omega*L residual measure (use full LH)
@@ -74,6 +76,8 @@ function [LAMBDA,E_lcc,lccsd_resid] = lefteomccsd(omega,Rvec,HBar,t1,t2,sys,opts
         for j = 1:nroot
             fprintf('   Root - %d     e = %4.10f     |r| = %4.10f\n',j,E_lcc(j),lccsd_resid(j));
         end
+
+        idx_not_converged = find(lccsd_resid > tol);
         
         if all(lccsd_resid < tol)
             flag_conv = 1;
@@ -101,7 +105,7 @@ function [LAMBDA,E_lcc,lccsd_resid] = lefteomccsd(omega,Rvec,HBar,t1,t2,sys,opts
         fprintf('\nLeft-EOMCCSD failed to converged in %d iterations\n',maxit)
     end
          
-    biorthmat = transpose(conj(LAMBDA))*Rvec;
+    biorthmat = transpose(conj(LAMBDA))*Rvec(:,1:nroot);
     fprintf('|LR - 1| = %4.12f\n',norm(biorthmat-eye(nroot)))
     
 end
