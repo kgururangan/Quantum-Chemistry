@@ -1,0 +1,35 @@
+
+% SYSTEM SETEP
+n = 10		% number of electrons
+nfzc = 0	% number of frozen core spatial orbitals
+nfzv = 0	% number of frozen virtual spatial orbitals
+
+% ACTIVE SPACE PARTITIONING
+Nact_h = 100	% number of active occupied orbitals
+Nact_p = 100	% number of active unoccupied orbitals
+
+% RESTRICTED CLOSED SHELL REFERENCE
+flag_RHF = True
+
+% DO LEFT CC
+do_left = True
+
+% CC INPUTS
+diis_size = 3	
+cc_tol = 8
+cc_maxit = 100
+lcc_maxit = 200
+
+% EOM INPUTS
+eom_tol = 6
+nvec_per_root = 1	% number of vectors to initial use per root in Davidson
+max_nvec_per_root = 5	% maximum number of subspace vectors per root in Davidson
+nroot = 8		% number of excited states
+eom_maxit = 80
+
+% INTEGRAL FILES
+onebody = /Users/karthik/Desktop/CC_matlab_tests/h2o-631g/onebody.inp
+twobody = /Users/karthik/Desktop/CC_matlab_tests/h2o-631g/twobody.inp
+
+% CALCULATION
+calc_type = EOM-CCSD
