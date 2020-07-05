@@ -1,14 +1,36 @@
 function [R, omega, r0, res] = eomccsd(HBar,t1,t2,sys,opts)
 
-    fprintf('\n==============++Entering EOM-CCSD Routine++=================\n')
+    fprintf('\n==================================++Entering EOM-CCSD Routine++=============================\n')
     
     nroot = opts.nroot;
 
     Nocc = sys.Nocc; Nunocc = sys.Nunocc;
     
     % get Epstein-Nesbet CCSD HBar diagonal
-    [D, ~, ~] = HBar_CCSD_SD_diagonal(HBar,t1,t2,sys);
-    
+    %[D, ~, ~] = HBar_CCSD_SD_diagonal(HBar,t1,t2,sys);
+
+%    < phi_{ia} | HBar | phi_{ia} >
+%   < phi_{ijab} | HBar | phi_{ijab} >
+
+    Dai = zeros(Nunocc,Nocc);
+    Dabij = zeros(Nunocc,Nunocc,Nocc,Nocc);
+
+    for a = 1:Nunocc
+        for i = 1:Nocc
+            [D1,D2,D3] = HBar_CCSD_S_diagonal(a,i,HBar);
+            Dai(a,i) = D1;
+            for b = 1:Nunocc
+                for j = 1:Nocc
+                    [D1,D2,D3] = HBar_CCSD_D_diagonal(a,b,i,j,HBar);
+                    Dabij(a,b,i,j) = D1;
+                end
+            end
+        end
+    end
+
+    D = cat(1, Dai(:), Dabij(:));
+
+%     
     % Matrix-vector product function
     HRmat = @(x) HR_matmat(x,HBar);
 
@@ -29,7 +51,8 @@ function [R, omega, r0, res] = eomccsd(HBar,t1,t2,sys,opts)
     end
 
     %[ R, L_R, omega, res, it, flag_conv] = davidson_fcn(HRmat, D, HBar_dim, nroot, B0, 'right', opts);
-    [R, omega, res, flag_conv] = davidson_fcn_v2(HRmat,D,nroot,B0,opts);
+    %[R, omega, res, flag_conv] = davidson(HRmat,D,nroot,B0,opts);
+    [R, omega, res, flag_conv] = davidson_update_R(HRmat,Dai,Dabij,nroot,B0,opts);
 
     omega = real(omega);
     
