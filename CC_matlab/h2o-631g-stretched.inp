@@ -12,7 +12,7 @@ Nact_p = 100	% number of active unoccupied orbitals
 flag_RHF = True
 
 % DO LEFT CC
-do_left = False
+do_left = True
 
 % CC INPUTS
 diis_size = 3	
@@ -24,12 +24,12 @@ lcc_maxit = 200
 eom_tol = 6
 nvec_per_root = 1	% number of vectors to initial use per root in Davidson
 max_nvec_per_root = 5	% maximum number of subspace vectors per root in Davidson
-nroot = 8		% number of excited states
-eom_maxit = 500
+nroot = 3		% number of excited states
+eom_maxit = 80
 
 % INTEGRAL FILES
 onebody = /Users/karthik/Desktop/CC_matlab_tests/h2o-631g/stretched/onebody.inp
 twobody = /Users/karthik/Desktop/CC_matlab_tests/h2o-631g/stretched/twobody.inp
 
 % CALCULATION
-calc_type = UCCSD
+calc_type = EOM-CCSD
