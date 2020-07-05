@@ -1,0 +1,15 @@
+#!/bin/bash
+
+MATLAB_ROOT_DIR='/Applications/MATLAB_R2020a.app'
+
+searchstring="."
+
+
+for mfile in "$@"
+do
+	string=${mfile}
+	temp=${string%$searchstring*}
+	#echo ${mfile}
+	${MATLAB_ROOT_DIR}/bin/matlab -batch "calc_driver_main('${mfile}')" -logfile ${temp}.log
+	#/Applications/MATLAB_R2020a.app/bin/matlab -batch "calc_driver_main('${mfile}')" -logfile ${temp}.log
+done
