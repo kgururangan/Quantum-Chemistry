@@ -14,6 +14,23 @@ function [] = calc_driver_main(input_file)
     fprintf('\nRepository online: <https://github.com/kgururangan/Quantum-Chemistry.git>\n')
     fprintf('Author: Karthik Gururangan (gururang@msu.edu)\n\n\n')
 
+    % computer information
+    v1 = ver('MATLAB');     
+    fprintf('Host Information\n')
+    fprintf('--------------------\n')
+    fprintf('Computer: %s\n',computer)
+    fprintf('MATLAB\n')
+    fprintf('Version:  %s\n',v1.Version)
+    fprintf('Realease: %s\n',v1.Release)
+    fprintf('Date: %s\n\n',v1.Date)
+    
+
+    filename = strip(split(input_file,'.')); proj_name = filename{1};
+	
+    fprintf('\nProject Name: %s\n',proj_name)
+    fprintf('---------------------------------\n')	
+    fprintf('Working directory: %s\n\n',pwd')
+
     % Parse input to get system information and integral locations
     [Nelec, nfzc, nfzv, nact_h, nact_p, onebody_path, twobody_path, run] = parse_input(input_file);
     % Load in onebody and twobody integrals
@@ -31,25 +48,6 @@ function [] = calc_driver_main(input_file)
 
     hf_energy = calculate_hf_energy(e1int,e2int,Nocc_a,Nocc_b);
 
-    filename = strip(split(input_file,'.')); proj_name = filename{1};
-	
-    fprintf('\nProject Name: %s\n',proj_name)
-    fprintf('---------------------------------\n')	
-    fprintf('Working directory: %s\n\n',pwd')
-
-    fprintf('System Information:\n')
-    fprintf('---------------------\n')
-    fprintf('   Number of electrons = %d\n',Nelec)
-    fprintf('   Number of spatial orbitals = %d\n',Norb)
-    fprintf('   Number of frozen core spatial orbitals = %d\n',nfzc)
-    fprintf('   Number of frozen virtual spatial orbitals = %d\n',nfzv)
-    fprintf('   Number of occupied orbitals (alpha) = %d\n',Nocc_a-nfzc)
-    fprintf('   Number of occupied orbitals (beta) = %d\n',Nocc_b-nfzc)
-    fprintf('   Number of unoccupied orbitals (alpha) = %d\n',Norb-Nocc_a-nfzv)
-    fprintf('   Number of unoccupied orbitals (beta) = %d\n',Norb-Nocc_b-nfzv)
-    fprintf('   Number of active occupied spatial orbitals = %d\n',nact_h)
-    fprintf('   Number of active unoccupied spatial orbitals = %d\n',nact_p)
-
     if run.left_cc == 1
 	    fprintf('\nCalculation Type = %s + Left-CC\n',run.calc_type)
     else
@@ -58,6 +56,19 @@ function [] = calc_driver_main(input_file)
 
     sys_cc = build_system_cc(e1int,e2int,Vnuc,Nocc_a,Nocc_b,nfzc,nfzv,nact_h,nact_p);
     sys_ucc = build_system_ucc(e1int,e2int,Nocc_a,Nocc_b);
+
+    fprintf('System Information:\n')
+    fprintf('---------------------\n')
+    fprintf('   Number of electrons = %d\n',sys_cc.Nelec)
+    fprintf('   Number of spatial orbitals = %d\n',sys_cc.Norb)
+    fprintf('   Number of frozen core spatial orbitals = %d\n',sys_cc.nfzc)
+    fprintf('   Number of frozen virtual spatial orbitals = %d\n',sys_cc.nfzv)
+    fprintf('   Number of occupied orbitals (alpha) = %d\n',Nocc_a-nfzc)
+    fprintf('   Number of occupied orbitals (beta) = %d\n',Nocc_b-nfzc)
+    fprintf('   Number of unoccupied orbitals (alpha) = %d\n',Norb-Nocc_a-nfzv)
+    fprintf('   Number of unoccupied orbitals (beta) = %d\n',Norb-Nocc_b-nfzv)
+    fprintf('   Number of active occupied spatial orbitals = %d\n',sys_cc.Nact_h)
+    fprintf('   Number of active unoccupied spatial orbitals = %d\n',sys_cc.Nact_p)
 
     fprintf('\n\nMolecular Orbital Basis\n')
     fprintf('------------------------\n')

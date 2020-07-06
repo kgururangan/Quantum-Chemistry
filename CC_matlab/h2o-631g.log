@@ -6,28 +6,36 @@ Repository online: <https://github.com/kgururangan/Quantum-Chemistry.git>
 Author: Karthik Gururangan (gururang@msu.edu)
 
 
-Onebody file: /Users/karthik/Desktop/CC_matlab_tests/h2o-631g/onebody.inp
-Twobody file: /Users/karthik/Desktop/CC_matlab_tests/h2o-631g/twobody.inp
-Loading integrals... completed!
+Host Information
+--------------------
+Computer: MACI64
+MATLAB
+Version:  9.8
+Realease: (R2020a)
+Date: 18-Nov-2019
+
 
 Project Name: h2o-631g
 ---------------------------------
 Working directory: /Users/karthik/Dropbox/Hartree Fock/hartree_fock/v4/CC_matlab
 
+Onebody file: /Users/karthik/Desktop/CC_matlab_tests/h2o-631g/onebody.inp
+Twobody file: /Users/karthik/Desktop/CC_matlab_tests/h2o-631g/twobody.inp
+Loading integrals... completed!
+
+Calculation Type = EOMCCSD + Left-CC
 System Information:
 ---------------------
    Number of electrons = 10
-   Number of spatial orbitals = 13
+   Number of spatial orbitals = 26
    Number of frozen core spatial orbitals = 0
    Number of frozen virtual spatial orbitals = 0
    Number of occupied orbitals (alpha) = 5
    Number of occupied orbitals (beta) = 5
    Number of unoccupied orbitals (alpha) = 8
    Number of unoccupied orbitals (beta) = 8
-   Number of active occupied spatial orbitals = 10000
-   Number of active unoccupied spatial orbitals = 10000
-
-Calculation Type = EOMCCSD + Left-CC
+   Number of active occupied spatial orbitals = 10
+   Number of active unoccupied spatial orbitals = 16
 
 
 Molecular Orbital Basis
@@ -51,23 +59,23 @@ Molecular Orbital Basis
 	12	    1.63632203         
 	13	    1.71766364         
 
-Calculation started on Sunday, July 5, 2020 5:23 PM (05-Jul-2020 17:23:36) 
+Calculation started on Monday, July 6, 2020 10:45 AM (06-Jul-2020 10:45:04) 
 
 ==================================++Entering CCSD Routine++=================================
 
-Iter-0     Residuum = 0.002061583710      Ecorr = 0.000000000000      Elapsed Time = 0.25 s
-Iter-1     Residuum = 0.000257514037      Ecorr = -0.109090685669      Elapsed Time = 0.05 s
-Iter-2     Residuum = 0.000080077487      Ecorr = -0.113093737395      Elapsed Time = 0.06 s
+Iter-0     Residuum = 0.002061583710      Ecorr = 0.000000000000      Elapsed Time = 0.22 s
+Iter-1     Residuum = 0.000257514037      Ecorr = -0.109090685669      Elapsed Time = 0.04 s
+Iter-2     Residuum = 0.000080077487      Ecorr = -0.113093737395      Elapsed Time = 0.04 s
 Iter-3     Residuum = 0.000028988260      Ecorr = -0.114608171320      Elapsed Time = 0.04 s
-Iter-4     Residuum = 0.000011001323      Ecorr = -0.115071216547      Elapsed Time = 0.08 s
-Iter-5     Residuum = 0.000004266104      Ecorr = -0.115226784998      Elapsed Time = 0.03 s
-Iter-6     Residuum = 0.000001673225      Ecorr = -0.115281694014      Elapsed Time = 0.23 s
-Iter-7     Residuum = 0.000000019195      Ecorr = -0.115313866344      Elapsed Time = 0.09 s
-CCSD successfully converged in 8 iterations (0.89 seconds)
+Iter-4     Residuum = 0.000011001323      Ecorr = -0.115071216547      Elapsed Time = 0.09 s
+Iter-5     Residuum = 0.000004266104      Ecorr = -0.115226784998      Elapsed Time = 0.04 s
+Iter-6     Residuum = 0.000001673225      Ecorr = -0.115281694014      Elapsed Time = 0.07 s
+Iter-7     Residuum = 0.000000019195      Ecorr = -0.115313866344      Elapsed Time = 0.04 s
+CCSD successfully converged in 8 iterations (0.62 seconds)
 Total Energy = -75.944387521524 Ha     Ecorr = -0.115313940463 Ha
 
 ==============================================
-Building HBar... completed in 0.46 seconds
+Building HBar... completed in 0.33 seconds
 ==============================================
 
 ==================================++Entering EOM-CCSD Routine++=============================
@@ -80,6 +88,7 @@ Initial CIS energies:
       E6 = 0.47125597
       E7 = 0.47125597
       E8 = 0.49668823
+
 Beginning Davidson diagonlization algorithm...
 
 Iter-0    Subspace size - 8
@@ -240,21 +249,21 @@ Iter-13    Subspace size - 32
    Root - 7     e = 0.4353123721     |r| = 0.0000002417
    Root - 8     e = 0.4537674657     |r| = 0.0000001059
 
-Davidson successfully converged in 13 iterations (29.99 seconds)
+Davidson successfully converged in 13 iterations (22.64 seconds)
 
 ==================================++Entering Left-CCSD Routine++=============================
 
-Iter-0     Residuum = 0.004638255776      Ecorr = -0.102197608957      Elapsed Time = 0.25 s
-Iter-1     Residuum = 0.001045760000      Ecorr = -0.112350224688      Elapsed Time = 0.16 s
-Iter-2     Residuum = 0.000389930962      Ecorr = -0.114208437013      Elapsed Time = 0.17 s
-Iter-3     Residuum = 0.000150266450      Ecorr = -0.114887857411      Elapsed Time = 0.16 s
+Iter-0     Residuum = 0.004638255776      Ecorr = -0.102197608957      Elapsed Time = 0.23 s
+Iter-1     Residuum = 0.001045760000      Ecorr = -0.112350224688      Elapsed Time = 0.15 s
+Iter-2     Residuum = 0.000389930962      Ecorr = -0.114208437013      Elapsed Time = 0.16 s
+Iter-3     Residuum = 0.000150266450      Ecorr = -0.114887857411      Elapsed Time = 0.15 s
 Iter-4     Residuum = 0.000020798681      Ecorr = -0.115254961351      Elapsed Time = 0.16 s
-Iter-5     Residuum = 0.000005802975      Ecorr = -0.115297484830      Elapsed Time = 0.16 s
-Iter-6     Residuum = 0.000001635631      Ecorr = -0.115309302270      Elapsed Time = 0.16 s
-Iter-7     Residuum = 0.000000321112      Ecorr = -0.115313029877      Elapsed Time = 0.19 s
-Iter-8     Residuum = 0.000000084305      Ecorr = -0.115313701398      Elapsed Time = 0.15 s
-Iter-9     Residuum = 0.000000020471      Ecorr = -0.115313882411      Elapsed Time = 0.15 s
-Left-CCSD successfully converged in 10 iterations (1.87 seconds)
+Iter-5     Residuum = 0.000005802975      Ecorr = -0.115297484830      Elapsed Time = 0.15 s
+Iter-6     Residuum = 0.000001635631      Ecorr = -0.115309302270      Elapsed Time = 0.15 s
+Iter-7     Residuum = 0.000000321112      Ecorr = -0.115313029877      Elapsed Time = 0.17 s
+Iter-8     Residuum = 0.000000084305      Ecorr = -0.115313701398      Elapsed Time = 0.14 s
+Iter-9     Residuum = 0.000000020471      Ecorr = -0.115313882411      Elapsed Time = 0.14 s
+Left-CCSD successfully converged in 10 iterations (1.76 seconds)
 
 ==================================++Entering Left-EOM-CCSD Routine++===========================
 
@@ -368,7 +377,7 @@ Iter-9:
    Root - 7     e = 0.3199984165     |r| = 0.0000002306
    Root - 8     e = 0.3384535323     |r| = 0.0000004435
 
-Left-EOMCCSD successfully converged in 10 iterations (12.06 seconds)
+Left-EOMCCSD successfully converged in 10 iterations (11.58 seconds)
 |LR - 1| = 0.000000000002
 
-Calculation ended on Sunday, July 5, 2020 5:24 PM (05-Jul-2020 17:24:22) 
+Calculation ended on Monday, July 6, 2020 10:45 AM (06-Jul-2020 10:45:42) 
