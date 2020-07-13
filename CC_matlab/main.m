@@ -30,50 +30,51 @@ load h2o-631g-stretched
 
 nfzc = 0; nfzv = 0; nact_h = 200; nact_p = 200;
 
-sys_ucc = build_system_ucc(e1int,e2int,Nocc_a,Nocc_b);
+sys_ucc = build_system_ucc(e1int,e2int,Vnuc,Nocc_a,Nocc_b);
 sys_cc = build_system_cc(e1int,e2int,Vnuc,Nocc_a,Nocc_b,nfzc,nfzv,nact_h,nact_p);
 
 %% UCCSD
 
 ccopts.diis_size = 3;
 ccopts.maxit = 100;
-ccopts.tol = 1e-10;
+ccopts.tol = 1e-9;
+% ERROR LIES IN T2A!!!
 [t1a,t1b,t2a,t2b,t2c,Ecorr_ucc] = uccsd(sys_ucc,ccopts);
 [T1] = convert_spinint_to_spinorb({t1a,t1b},sys_ucc);
 [T2] = convert_spinint_to_spinorb({t2a,t2b,t2c},sys_ucc);
-
-% % Checking UCCSD results with Jun's
-
-E1A_exact = 9.944089519854425E-011;
-E1B_exact = 9.944091634197451E-011;
-E2A_exact =    -1.118149855483151E-002;
-E2C_exact =    -1.118149857437544E-002;
-E2B_exact =    -0.193074895116479;
-E1A1A_exact =   -7.721105018602925E-005;
-E1A1B_exact =   5.956425520525440E-004;
-E1B1B_exact =   -7.721105255510347E-005;
-Ecorr_exact = E1A_exact + E1B_exact + E2A_exact + E2B_exact + E2C_exact + E1A1A_exact + E1B1B_exact + E1A1B_exact;
-
-E1A = einsum_kg(sys_ucc.fa_ov,t1a,'me,em->');
-E1B = einsum_kg(sys_ucc.fb_ov,t1b,'me,em->');
-E2A = 0.25*einsum_kg(sys_ucc.vA_oovv,t2a,'mnef,efmn->');
-E2C = 0.25*einsum_kg(sys_ucc.vC_oovv,t2c,'mnef,efmn->');
-E2B = einsum_kg(sys_ucc.vB_oovv,t2b,'mnef,efmn->');
-E1A1A = 0.5*einsum_kg(einsum_kg(sys_ucc.vA_oovv,t1a,'mnef,fn->me'),t1a,'me,em->');
-E1B1B = 0.5*einsum_kg(einsum_kg(sys_ucc.vC_oovv,t1b,'mnef,fn->me'),t1b,'me,em->');
-E1A1B = einsum_kg(einsum_kg(sys_ucc.vB_oovv,t1a,'mnef,em->nf'),t1b,'nf,fn->');
-
-Ecorr = E1A + E1B + E2A + E2B + E2C + E1A1A + E1B1B + E1A1B;
-
-fprintf('E1A error = %4.12f\n',E1A_exact - E1A)
-fprintf('E1B error = %4.12f\n',E1B_exact - E1B)
-fprintf('E2A error = %4.12f\n',E2A_exact - E2A)
-fprintf('E2C error = %4.12f\n',E2C_exact - E2C)
-fprintf('E2B error = %4.12f\n',E2B_exact - E2B)
-fprintf('E1A1A error = %4.12f\n',E1A1A_exact - E1A1A)
-fprintf('E1B1B error = %4.12f\n',E1B1B_exact - E1B1B)
-fprintf('E1A1B error = %4.12f\n',E1A1B_exact - E1A1B)
-fprintf('Ecorr error = %4.12f\n',Ecorr_exact - Ecorr)
+% 
+% % % Checking UCCSD results with Jun's
+% 
+% E1A_exact = 9.944089519854425E-011;
+% E1B_exact = 9.944091634197451E-011;
+% E2A_exact =    -1.118149855483151E-002;
+% E2C_exact =    -1.118149857437544E-002;
+% E2B_exact =    -0.193074895116479;
+% E1A1A_exact =   -7.721105018602925E-005;
+% E1A1B_exact =   5.956425520525440E-004;
+% E1B1B_exact =   -7.721105255510347E-005;
+% Ecorr_exact = E1A_exact + E1B_exact + E2A_exact + E2B_exact + E2C_exact + E1A1A_exact + E1B1B_exact + E1A1B_exact;
+% 
+% E1A = einsum_kg(sys_ucc.fa_ov,t1a,'me,em->');
+% E1B = einsum_kg(sys_ucc.fb_ov,t1b,'me,em->');
+% E2A = 0.25*einsum_kg(sys_ucc.vA_oovv,t2a,'mnef,efmn->');
+% E2C = 0.25*einsum_kg(sys_ucc.vC_oovv,t2c,'mnef,efmn->');
+% E2B = einsum_kg(sys_ucc.vB_oovv,t2b,'mnef,efmn->');
+% E1A1A = 0.5*einsum_kg(einsum_kg(sys_ucc.vA_oovv,t1a,'mnef,fn->me'),t1a,'me,em->');
+% E1B1B = 0.5*einsum_kg(einsum_kg(sys_ucc.vC_oovv,t1b,'mnef,fn->me'),t1b,'me,em->');
+% E1A1B = einsum_kg(einsum_kg(sys_ucc.vB_oovv,t1a,'mnef,em->nf'),t1b,'nf,fn->');
+% 
+% Ecorr = E1A + E1B + E2A + E2B + E2C + E1A1A + E1B1B + E1A1B;
+% 
+% fprintf('E1A error = %4.12f\n',E1A_exact - E1A)
+% fprintf('E1B error = %4.12f\n',E1B_exact - E1B)
+% fprintf('E2A error = %4.12f\n',E2A_exact - E2A)
+% fprintf('E2C error = %4.12f\n',E2C_exact - E2C)
+% fprintf('E2B error = %4.12f\n',E2B_exact - E2B)
+% fprintf('E1A1A error = %4.12f\n',E1A1A_exact - E1A1A)
+% fprintf('E1B1B error = %4.12f\n',E1B1B_exact - E1B1B)
+% fprintf('E1A1B error = %4.12f\n',E1A1B_exact - E1A1B)
+% fprintf('Ecorr error = %4.12f\n',Ecorr_exact - Ecorr)
 
         
 
@@ -81,7 +82,8 @@ fprintf('Ecorr error = %4.12f\n',Ecorr_exact - Ecorr)
 
 ccopts.diis_size = 3;
 ccopts.maxit = 100;
-ccopts.tol = 1e-8;
+ccopts.tol = 1e-9;
+ccopts.shift = 0.0;
 
 [t1,t2,Ecorr_ccsd] = ccsd(sys_cc,ccopts);
 
@@ -99,11 +101,12 @@ ccopts.tol = 1e-8;
 
 %% Left-CCSD 
 
-ccopts.diis_size = 5;
-ccopts.maxit = 200;
-ccopts.tol = 1e-9;
+lccopts.diis_size = 5;
+lccopts.maxit = 200;
+lccopts.tol = 1e-9;
+lccopts.shift = 0.0;
 
-[lambda1,lambda2,lcc_resid] = lccsd(t1,t2,HBar,sys_cc,ccopts);
+[lambda1,lambda2,lcc_resid] = lccsd(t1,t2,HBar,sys_cc,lccopts);
 
 %% CR-CC(2,3)
 
@@ -112,14 +115,15 @@ ccopts.tol = 1e-9;
 
 %% EOM-CCSD
 
-eomopts.nroot = 3;
+eomopts.nroot = 8;
 eomopts.maxit = 100;
-eomopts.tol = 1e-6;
+eomopts.tol = 1e-8;
 eomopts.nvec_per_root = 1;
 eomopts.max_nvec_per_root = 5;
 eomopts.flag_verbose = 1;
 eomopts.init_guess = 'cis';
 eomopts.thresh_vec = 10*eomopts.tol;
+
 
 % it's possible there's an error in EOMCCSD sigma function. R vector for
 % first singlet state of H2 are close to Jun's but not exactly identical...
@@ -143,9 +147,58 @@ eomopts.thresh_vec = 10*eomopts.tol;
 
 %% Left-EOMCCSD 
 
-lccopts.maxit = 100;
+lccopts.maxit = 50;
 lccopts.diis_size = 3;
 lccopts.tol = eomopts.tol; % can only converge Left-EOM to the same tolerance as we converged right EOM
+lccopts.shift = 0.00;
 
 [Lvec,omega_lcc,eom_lcc_resid] = lefteomccsd(omega,Rvec,HBar,t1,t2,sys_cc,lccopts);
+
+%% Testing UCC HBar
+
+[HBar] = build_HBar_debug(T1,T2,sys_cc);
+
+[HBar_t] = build_ucc_HBar( t1a, t1b, t2a, t2b, t2c, sys_ucc );
+
+[H2] = convert_HBar_to_spinorb(HBar_t.H2A,HBar_t.H2B,HBar_t.H2C);
+
+H2A = HBar_t.H2A; H2B = HBar_t.H2B; H2C = HBar_t.H2C;
+
+H_amij = HBar{2}{2,1,1,1};
+
+err = H2.vooo - H_amij;
+norm(err(:))
+
+%%
+ivir_a = 1:2:15; ivir_b = 2:2:16;
+iocc_a = 1:2:9; iocc_b = 2:2:10;
+
+H2 = zeros(16,10,10,10);
+
+H2(ivir_a,iocc_a,iocc_a,iocc_a) = H2A.vooo;
+
+H2(ivir_a,iocc_b,iocc_a,iocc_b) = H2B.vooo;
+H2(iocc_b,ivir_a,iocc_b,iocc_a) = H2B.ovoo;
+H2(ivir_a,iocc_b,iocc_b,iocc_a) = -H2B.vooo;
+H2(iocc_b,ivir_a,iocc_a,iocc_b) = -H2B.ovoo;
+
+
+H2(ivir_b,iocc_b,iocc_b,iocc_b) = H2C.vooo;
+
+err = H2 - H_amij;
+norm(err(:))
+% 
+% h_amij_A = H2.vooo(ivir_a,iocc_a,iocc_a,iocc_a);
+% %h_amij_B = H2.vooo(ivir_a,iocc_b,iocc_a,iocc_b) - H2.vooo(ivir_b,iocc_a,iocc_b,iocc_a);
+% h_amij_C = H2.vooo(ivir_b,iocc_b,iocc_b,iocc_b);
+% 
+% err_amij_A = h_amij_A - H_amij(ivir_a,iocc_a,iocc_a,iocc_a);
+% norm(err_amij_A(:))
+% 
+% err_amij_B = h_amij_B - H_amij(ivir_b,iocc_a,iocc_b,iocc_a);
+% norm(err_amij_B(:))
+% 
+% err_amij_C = h_amij_C - H_amij(ivir_b,iocc_b,iocc_b,iocc_b);
+% norm(err_amij_C(:))
+
 
