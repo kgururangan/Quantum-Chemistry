@@ -1,4 +1,4 @@
-function [sys] = build_system_ucc(e1int,e2int,Nocc_alpha,Nocc_beta)
+function [sys] = build_system_ucc(e1int,e2int,Vnuc,Nocc_alpha,Nocc_beta)
 
         
     Norb = size(e1int,1);
@@ -10,7 +10,37 @@ function [sys] = build_system_ucc(e1int,e2int,Nocc_alpha,Nocc_beta)
     ivir_alpha = Nocc_alpha+1:Norb;
     ivir_beta = Nocc_beta+1:Norb;
 
+    Nocc_alpha = length(iocc_alpha); Nocc_beta = length(iocc_beta);
+    Nvir_alpha = length(ivir_alpha); Nvir_beta = length(ivir_beta);
+
+    % Calculate the scf energy
+    hf_energy = 0.0;
+    for i = 1:Nocc_alpha
+        hf_energy = hf_energy + e1int(i,i);
+    end
+    for i = 1:Nocc_beta
+        hf_energy = hf_energy + e1int(i,i);
+    end
+    for i = 1:Nocc_alpha
+        for j = 1:Nocc_beta
+            hf_energy = hf_energy + e2int(i,j,i,j);
+        end
+    end
+    for i = 1:Nocc_alpha
+        for j = 1:Nocc_alpha
+            hf_energy = hf_energy + 0.5*(e2int(i,j,i,j)-e2int(i,j,j,i));
+        end
+    end
+    for i = 1:Nocc_beta
+        for j = 1:Nocc_beta
+            hf_energy = hf_energy + 0.5*(e2int(i,j,i,j)-e2int(i,j,j,i));
+        end
+    end
+
+    sys.Escf = hf_energy + Vnuc;
+
     % populate system structure for spin-integrated post-HF methods
+    sys.Norb = Norb;
     sys.Nelec = Nelec;
     sys.Nocc_alpha = length(iocc_alpha);
     sys.Nocc_beta = length(iocc_beta);
@@ -20,6 +50,20 @@ function [sys] = build_system_ucc(e1int,e2int,Nocc_alpha,Nocc_beta)
     sys.ivir_alpha = ivir_alpha;
     sys.iocc_beta = iocc_beta;
     sys.ivir_beta = ivir_beta;
+
+    sys.doubles_dim = Nocc_alpha*Nvir_alpha + ...
+                      Nocc_beta*Nvir_beta + ...
+                      Nocc_alpha^2*Nvir_alpha^2 + ...
+                      Nocc_alpha*Nocc_beta*Nvir_alpha*Nvir_beta + ...
+                      Nocc_beta^2*Nvir_beta^2;
+
+    post1a = 1:Nocc_alpha*Nvir_alpha;
+    post1b = [post1a(end)+1:post1a(end)+Nocc_beta*Nvir_beta];
+    post2a = [post1b(end)+1:post1b(end)+Nocc_alpha^2*Nvir_beta^2];
+    post2b = [post2a(end)+1:post2a(end)+Nocc_alpha*Nocc_beta*Nvir_alpha*Nvir_beta];
+    post2c = [post2b(end)+1:post2b(end)+Nocc_beta^2*Nvir_beta^2];
+    sys.posv = {post1a, post1b, post2a, post2b, post2c};
+    
     
     % build antisymmetrized twobody integrals
     VA = e2int - permute(e2int,[1,2,4,3]);
@@ -40,17 +84,22 @@ function [sys] = build_system_ucc(e1int,e2int,Nocc_alpha,Nocc_beta)
                end
         end
     end
-    
+
+    % diagonal fock masks
+    Zocc_alpha = ones(sys.Nocc_alpha) - eye(sys.Nocc_alpha);
+    Zvir_alpha = ones(sys.Nvir_alpha) - eye(sys.Nvir_alpha);
+    Zocc_beta = ones(sys.Nocc_beta) - eye(sys.Nocc_beta);
+    Zvir_beta = ones(sys.Nvir_beta) - eye(sys.Nvir_beta);
     
     % f1A
-    sys.fa_oo = FA(iocc_alpha, iocc_alpha); 
-    sys.fa_vv = FA(ivir_alpha, ivir_alpha);
+    sys.fa_oo = FA(iocc_alpha, iocc_alpha);  sys.fa_oo_masked = sys.fa_oo.*Zocc_alpha;
+    sys.fa_vv = FA(ivir_alpha, ivir_alpha);  sys.fa_vv_masked = sys.fa_vv.*Zvir_alpha;
     sys.fa_ov = FA(iocc_alpha, ivir_alpha);
     sys.fa_vo = FA(ivir_alpha, iocc_alpha);
 
     % f1B
-    sys.fb_oo = FB(iocc_beta, iocc_beta);
-    sys.fb_vv = FB(ivir_beta, ivir_beta);
+    sys.fb_oo = FB(iocc_beta, iocc_beta);   sys.fb_oo_masked = sys.fb_oo.*Zocc_beta;
+    sys.fb_vv = FB(ivir_beta, ivir_beta);   sys.fb_vv_masked = sys.fb_vv.*Zvir_beta;
     sys.fb_ov = FB(iocc_beta, ivir_beta);
     sys.fb_vo = FB(ivir_beta, iocc_beta);
 
