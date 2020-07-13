@@ -28,11 +28,19 @@ function [] = calc_driver_main(input_file)
     filename = strip(split(input_file,'.')); proj_name = filename{1};
 	
     fprintf('\nProject Name: %s\n',proj_name)
-    fprintf('---------------------------------\n')	
+    fprintf('%s\n',repmat('-',1,length(proj_name)+20))	
     fprintf('Working directory: %s\n\n',pwd')
 
     % Parse input to get system information and integral locations
     [Nelec, nfzc, nfzv, nact_h, nact_p, onebody_path, twobody_path, run] = parse_input(input_file);
+
+    % Load in onebody and twobody integrals
+    if run.left_cc == 1
+	    fprintf('\nCalculation Type = %s + Left-CC\n\n',run.calc_type)
+    else
+	    fprintf('\nCalculation Type = %s\n\n',run.calc_type)
+    end
+
     % Load in onebody and twobody integrals
     fprintf('Onebody file: %s\n',onebody_path)
     fprintf('Twobody file: %s\n',twobody_path)
@@ -48,14 +56,8 @@ function [] = calc_driver_main(input_file)
 
     hf_energy = calculate_hf_energy(e1int,e2int,Nocc_a,Nocc_b);
 
-    if run.left_cc == 1
-	    fprintf('\nCalculation Type = %s + Left-CC\n',run.calc_type)
-    else
-	    fprintf('\nCalculation Type = %s\n',run.calc_type)
-    end
-
     sys_cc = build_system_cc(e1int,e2int,Vnuc,Nocc_a,Nocc_b,nfzc,nfzv,nact_h,nact_p);
-    sys_ucc = build_system_ucc(e1int,e2int,Nocc_a,Nocc_b);
+    sys_ucc = build_system_ucc(e1int,e2int,Vnuc,Nocc_a,Nocc_b);
 
     fprintf('System Information:\n')
     fprintf('---------------------\n')
@@ -160,7 +162,7 @@ function [] = calc_driver_main(input_file)
             eomopts.nvec_per_root = run.nvec_per_root;
             eomopts.max_nvec_per_root = run.max_nvec_per_root;
             eomopts.flag_verbose = 1;
-            eomopts.init_guess = 'cis';
+            eomopts.init_guess = run.eom_guess;
             eomopts.thresh_vec = 10*run.eom_tol;
 	    
             [Rvec, omega, r0, eom_residual] = eomccsd(HBar,t1,t2,sys_cc,eomopts);

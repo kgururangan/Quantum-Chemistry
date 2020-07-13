@@ -1,0 +1,87 @@
+==========================================================================================================================
+================================================== Coupled-Cluster MATLAB ================================================
+==========================================================================================================================
+
+Repository online: <https://github.com/kgururangan/Quantum-Chemistry.git>
+Author: Karthik Gururangan (gururang@msu.edu)
+
+
+Host Information
+--------------------
+Computer: MACI64
+MATLAB
+Version:  9.8
+Realease: (R2020a)
+Date: 18-Nov-2019
+
+
+Project Name: h2o-631g-stretched-uccsd
+--------------------------------------------
+Working directory: /Users/karthik/Dropbox/Hartree Fock/hartree_fock/v4/CC_matlab
+
+
+Calculation Type = UCCSD + Left-CC
+
+Onebody file: /Users/karthik/Desktop/CC_matlab_tests/h2o-631g/stretched/onebody.inp
+Twobody file: /Users/karthik/Desktop/CC_matlab_tests/h2o-631g/stretched/twobody.inp
+Loading integrals... completed!
+System Information:
+---------------------
+   Number of electrons = 10
+   Number of spatial orbitals = 26
+   Number of frozen core spatial orbitals = 0
+   Number of frozen virtual spatial orbitals = 0
+   Number of occupied orbitals (alpha) = 5
+   Number of occupied orbitals (beta) = 5
+   Number of unoccupied orbitals (alpha) = 8
+   Number of unoccupied orbitals (beta) = 8
+   Number of active occupied spatial orbitals = 10
+   Number of active unoccupied spatial orbitals = 16
+
+
+Molecular Orbital Basis
+------------------------
+	Nuclear Repulsion Energy = 5.531500914263 Ha
+	Reference Energy = -75.719966295157 Ha
+
+	MO Index     Energy (Ha)      Occupied
+	----------------------------------------
+	1	    -20.64648568         *
+	2	    -1.20421757         *
+	3	    -0.49714024         *
+	4	    -0.48885274         *
+	5	    -0.45642794         *
+	6	    0.02552666         
+	7	    0.10130296         
+	8	    0.91788151         
+	9	    0.97087566         
+	10	    1.16293626         
+	11	    1.23575969         
+	12	    1.37437768         
+	13	    1.44848415         
+
+Calculation started on Monday, July 13, 2020 2:00 PM (13-Jul-2020 14:00:24) 
+
+==================================++Entering UCCSD Routine++=================================
+
+Iter-1     Residuum = 0.005473976625      Ecorr = 0.000000000000      Elapsed Time = 0.32 s
+Iter-2     Residuum = 0.001830078891      Ecorr = -0.181802440984      Elapsed Time = 0.09 s
+Iter-3     Residuum = 0.000972050957      Ecorr = -0.195733659889      Elapsed Time = 0.09 s
+Iter-4     Residuum = 0.000572828233      Ecorr = -0.204173832628      Elapsed Time = 0.11 s
+Iter-5     Residuum = 0.000353613498      Ecorr = -0.208682852713      Elapsed Time = 0.19 s
+Iter-6     Residuum = 0.000225425912      Ecorr = -0.211213556520      Elapsed Time = 0.09 s
+Iter-7     Residuum = 0.000018041609      Ecorr = -0.214961238481      Elapsed Time = 0.13 s
+Iter-8     Residuum = 0.000008612060      Ecorr = -0.214972242474      Elapsed Time = 0.08 s
+Iter-9     Residuum = 0.000004247076      Ecorr = -0.214956199974      Elapsed Time = 0.10 s
+Iter-10     Residuum = 0.000002167305      Ecorr = -0.214964038023      Elapsed Time = 0.10 s
+Iter-11     Residuum = 0.000001177709      Ecorr = -0.214979285275      Elapsed Time = 0.09 s
+Iter-12     Residuum = 0.000000696322      Ecorr = -0.214990334649      Elapsed Time = 0.09 s
+Iter-13     Residuum = 0.000000318573      Ecorr = -0.214995853001      Elapsed Time = 0.07 s
+Iter-14     Residuum = 0.000000128067      Ecorr = -0.214997596480      Elapsed Time = 0.07 s
+Iter-15     Residuum = 0.000000055985      Ecorr = -0.214997289464      Elapsed Time = 0.08 s
+Iter-16     Residuum = 0.000000029269      Ecorr = -0.214997001799      Elapsed Time = 0.07 s
+Iter-17     Residuum = 0.000000016936      Ecorr = -0.214996750512      Elapsed Time = 0.07 s
+UCCSD successfully converged in 18 iterations (1.92 seconds)
+Total Energy = -75.934962962725 Ha     Ecorr = -0.214996667568 Ha
+
+Calculation ended on Monday, July 13, 2020 2:00 PM (13-Jul-2020 14:00:26) 
