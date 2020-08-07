@@ -59,31 +59,31 @@ Molecular Orbital Basis
 	12	    1.37437768         
 	13	    1.44848415         
 
-Calculation started on Monday, July 6, 2020 10:46 AM (06-Jul-2020 10:46:33) 
+Calculation started on Monday, July 6, 2020 5:40 PM (06-Jul-2020 17:40:13) 
 
 ==================================++Entering CCSD Routine++=================================
 
-Iter-0     Residuum = 0.004035962532      Ecorr = 0.000000000000      Elapsed Time = 0.25 s
-Iter-1     Residuum = 0.001199899151      Ecorr = -0.194141895479      Elapsed Time = 0.05 s
-Iter-2     Residuum = 0.000645518753      Ecorr = -0.191161225061      Elapsed Time = 0.04 s
-Iter-3     Residuum = 0.000372012276      Ecorr = -0.203714575866      Elapsed Time = 0.05 s
+Iter-0     Residuum = 0.004035962532      Ecorr = 0.000000000000      Elapsed Time = 0.32 s
+Iter-1     Residuum = 0.001199899151      Ecorr = -0.194141895479      Elapsed Time = 0.10 s
+Iter-2     Residuum = 0.000645518753      Ecorr = -0.191161225061      Elapsed Time = 0.05 s
+Iter-3     Residuum = 0.000372012276      Ecorr = -0.203714575866      Elapsed Time = 0.06 s
 Iter-4     Residuum = 0.000232708783      Ecorr = -0.207994550901      Elapsed Time = 0.08 s
-Iter-5     Residuum = 0.000149938358      Ecorr = -0.210820015481      Elapsed Time = 0.07 s
+Iter-5     Residuum = 0.000149938358      Ecorr = -0.210820015481      Elapsed Time = 0.04 s
 Iter-6     Residuum = 0.000100212579      Ecorr = -0.212384288196      Elapsed Time = 0.08 s
-Iter-7     Residuum = 0.000006788367      Ecorr = -0.215030612340      Elapsed Time = 0.04 s
-Iter-8     Residuum = 0.000003133146      Ecorr = -0.214953034106      Elapsed Time = 0.04 s
-Iter-9     Residuum = 0.000001468623      Ecorr = -0.214993526095      Elapsed Time = 0.03 s
-Iter-10     Residuum = 0.000000584664      Ecorr = -0.214995222865      Elapsed Time = 0.03 s
-Iter-11     Residuum = 0.000000324214      Ecorr = -0.215000459194      Elapsed Time = 0.03 s
-Iter-12     Residuum = 0.000000150371      Ecorr = -0.214997856770      Elapsed Time = 0.03 s
-Iter-13     Residuum = 0.000000065818      Ecorr = -0.214998244770      Elapsed Time = 0.03 s
-Iter-14     Residuum = 0.000000037343      Ecorr = -0.214997341455      Elapsed Time = 0.03 s
-Iter-15     Residuum = 0.000000014852      Ecorr = -0.214996939546      Elapsed Time = 0.06 s
-CCSD successfully converged in 16 iterations (1.02 seconds)
+Iter-7     Residuum = 0.000006788367      Ecorr = -0.215030612340      Elapsed Time = 0.07 s
+Iter-8     Residuum = 0.000003133146      Ecorr = -0.214953034106      Elapsed Time = 0.08 s
+Iter-9     Residuum = 0.000001468623      Ecorr = -0.214993526095      Elapsed Time = 0.05 s
+Iter-10     Residuum = 0.000000584664      Ecorr = -0.214995222865      Elapsed Time = 0.06 s
+Iter-11     Residuum = 0.000000324214      Ecorr = -0.215000459194      Elapsed Time = 0.04 s
+Iter-12     Residuum = 0.000000150371      Ecorr = -0.214997856770      Elapsed Time = 0.04 s
+Iter-13     Residuum = 0.000000065818      Ecorr = -0.214998244770      Elapsed Time = 0.08 s
+Iter-14     Residuum = 0.000000037343      Ecorr = -0.214997341455      Elapsed Time = 0.06 s
+Iter-15     Residuum = 0.000000014852      Ecorr = -0.214996939546      Elapsed Time = 0.08 s
+CCSD successfully converged in 16 iterations (1.42 seconds)
 Total Energy = -75.934962949036 Ha     Ecorr = -0.214996653880 Ha
 
 ==============================================
-Building HBar... completed in 0.60 seconds
+Building HBar... completed in 0.55 seconds
 ==============================================
 
 ==================================++Entering EOM-CCSD Routine++=============================
@@ -220,59 +220,59 @@ Iter-19    Subspace size - 15
    Root - 2     e = 0.0829276531     |r| = 0.0000003251
    Root - 3     e = 0.0829276531     |r| = 0.0000003253
 
-Davidson successfully converged in 19 iterations (23.22 seconds)
+Davidson successfully converged in 19 iterations (34.43 seconds)
 
 ==================================++Entering Left-CCSD Routine++=============================
 
-Iter-0     Residuum = 0.031769690749      Ecorr = -0.178139660645      Elapsed Time = 0.22 s
-Iter-1     Residuum = 0.015708955224      Ecorr = -0.196553382842      Elapsed Time = 0.15 s
-Iter-2     Residuum = 0.010122814852      Ecorr = -0.203012733591      Elapsed Time = 0.17 s
-Iter-3     Residuum = 0.006677471539      Ecorr = -0.207052528070      Elapsed Time = 0.14 s
-Iter-4     Residuum = 0.001261272674      Ecorr = -0.213483580690      Elapsed Time = 0.15 s
-Iter-5     Residuum = 0.000495867553      Ecorr = -0.214401319471      Elapsed Time = 0.15 s
-Iter-6     Residuum = 0.000248967478      Ecorr = -0.214697753690      Elapsed Time = 0.14 s
-Iter-7     Residuum = 0.000096292533      Ecorr = -0.214881049670      Elapsed Time = 0.18 s
-Iter-8     Residuum = 0.000024634572      Ecorr = -0.214967078609      Elapsed Time = 0.15 s
-Iter-9     Residuum = 0.000006148304      Ecorr = -0.214989272462      Elapsed Time = 0.16 s
-Iter-10     Residuum = 0.000002844729      Ecorr = -0.214993238606      Elapsed Time = 0.16 s
-Iter-11     Residuum = 0.000001219075      Ecorr = -0.214995190304      Elapsed Time = 0.14 s
-Iter-12     Residuum = 0.000000702302      Ecorr = -0.214995810722      Elapsed Time = 0.14 s
-Iter-13     Residuum = 0.000000332479      Ecorr = -0.214996254717      Elapsed Time = 0.17 s
-Iter-14     Residuum = 0.000000162638      Ecorr = -0.214996458623      Elapsed Time = 0.14 s
-Iter-15     Residuum = 0.000000076536      Ecorr = -0.214996561993      Elapsed Time = 0.14 s
-Iter-16     Residuum = 0.000000032805      Ecorr = -0.214996614496      Elapsed Time = 0.16 s
-Iter-17     Residuum = 0.000000117503      Ecorr = -0.214996512810      Elapsed Time = 0.23 s
-Iter-18     Residuum = 0.000000089964      Ecorr = -0.214996545873      Elapsed Time = 0.16 s
-Iter-19     Residuum = 0.000000089964      Ecorr = -0.214996545873      Elapsed Time = 0.15 s
-Iter-20     Residuum = 0.000000089964      Ecorr = -0.214996545873      Elapsed Time = 0.15 s
-Iter-21     Residuum = 0.000000069769      Ecorr = -0.214996570118      Elapsed Time = 0.19 s
-Iter-22     Residuum = 0.000000069769      Ecorr = -0.214996570118      Elapsed Time = 0.24 s
-Iter-23     Residuum = 0.000000069769      Ecorr = -0.214996570118      Elapsed Time = 0.17 s
-Iter-24     Residuum = 0.000000054530      Ecorr = -0.214996588413      Elapsed Time = 0.17 s
-Iter-25     Residuum = 0.000000054530      Ecorr = -0.214996588413      Elapsed Time = 0.17 s
+Iter-0     Residuum = 0.031769690749      Ecorr = -0.178139660645      Elapsed Time = 0.38 s
+Iter-1     Residuum = 0.015708955224      Ecorr = -0.196553382842      Elapsed Time = 0.23 s
+Iter-2     Residuum = 0.010122814852      Ecorr = -0.203012733591      Elapsed Time = 0.23 s
+Iter-3     Residuum = 0.006677471539      Ecorr = -0.207052528070      Elapsed Time = 0.20 s
+Iter-4     Residuum = 0.001261272674      Ecorr = -0.213483580690      Elapsed Time = 0.23 s
+Iter-5     Residuum = 0.000495867553      Ecorr = -0.214401319471      Elapsed Time = 0.27 s
+Iter-6     Residuum = 0.000248967478      Ecorr = -0.214697753690      Elapsed Time = 0.21 s
+Iter-7     Residuum = 0.000096292533      Ecorr = -0.214881049670      Elapsed Time = 0.31 s
+Iter-8     Residuum = 0.000024634572      Ecorr = -0.214967078609      Elapsed Time = 0.24 s
+Iter-9     Residuum = 0.000006148304      Ecorr = -0.214989272462      Elapsed Time = 0.28 s
+Iter-10     Residuum = 0.000002844729      Ecorr = -0.214993238606      Elapsed Time = 0.23 s
+Iter-11     Residuum = 0.000001219075      Ecorr = -0.214995190304      Elapsed Time = 0.20 s
+Iter-12     Residuum = 0.000000702302      Ecorr = -0.214995810722      Elapsed Time = 0.24 s
+Iter-13     Residuum = 0.000000332479      Ecorr = -0.214996254717      Elapsed Time = 0.28 s
+Iter-14     Residuum = 0.000000162638      Ecorr = -0.214996458623      Elapsed Time = 0.21 s
+Iter-15     Residuum = 0.000000076536      Ecorr = -0.214996561993      Elapsed Time = 0.20 s
+Iter-16     Residuum = 0.000000032805      Ecorr = -0.214996614496      Elapsed Time = 0.22 s
+Iter-17     Residuum = 0.000000117503      Ecorr = -0.214996512810      Elapsed Time = 0.30 s
+Iter-18     Residuum = 0.000000089964      Ecorr = -0.214996545873      Elapsed Time = 0.22 s
+Iter-19     Residuum = 0.000000089964      Ecorr = -0.214996545873      Elapsed Time = 0.22 s
+Iter-20     Residuum = 0.000000089964      Ecorr = -0.214996545873      Elapsed Time = 0.21 s
+Iter-21     Residuum = 0.000000069769      Ecorr = -0.214996570118      Elapsed Time = 0.22 s
+Iter-22     Residuum = 0.000000069769      Ecorr = -0.214996570118      Elapsed Time = 0.32 s
+Iter-23     Residuum = 0.000000069769      Ecorr = -0.214996570118      Elapsed Time = 0.21 s
+Iter-24     Residuum = 0.000000054530      Ecorr = -0.214996588413      Elapsed Time = 0.22 s
+Iter-25     Residuum = 0.000000054530      Ecorr = -0.214996588413      Elapsed Time = 0.21 s
 Iter-26     Residuum = 0.000000054530      Ecorr = -0.214996588413      Elapsed Time = 0.21 s
-Iter-27     Residuum = 0.000000042779      Ecorr = -0.214996602520      Elapsed Time = 0.19 s
-Iter-28     Residuum = 0.000000042779      Ecorr = -0.214996602520      Elapsed Time = 0.17 s
-Iter-29     Residuum = 0.000000042779      Ecorr = -0.214996602520      Elapsed Time = 0.17 s
-Iter-30     Residuum = 0.000000033637      Ecorr = -0.214996613496      Elapsed Time = 0.17 s
-Iter-31     Residuum = 0.000000033637      Ecorr = -0.214996613496      Elapsed Time = 0.17 s
-Iter-32     Residuum = 0.000000033637      Ecorr = -0.214996613496      Elapsed Time = 0.17 s
-Iter-33     Residuum = 0.000000026488      Ecorr = -0.214996622079      Elapsed Time = 0.15 s
-Iter-34     Residuum = 0.000000026488      Ecorr = -0.214996622079      Elapsed Time = 0.15 s
-Iter-35     Residuum = 0.000000026488      Ecorr = -0.214996622079      Elapsed Time = 0.16 s
-Iter-36     Residuum = 0.000000020881      Ecorr = -0.214996628811      Elapsed Time = 0.17 s
-Iter-37     Residuum = 0.000000020881      Ecorr = -0.214996628811      Elapsed Time = 0.16 s
-Iter-38     Residuum = 0.000000020881      Ecorr = -0.214996628811      Elapsed Time = 0.15 s
-Iter-39     Residuum = 0.000000016474      Ecorr = -0.214996634102      Elapsed Time = 0.15 s
-Iter-40     Residuum = 0.000000016474      Ecorr = -0.214996634102      Elapsed Time = 0.15 s
-Iter-41     Residuum = 0.000000016474      Ecorr = -0.214996634102      Elapsed Time = 0.15 s
-Iter-42     Residuum = 0.000000013005      Ecorr = -0.214996638266      Elapsed Time = 0.15 s
-Iter-43     Residuum = 0.000000013005      Ecorr = -0.214996638266      Elapsed Time = 0.15 s
-Iter-44     Residuum = 0.000000013005      Ecorr = -0.214996638266      Elapsed Time = 0.16 s
-Iter-45     Residuum = 0.000000010273      Ecorr = -0.214996641547      Elapsed Time = 0.15 s
-Iter-46     Residuum = 0.000000010273      Ecorr = -0.214996641547      Elapsed Time = 0.15 s
-Iter-47     Residuum = 0.000000010273      Ecorr = -0.214996641547      Elapsed Time = 0.15 s
-Left-CCSD successfully converged in 48 iterations (8.05 seconds)
+Iter-27     Residuum = 0.000000042779      Ecorr = -0.214996602520      Elapsed Time = 0.26 s
+Iter-28     Residuum = 0.000000042779      Ecorr = -0.214996602520      Elapsed Time = 0.21 s
+Iter-29     Residuum = 0.000000042779      Ecorr = -0.214996602520      Elapsed Time = 0.24 s
+Iter-30     Residuum = 0.000000033637      Ecorr = -0.214996613496      Elapsed Time = 0.21 s
+Iter-31     Residuum = 0.000000033637      Ecorr = -0.214996613496      Elapsed Time = 0.29 s
+Iter-32     Residuum = 0.000000033637      Ecorr = -0.214996613496      Elapsed Time = 0.26 s
+Iter-33     Residuum = 0.000000026488      Ecorr = -0.214996622079      Elapsed Time = 0.27 s
+Iter-34     Residuum = 0.000000026488      Ecorr = -0.214996622079      Elapsed Time = 0.22 s
+Iter-35     Residuum = 0.000000026488      Ecorr = -0.214996622079      Elapsed Time = 0.21 s
+Iter-36     Residuum = 0.000000020881      Ecorr = -0.214996628811      Elapsed Time = 0.22 s
+Iter-37     Residuum = 0.000000020881      Ecorr = -0.214996628811      Elapsed Time = 0.24 s
+Iter-38     Residuum = 0.000000020881      Ecorr = -0.214996628811      Elapsed Time = 0.28 s
+Iter-39     Residuum = 0.000000016474      Ecorr = -0.214996634102      Elapsed Time = 0.24 s
+Iter-40     Residuum = 0.000000016474      Ecorr = -0.214996634102      Elapsed Time = 0.20 s
+Iter-41     Residuum = 0.000000016474      Ecorr = -0.214996634102      Elapsed Time = 0.21 s
+Iter-42     Residuum = 0.000000013005      Ecorr = -0.214996638266      Elapsed Time = 0.22 s
+Iter-43     Residuum = 0.000000013005      Ecorr = -0.214996638266      Elapsed Time = 0.26 s
+Iter-44     Residuum = 0.000000013005      Ecorr = -0.214996638266      Elapsed Time = 0.19 s
+Iter-45     Residuum = 0.000000010273      Ecorr = -0.214996641547      Elapsed Time = 0.27 s
+Iter-46     Residuum = 0.000000010273      Ecorr = -0.214996641547      Elapsed Time = 0.25 s
+Iter-47     Residuum = 0.000000010273      Ecorr = -0.214996641547      Elapsed Time = 0.26 s
+Left-CCSD successfully converged in 48 iterations (11.76 seconds)
 
 ==================================++Entering Left-EOM-CCSD Routine++===========================
 
@@ -378,7 +378,7 @@ Iter-16:
    Root - 2     e = -0.1320689673     |r| = 0.0000004617
    Root - 3     e = -0.1320689673     |r| = 0.0000004501
 
-Left-EOMCCSD successfully converged in 17 iterations (23.27 seconds)
+Left-EOMCCSD successfully converged in 17 iterations (27.38 seconds)
 |LR - 1| = 0.000000008204
 
-Calculation ended on Monday, July 6, 2020 10:47 AM (06-Jul-2020 10:47:29) 
+Calculation ended on Monday, July 6, 2020 5:41 PM (06-Jul-2020 17:41:29) 

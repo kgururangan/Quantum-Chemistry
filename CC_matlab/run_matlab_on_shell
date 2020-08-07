@@ -1,0 +1,9 @@
+# The MATLAB R2020A executable is found by going to the normal Matlab IDE and typing
+ matlabroot
+# This will produce
+ '/Applications/MATLAB_R2020a.app'
+# The command line command 'matlab' is aliased to call this executable with the -batch option, so
+ /Users/karthik/Applications/MATLAB_R2020a.app/bin/matlab -batch "statements"
+# "statements" is any list of Matlab code. So, to call a function with arguments, we have 
+matlab "function(arg1,arg2,...)" 
+# where "function" refers to function.m. The .m extension is always left out 
