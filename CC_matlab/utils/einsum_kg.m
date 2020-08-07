@@ -61,45 +61,55 @@ in=s{1};
 out=s{2};
 
 in=split(in,',');
+% 
+%     if length(in) == 1 % permutation
+%         for i = 1:length(in)
+%             for j = 1:length(out)
+%                 if out(j) == in(i)
+%                     final_permutation(i) = j;
+%                 end
+%             end
+%          end
+%     else
 
-idxA=in{1};
-idxB=in{2};
+        idxA=in{1};
+        idxB=in{2};
 
-final_permutation = [];
-iA_con = [];
-iB_con = [];
+        final_permutation = [];
+        iA_con = [];
+        iB_con = [];
 
-for i=1:length(idxA)
-    
-    j=find(idxB==idxA(i));
-    
-    if isempty(j)   % i is an output index
-        
-        j=find(out==idxA(i));
-        final_permutation(end+1)=j;%#ok<AGROW>
-        
-    else            % i is contracted
-        
-        iA_con(end+1)=i; 
-        iB_con(end+1)=j; 
-        
-    end
-end
+        for i=1:length(idxA)
 
-for i=1:length(idxB)
-    
-    j=find(idxB(i)==out);
-    
-    if ~isempty(j)   % i is an output index
-        final_permutation(end+1)=j;
-    end
-    
-end
+            j=find(idxB==idxA(i));
 
+            if isempty(j)   % i is an output index
 
-[~, final_permutation]=sort(final_permutation);
+                j=find(out==idxA(i));
+                final_permutation(end+1)=j;%#ok<AGROW>
+
+            else            % i is contracted
+
+                iA_con(end+1)=i; 
+                iB_con(end+1)=j; 
+
+            end
+        end
+
+        for i=1:length(idxB)
+
+            j=find(idxB(i)==out);
+
+            if ~isempty(j)   % i is an output index
+                final_permutation(end+1)=j;
+            end
+
+        end
 
 
+        [~, final_permutation]=sort(final_permutation);
+
+%     end
 end
 
 function C = OuterProduct(A, B)  % version 5

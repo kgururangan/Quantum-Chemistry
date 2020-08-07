@@ -74,11 +74,15 @@ function [sys] = build_system_cc(e1int,e2int,Vnuc,Nocc_a,Nocc_b,NFZ_core,NFZ_vir
     % active space
     M1 = min(Nocc,2*Nact_h);
     M2 = min(Nunocc,2*Nact_p);
+
     % used for slicing FM and VM
     iact_h = [Nelec-M1+1:Nelec];
     iact_p = [Nelec+1:Nelec+M2];
+
+    sys.e1int = e1int;
+    sys.e2int = e2int;
     
-    sys.Norb = 2*Norb;
+    sys.Norb = Norb;
     sys.FM = FM;
     sys.VM = VM;
     sys.occ_list = occ;
@@ -111,8 +115,8 @@ function [sys] = build_system_cc(e1int,e2int,Vnuc,Nocc_a,Nocc_b,NFZ_core,NFZ_vir
     sys.triples3_dim = sys.Nov + sys.Noovv + M1^3*M2^3;
     sys.posv1 = 1:sys.singles_dim;
     sys.posv2 = sys.singles_dim+1:sys.doubles_dim;
-    sys.posv3 = sys.doubles_dim+1:sys.triples_dim;
-    sys.posv3_act = sys.doubles_dim+1:sys.triples3_dim;
+%    sys.posv3 = sys.doubles_dim+1:sys.triples_dim;
+%    sys.posv3_act = sys.doubles_dim+1:sys.triples3_dim;
     
     % occupied/unocciuped slicing of FM and VM matrices
     sys.foo = FM(occ,occ);
