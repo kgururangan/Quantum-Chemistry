@@ -1,11 +1,13 @@
 function [MM23] = build_MM23(t1,t2,HBar)
+
+    fprintf('MMCC(2,3) construction... ')
     
     tic
 
     h_me = HBar{1}{1,2};
     h_amij = HBar{2}{2,1,1,1};
     h_abie = HBar{2}{2,2,1,2};
-    
+
     I12 = h_abie-einsum_kg(h_me,t2,'me,abim->abie');
     
     % < phi_{ijkabc} | H_{CCSD} | 0 >
@@ -30,6 +32,6 @@ function [MM23] = build_MM23(t1,t2,HBar)
                  +einsum_kg(I12,t2,'cbke,eaji->abcijk') ... % (ac)(ik)
                  +einsum_kg(I12,t2,'acke,ebji->abcijk');    % (bc)(ik)
 
-    fprintf('MM(2,3) constructed in %4.2f s\n',toc)
+    fprintf(' finished in %4.2f s\n',toc)
 end
 

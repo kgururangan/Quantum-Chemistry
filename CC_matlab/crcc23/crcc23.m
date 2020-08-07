@@ -12,8 +12,10 @@ function [Ecorr_crcc23A,Ecorr_crcc23B,Ecorr_crcc23C,Ecorr_crcc23D] = crcc23(t1,t
     deltaC = 0.0; % using EN denominator -<phi_{ijk}^{abc} | H_1(CCSD) + H_2(CCSD) | phi_{ijk}^{abc}>
     deltaD = 0.0; % using EN denominator -<phi_{ijk}^{abc} | H_1(CCSD) + H_2(CCSD) + H_3(CCSD) | phi_{ijk}^{abc}>
     
-    fprintf('\nCalculating MM correction...\n')
+    fprintf('MM Correction calculation...')
     tic
+    
+    LR = 0.0;
 
     for a = 1:sys.Nunocc
         for b = a+1:sys.Nunocc
@@ -21,6 +23,8 @@ function [Ecorr_crcc23A,Ecorr_crcc23B,Ecorr_crcc23C,Ecorr_crcc23D] = crcc23(t1,t
                 for i = 1:sys.Nocc
                     for j = i+1:sys.Nocc
                         for k = j+1:sys.Nocc
+                            
+                            LR = LR + L3(i,j,k,a,b,c)*MM23(a,b,c,i,j,k);
 
                             temp = L3(i,j,k,a,b,c)*MM23(a,b,c,i,j,k);
 
@@ -53,13 +57,20 @@ function [Ecorr_crcc23A,Ecorr_crcc23B,Ecorr_crcc23C,Ecorr_crcc23D] = crcc23(t1,t
     Ecorr_crcc23C = Ecorr_ccsd + deltaC;
     Ecorr_crcc23D = Ecorr_ccsd + deltaD;
 
-    fprintf('MM correction completed in %4.2f s\n',toc)
+    E_crcc23A = sys.Escf + Ecorr_ccsd + deltaA;
+    E_crcc23B = sys.Escf + Ecorr_ccsd + deltaB;
+    E_crcc23C = sys.Escf + Ecorr_ccsd + deltaC;
+    E_crcc23D = sys.Escf + Ecorr_ccsd + deltaD;
+
+    fprintf(' finished in %4.2f s\n',toc)
+    
+    fprintf('<LR> %4.12f\',LR)
 
     fprintf('\n')
-    fprintf('CR-CC(2,3)_A = %4.12f Ha     Delta_A = %4.12f Ha\n',Ecorr_crcc23A,deltaA)
-    fprintf('CR-CC(2,3)_B = %4.12f Ha     Delta_B = %4.12f Ha\n',Ecorr_crcc23B,deltaB)
-    fprintf('CR-CC(2,3)_C = %4.12f Ha     Delta_C = %4.12f Ha\n',Ecorr_crcc23C,deltaC)
-    fprintf('CR-CC(2,3)_D = %4.12f Ha     Delta_D = %4.12f Ha \n',Ecorr_crcc23D,deltaD)
+    fprintf('CR-CC(2,3)_A = %4.12f Eh     Ecorr = %4.12f Eh     Delta_A = %4.12f Eh\n',E_crcc23A,Ecorr_crcc23A,deltaA)
+    fprintf('CR-CC(2,3)_B = %4.12f Eh     Ecorr = %4.12f Eh     Delta_B = %4.12f Eh\n',E_crcc23B,Ecorr_crcc23B,deltaB)
+    fprintf('CR-CC(2,3)_C = %4.12f Eh     Ecorr = %4.12f Eh     Delta_C = %4.12f Eh\n',E_crcc23C,Ecorr_crcc23C,deltaC)
+    fprintf('CR-CC(2,3)_D = %4.12f Eh     Ecorr = %4.12f Eh     Delta_D = %4.12f Eh \n',E_crcc23D,Ecorr_crcc23D,deltaD)
                 
 
 
