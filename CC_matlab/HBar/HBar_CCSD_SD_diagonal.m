@@ -1,12 +1,15 @@
 function [D, Dia, Dijab] = HBar_CCSD_SD_diagonal(HBar, t1, t2, sys)
 
-    occ = sys.occ;
-    unocc = sys.unocc;
+%     occ = sys.occ;
+%     unocc = sys.unocc;
+%     
+%     VM = sys.VM;
+%     
+%     Nocc = length(occ);
+%     Nunocc = length(unocc);
     
-    VM = sys.VM;
-    
-    Nocc = length(occ);
-    Nunocc = length(unocc);
+    Nocc = sys.Nocc;
+    Nunocc = sys.Nunocc;
 
     Dia = zeros(Nunocc,Nocc);
     Dijab = zeros(Nunocc,Nunocc,Nocc,Nocc);
@@ -44,17 +47,17 @@ function [D, Dia, Dijab] = HBar_CCSD_SD_diagonal(HBar, t1, t2, sys)
                                 
                     Dijab(a,b,i,j) = Dijab(a,b,i,j) + HBar{2}{2,2,2,2}(a,b,a,b) + HBar{2}{1,1,1,1}(i,j,i,j);
                     
-                    for l = 1:Nocc
-                        Dijab(a,b,i,j) = Dijab(a,b,i,j) - ...
-                                         0.5*(VM(occ(j),occ(l),unocc(a),unocc(b))*t2(a,b,j,l) + ...
-                                              VM(occ(i),occ(l),unocc(a),unocc(b))*t2(a,b,i,l));
-                    end
-                    
-                    for d = 1:Nunocc
-                        Dijab(a,b,i,j) = Dijab(a,b,i,j) - ...
-                                         0.5*(VM(occ(i),occ(j),unocc(b),unocc(d))*t2(b,d,i,j) + ...
-                                              VM(occ(i),occ(j),unocc(a),unocc(d))*t2(a,d,i,j));
-                    end
+%                     for l = 1:Nocc
+%                         Dijab(a,b,i,j) = Dijab(a,b,i,j) - ...
+%                                          0.5*(VM(occ(j),occ(l),unocc(a),unocc(b))*t2(a,b,j,l) + ...
+%                                               VM(occ(i),occ(l),unocc(a),unocc(b))*t2(a,b,i,l));
+%                     end
+%                     
+%                     for d = 1:Nunocc
+%                         Dijab(a,b,i,j) = Dijab(a,b,i,j) - ...
+%                                          0.5*(VM(occ(i),occ(j),unocc(b),unocc(d))*t2(b,d,i,j) + ...
+%                                               VM(occ(i),occ(j),unocc(a),unocc(d))*t2(a,d,i,j));
+%                     end
                     
                 end
                 

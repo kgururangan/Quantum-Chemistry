@@ -70,7 +70,11 @@ function [HBar] = build_HBar( t1, t2, sys )
     
     H2{1,1,1,2} = sys.Vooov + einsum_kg(sys.Voovv,t1,'mnfe,fi->mnie'); % W_mnie
     
+    H2{1,1,2,1} = -permute(H2{1,1,1,2},[1,2,4,3]);
+    
     H2{2,1,2,2} = sys.Vvovv - einsum_kg(sys.Voovv,t1,'nmef,an->amef'); % W_amef
+    
+    H2{1,2,2,2} = -permute(H2{2,1,2,2},[2,1,3,4]);
     
     H2{1,2,1,1} =   sys.Vovoo - einsum_kg(H1{1,2},t2,'me,beij->mbij') - einsum_kg(H2{1,1,1,1},t1,'mnij,bn->mbij') + ...
                     0.5*einsum_kg(sys.Vovvv,tau,'mbef,efij->mbij') + ...
@@ -78,6 +82,8 @@ function [HBar] = build_HBar( t1, t2, sys )
                     einsum_kg(sys.Vovvo,t1,'mbej,ei->mbij') - einsum_kg(sys.Vovvo,t1,'mbei,ej->mbij') - ...
                     einsum_kg(einsum_kg(sys.Voovv,t2,'mnef,bfnj->mbej'),t1,'mbej,ei->mbij') + ...
                     einsum_kg(einsum_kg(sys.Voovv,t2,'mnef,bfni->mbei'),t1,'mbei,ej->mbij'); % W_mbij
+
+    H2{2,1,1,1} = -permute(H2{1,2,1,1},[2,1,3,4]);
                 
     H2{2,2,2,1} =   sys.Vvvvo - einsum_kg(H1{1,2},t2,'me,abmi->abei') + einsum_kg(H2{2,2,2,2},t1,'abef,fi->abei') + ...
                     0.5*einsum_kg(sys.Voovo,tau,'mnei,abmn->abei') - ...
@@ -85,6 +91,8 @@ function [HBar] = build_HBar( t1, t2, sys )
                     einsum_kg(sys.Vovvo,t1,'mbei,am->abei') + einsum_kg(sys.Vovvo,t1,'maei,bm->abei') + ...
                     einsum_kg(einsum_kg(sys.Voovv,t2,'mnef,bfni->mbei'),t1,'mbei,am->abei') - ...
                     einsum_kg(einsum_kg(sys.Voovv,t2,'mnef,afni->maei'),t1,'maei,bm->abei'); % W_abei
+
+    H2{2,2,1,2} = -permute(H2{2,2,2,1},[1,2,4,3]);
                 
     H2{2,2,1,1} = zeros(Nunocc,Nunocc,Nocc,Nocc); % zero by CCSD
                 

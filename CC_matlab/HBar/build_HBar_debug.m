@@ -1,7 +1,7 @@
 function [HBar] = build_HBar_debug(t1,t2,sys)
 
     fprintf('\n==============================================\n')
-    fprintf('Building HBar...')
+    fprintf('Building CCSD HBar...')
 
     H1 = cell(2,2);
     H2 = cell(2,2,2,2);
@@ -108,15 +108,54 @@ function [HBar] = build_HBar_debug(t1,t2,sys)
                         einsum_kg(sys.Vovvv,t2,'maef,bfij->abmije') - ...
                         einsum_kg(einsum_kg(sys.Voovv,t1,'mnef,an->maef'),t2,'maef,fbij->abmije') + ...
                         einsum_kg(einsum_kg(sys.Voovv,t1,'mnef,bn->mbef'),t2,'mbef,faij->abmije'); % W_abmije
+    H3{2,1,2,1,2,1} = permute(H3{2,2,1,1,1,2},[1,3,2,4,6,5]);       
+    H3{1,2,2,2,1,1} = permute(H3{2,2,1,1,1,2},[3,1,2,6,4,5]);
+                   
+    H3{1,1,2,1,1,1} = einsum_kg(H2{1,1,1,2},t2,'mnie,ecjk->mncijk')...
+                       -einsum_kg(H2{1,1,1,2},t2,'mnje,ecik->mncijk')...
+                       -einsum_kg(H2{1,1,1,2},t2,'mnke,ecji->mncijk');
+%     H3{1,1,2,1,1,1} = einsum_kg(H2{1,1,1,2},t2,'nmje,ecik->mncijk')...
+%                       -einsum_kg(H2{1,1,1,2},t2,'nmie,ecjk->mncijk')...
+%                       -einsum_kg(H2{1,1,1,2},t2,'nmke,ecij->mncijk');
+    H3{2,1,1,1,1,1} = permute(H3{1,1,2,1,1,1},[3,1,2,4,5,6]);
+    H3{1,2,1,1,1,1} = -permute(H3{1,1,2,1,1,1},[1,3,2,4,5,6]);
+
+    H3{2,2,2,2,2,1} = -einsum_kg(H2{2,1,2,2},t2,'amef,bcmk->abcefk')...
+                      +einsum_kg(H2{2,1,2,2},t2,'bmef,acmk->abcefk')...
+                      +einsum_kg(H2{2,1,2,2},t2,'cmef,bamk->abcefk');
+    H3{2,2,2,2,1,2} = -permute(H3{2,2,2,2,2,1},[1,2,3,4,6,5]);
+    H3{2,2,2,1,2,2} = permute(H3{2,2,2,2,2,1},[1,2,3,6,4,5]);
 
     H3{2,1,1,1,1,2} = einsum_kg(sys.Voovv,t2,'mnfe,afij->amnije'); % W_amnije
-    
-    H3{2,2,1,1,2,2} = -einsum_kg(sys.Voovv,t2,'mnfe,abin->abmief'); % W_abmief
-    
     H3{2,1,1,1,2,1} = -permute(H3{2,1,1,1,1,2},[1,2,3,4,6,5]);
     
+    H3{2,2,1,1,2,2} = -einsum_kg(sys.Voovv,t2,'mnfe,abin->abmief'); % W_abmief
     H3{2,1,2,1,2,2} = -permute(H3{2,2,1,1,2,2},[1,3,2,4,5,6]);
-
+    
+    H3{2,2,2,1,1,2} = -einsum_kg(H2{2,1,1,2},t2,'amie,bcjm->abcije')...
+                      +einsum_kg(H2{2,1,1,2},t2,'amje,bcim->abcije')... %(ij)
+                      +einsum_kg(H2{2,1,1,2},t2,'bmie,acjm->abcije')... %(ab)
+                      +einsum_kg(H2{2,1,1,2},t2,'cmie,bajm->abcije')... %(ac)
+                      -einsum_kg(H2{2,1,1,2},t2,'bmje,acim->abcije')... %(ij)(ab)
+                      -einsum_kg(H2{2,1,1,2},t2,'cmje,baim->abcije')... %(ij)(ac)
+                      +einsum_kg(H2{2,2,2,2},t2,'acfe,fbij->abcije')... 
+                      -einsum_kg(H2{2,2,2,2},t2,'bcfe,faij->abcije')... %(ab)
+                      -einsum_kg(H2{2,2,2,2},t2,'abfe,fcij->abcije');   %(bc)
+    H3{2,2,2,1,2,1} = -permute(H3{2,2,2,1,1,2},[1,2,3,4,6,5]);
+    H3{2,2,2,2,1,1} = permute(H3{2,2,2,1,1,2},[1,2,3,6,4,5]);
+                  
+    H3{2,2,1,1,1,1} = einsum_kg(H2{2,1,1,2},t2,'amie,bejk->abmijk')...
+                      -einsum_kg(H2{2,1,1,2},t2,'bmie,aejk->abmijk')... %(ab)
+                      -einsum_kg(H2{2,1,1,2},t2,'amje,beik->abmijk')... %(ij)
+                      -einsum_kg(H2{2,1,1,2},t2,'amke,beji->abmijk')... %(ik)
+                      +einsum_kg(H2{2,1,1,2},t2,'bmje,aeik->abmijk')... %(ab)(ij)
+                      +einsum_kg(H2{2,1,1,2},t2,'bmke,aeji->abmijk')... %(ab)(ik)
+                      -einsum_kg(H2{1,1,1,1},t2,'mnki,abnj->abmijk')... 
+                      +einsum_kg(H2{1,1,1,1},t2,'mnkj,abni->abmijk')... %(ij)
+                      +einsum_kg(H2{1,1,1,1},t2,'mnji,abnk->abmijk');   %(jk)
+    H3{2,1,2,1,1,1} = -permute(H3{2,2,1,1,1,1},[1,3,2,4,5,6]);
+    H3{1,2,2,1,1,1} = permute(H3{2,2,1,1,1,1},[3,1,2,4,5,6]);
+    
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     HBar = {H1,H2,H3};
