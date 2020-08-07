@@ -3,8 +3,9 @@ Collection of codes used for quantum chemistry calculations based on Hartree-Foc
 
 Contents of Repository:
 
-CC_matlab - most up-to-date set of spin-integrated coupled-cluster codes. Available spin-integrated calculations:
+CC_matlab - most up-to-date set of spin-integrated coupled-cluster codes compatible with molecular orbital (MO) integrals obtained from any commercial quantum cheimstry software. Also contains RHF solver so that MO integrals can be generated in a self-contained manner (however SCF solver is not symmetry-adapted yet). Available spin-integrated calculations:
 
+    - RHF
     - CCSD 
     - CR-CC(2,3) 
     - Left-CCSD
