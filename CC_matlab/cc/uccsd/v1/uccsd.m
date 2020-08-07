@@ -49,11 +49,15 @@ function [t1a,t1b,t2a,t2b,t2c,Ecorr] = uccsd(sys,opts)
         curr_size = size(T1A_list,2);
         
         % build t1 and t2 diagrammatically
-        [chi1A, chi1B, chi2A, chi2B, chi2C] = build_ucc_intermediates(t1a, t1b, t2a, t2b, t2c, sys);
+        %[chi1A, chi1B, chi2A, chi2B, chi2C] = build_ucc_intermediates(t1a, t1b, t2a, t2b, t2c, sys);
         t1a = update_t1a(t1a,t1b,t2a,t2b,t2c,chi1A,chi1B,chi2A,chi2B,chi2C,sys);
+        %[chi1A, chi1B, chi2A, chi2B, chi2C] = build_ucc_intermediates(t1a, t1b, t2a, t2b, t2c, sys);
         t1b = t1a;
+        %[chi1A, chi1B, chi2A, chi2B, chi2C] = build_ucc_intermediates(t1a, t1b, t2a, t2b, t2c, sys);
         t2a = update_t2a(t1a,t1b,t2a,t2b,t2c,chi1A,chi1B,chi2A,chi2B,chi2C,sys);
+        %[chi1A, chi1B, chi2A, chi2B, chi2C] = build_ucc_intermediates(t1a, t1b, t2a, t2b, t2c, sys);
         t2b = update_t2b(t1a,t1b,t2a,t2b,t2c,chi1A,chi1B,chi2A,chi2B,chi2C,sys);
+        %[chi1A, chi1B, chi2A, chi2B, chi2C] = build_ucc_intermediates(t1a, t1b, t2a, t2b, t2c, sys);
         t2c = t2a;
 
         

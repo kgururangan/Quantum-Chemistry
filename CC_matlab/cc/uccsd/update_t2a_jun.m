@@ -1,4 +1,4 @@
-function [t2a] = update_t2a_jun(t1a,t1b,t2a,t2b,t2c,sys)
+function [t2a] = update_t2a_jun(t1a,t1b,t2a,t2b,t2c,sys,shift)
 
     s9 = einsum_kg(sys.vA_oooo,t1a,'mnij,am->ijna');
     s11 = einsum_kg(sys.vA_ovov,t1a,'mbie,ej->ibmj');
@@ -101,7 +101,7 @@ function [t2a] = update_t2a_jun(t1a,t1b,t2a,t2b,t2c,sys)
         for b = a+1:sys.Nvir_alpha
             for i = 1:sys.Nocc_alpha
                 for j = i+1:sys.Nocc_alpha
-                    denom = (sys.fa_oo(i,i)+sys.fa_oo(j,j)-sys.fa_vv(a,a)-sys.fa_vv(b,b));
+                    denom = (sys.fa_oo(i,i)+sys.fa_oo(j,j)-sys.fa_vv(a,a)-sys.fa_vv(b,b)-shift);
                     coef = new_t(a,b,i,j) / denom;
                     t2a(a,b,i,j) = t2a(a,b,i,j) + coef;               
                     t2a(b,a,i,j) = -t2a(a,b,i,j);

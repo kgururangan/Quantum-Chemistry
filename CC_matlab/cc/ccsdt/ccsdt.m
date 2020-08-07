@@ -18,8 +18,8 @@ function [t1,t2,t3,Ecorr] = ccsdt(sys,opts)
     size_t3 = [sys.Nunocc,sys.Nunocc,sys.Nunocc,sys.Nocc,sys.Nocc,sys.Nocc];
     
     % Jacobi/DIIS iterations
-    it = 1; flag_conv = 0;
-    while it < maxit
+    it_micro = 0; flag_conv = 0; it_macro = 0;
+    while it_micro < maxit
         
         tic
         
@@ -62,18 +62,20 @@ function [t1,t2,t3,Ecorr] = ccsdt(sys,opts)
         end
         
         % append trial and residual vectors to lists
-        T_list(:,mod(it,diis_size)+1) = T;
-        T_resid_list(:,mod(it,diis_size)+1) = T_resid;
+        T_list(:,mod(it_micro,diis_size)+1) = T;
+        T_resid_list(:,mod(it_micro,diis_size)+1) = T_resid;
          
         % diis extrapolate
-        if it >= diis_size
+        if mod(it_micro,diis_size) == 0 && it_micro > 1
+           it_macro = it_macro + 1;
+           fprintf('\nDIIS Cycle - %d',it_macro)
            T = diis_xtrap(T_list,T_resid_list);
-        end
+        end    
 
 
-        fprintf('\nIter-%d     Residuum = %4.12f      Ecorr = %4.12f      Elapsed Time = %4.2f s',it,ccsdt_resid,Ecorr,toc);
+        fprintf('\nIter-%d     Residuum = %4.12f      Ecorr = %4.12f      Elapsed Time = %4.2f s',it_micro,ccsdt_resid,Ecorr,toc);
         
-        it = it + 1;
+        it_micro = it_micro + 1;
         
     end
     
@@ -84,7 +86,7 @@ function [t1,t2,t3,Ecorr] = ccsdt(sys,opts)
     Ecorr = cc_energy(t1,t2,sys);
     
     if flag_conv == 1
-        fprintf('\nCCSDT successfully converged in %d iterations (%4.2f seconds)\n',it,toc(tic_Start));
+        fprintf('\nCCSDT successfully converged in %d iterations (%4.2f seconds)\n',it_micro,toc(tic_Start));
         fprintf('Final Correlation Energy = %4.12f Ha\n',Ecorr);
     else
         fprintf('\nCCSDT failed to converged in %d iterations\n',maxit)

@@ -1,4 +1,4 @@
-function [t2b] = update_t2b(t1a, t1b, t2a, t2b, t2c, chi1A, chi1B, chi2A, chi2B, chi2C, sys)
+function [t2b] = update_t2b(t1a, t1b, t2a, t2b, t2c, chi1A, chi1B, chi2A, chi2B, chi2C, sys, shift)
 
     X2b_abij = sys.vB_vvoo ... % 1
                -einsum_kg(chi1A.mi,t2b,'mi,abmj->abij') ... % 8
@@ -39,7 +39,7 @@ function [t2b] = update_t2b(t1a, t1b, t2a, t2b, t2c, chi1A, chi1B, chi2A, chi2B,
                  for j = 1:sys.Nocc_beta
                      
                      temp =     X2b_abij(a,b,i,j)/...
-                                        (sys.fa_oo(i,i)+sys.fb_oo(j,j)-sys.fa_vv(a,a)-sys.fb_vv(b,b));  
+                                        (sys.fa_oo(i,i)+sys.fb_oo(j,j)-sys.fa_vv(a,a)-sys.fb_vv(b,b)-shift);  
                      t2b(a,b,i,j) = (1-omega)*t2b(a,b,i,j) + omega*temp;
                  end
              end

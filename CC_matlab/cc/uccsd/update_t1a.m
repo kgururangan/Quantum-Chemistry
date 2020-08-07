@@ -1,4 +1,4 @@
-function [t1a] = update_t1a(t1a, t1b, t2a, t2b, t2c, chi1A, chi1B, chi2A, chi2B, chi2C, sys)
+function [t1a] = update_t1a(t1a, t1b, t2a, t2b, t2c, chi1A, chi1B, chi2A, chi2B, chi2C, sys, shift)
 
     X1a_ia = sys.fa_vo +... % 1
              +einsum_kg(chi1A.ae_bar,t1a,'ae,ei->ai')... % 8
@@ -16,7 +16,7 @@ function [t1a] = update_t1a(t1a, t1b, t2a, t2b, t2c, chi1A, chi1B, chi2A, chi2B,
     omega = 1;          
     for a = 1:sys.Nvir_alpha
         for i = 1:sys.Nocc_alpha
-            temp = X1a_ia(a,i)/(sys.fa_oo(i,i) - sys.fa_vv(a,a));
+            temp = X1a_ia(a,i)/(sys.fa_oo(i,i) - sys.fa_vv(a,a) - shift);
             t1a(a,i) = (1-omega)*t1a(a,i) + omega*temp;
         end
     end

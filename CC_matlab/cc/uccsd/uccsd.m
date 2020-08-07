@@ -1,14 +1,21 @@
-function [t1a,t1b,t2a,t2b,t2c,Ecorr] = uccsd(sys,opts)
+function [cc_t,Ecorr] = uccsd(sys,opts,T_guess)
 
     diis_size = opts.diis_size;
     maxit = opts.maxit;
     tol = opts.tol;
+    shift = opts.shift;
+
+    if nargin < 3 || isempty(T_guess)
+        T = zeros(sys.doubles_dim,1);
+    else
+        T = T_guess;
+    end
     
     tic_Start = tic;
     fprintf('\n==================================++Entering UCCSD Routine++=================================\n')
 
     % Initialize T1 and T2 DIIS containers
-    T = zeros(sys.doubles_dim,1);
+    
     T_list = zeros(sys.doubles_dim,diis_size);
     T_resid_list = zeros(sys.doubles_dim,diis_size);
 
@@ -19,8 +26,8 @@ function [t1a,t1b,t2a,t2b,t2c,Ecorr] = uccsd(sys,opts)
     szt2c = [sys.Nvir_beta, sys.Nvir_beta, sys.Nocc_beta, sys.Nocc_beta];
     
     % Jacobi/DIIS iterations
-    it = 1; flag_conv = 0;
-    while it < maxit
+    it_micro = 0; flag_conv = 0; it_macro = 0;
+    while it_micro < maxit
         
         tic
         
@@ -37,11 +44,11 @@ function [t1a,t1b,t2a,t2b,t2c,Ecorr] = uccsd(sys,opts)
        
         % update t1 and t2 by Jacobi                        
         [chi1A, chi1B, chi2A, chi2B, chi2C] = build_ucc_intermediates_v2(t1a, t1b, t2a, t2b, t2c, sys);
-        t1a = update_t1a(t1a,t1b,t2a,t2b,t2c,chi1A,chi1B,chi2A,chi2B,chi2C,sys);
+        t1a = update_t1a(t1a,t1b,t2a,t2b,t2c,chi1A,chi1B,chi2A,chi2B,chi2C,sys,shift);
         t1b = t1a;
         %t2a = update_t2a(t1a,t1b,t2a,t2b,t2c,chi1A,chi1B,chi2A,chi2B,chi2C,sys);
-        t2a = update_t2a_jun(t1a,t1b,t2a,t2b,t2c,sys);
-        t2b = update_t2b(t1a,t1b,t2a,t2b,t2c,chi1A,chi1B,chi2A,chi2B,chi2C,sys);
+        t2a = update_t2a_jun(t1a,t1b,t2a,t2b,t2c,sys,shift);
+        t2b = update_t2b(t1a,t1b,t2a,t2b,t2c,chi1A,chi1B,chi2A,chi2B,chi2C,sys,shift);
         t2c = t2a;
         
         % store vectorized results
@@ -59,31 +66,33 @@ function [t1a,t1b,t2a,t2b,t2c,Ecorr] = uccsd(sys,opts)
         end
 
         % append trial and residual vectors to lists
-        T_list(:,mod(it,diis_size)+1) = T;
-        T_resid_list(:,mod(it,diis_size)+1) = T_resid;
+        T_list(:,mod(it_micro,diis_size)+1) = T;
+        T_resid_list(:,mod(it_micro,diis_size)+1) = T_resid;
          
         % diis extrapolate
-        if it >= 2*diis_size
+        if mod(it_micro,diis_size) == 0
+           it_macro = it_macro + 1;
+           fprintf('\nDIIS Cycle - %d',it_macro)
            T = diis_xtrap(T_list,T_resid_list);
         end        
 
-        fprintf('\nIter-%d     Residuum = %4.12f      Ecorr = %4.12f      Elapsed Time = %4.2f s',it,ccsd_resid,Ecorr,toc);
+        fprintf('\n    Iter-%d     Residuum = %4.12f      Ecorr = %4.12f      Elapsed Time = %4.2f s',it_micro,ccsd_resid,Ecorr,toc);
         
-        it = it + 1;
+        it_micro = it_micro + 1;
 %         
     end
 
     % return final amplitudes and correlation energy
-    t1a = reshape(T(sys.posv{1}),szt1a);
-    t1b = reshape(T(sys.posv{2}),szt1b);
-    t2a = reshape(T(sys.posv{3}),szt2a);
-    t2b = reshape(T(sys.posv{4}),szt2b);
-    t2c = reshape(T(sys.posv{5}),szt2c);
-    Ecorr = ucc_energy(t1a,t1b,t2a,t2b,t2c,sys);
+    cc_t.t1a = reshape(T(sys.posv{1}),szt1a);
+    cc_t.t1b = reshape(T(sys.posv{2}),szt1b);
+    cc_t.t2a = reshape(T(sys.posv{3}),szt2a);
+    cc_t.t2b = reshape(T(sys.posv{4}),szt2b);
+    cc_t.t2c = reshape(T(sys.posv{5}),szt2c);
+    Ecorr = ucc_energy(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,sys);
     
     if flag_conv == 1
-        fprintf('\nUCCSD successfully converged in %d iterations (%4.2f seconds)\n',it,toc(tic_Start));
-        fprintf('Total Energy = %4.12f Ha     Ecorr = %4.12f Ha\n',Ecorr+sys.Escf,Ecorr);
+        fprintf('\nUCCSD successfully converged in %d iterations (%4.2f seconds)\n',it_micro,toc(tic_Start));
+        fprintf('Total Energy = %4.12f Eh     Ecorr = %4.12f Eh\n',Ecorr+sys.Escf,Ecorr);
     else
         fprintf('\nUCCSD failed to converged in %d iterations\n',maxit)
     end   
