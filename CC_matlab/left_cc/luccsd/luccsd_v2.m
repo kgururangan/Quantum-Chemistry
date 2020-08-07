@@ -1,4 +1,4 @@
-function [L1,L2,lccsd_resid] = lccsd(t1,t2,HBar,sys,opts)
+function [L1,L2,lccsd_resid] = luccsd_v2(t1,t2,HBar_t,HBar,sys,sys_ucc,opts)
 
 % we're using abij ordering for L1 and L2 now!
 
@@ -17,9 +17,6 @@ function [L1,L2,lccsd_resid] = lccsd(t1,t2,HBar,sys,opts)
     posv1 = sys.posv1;
     posv2 = sys.posv2;
     
-    size_L1 = [Nunocc, Nocc];
-    size_L2 = [Nunocc, Nunocc, Nocc, Nocc];
-    
     LAMBDA_list = zeros(doubles_dim, diis_size); 
     LAMBDA_resid_list = zeros(doubles_dim, diis_size);
     
@@ -34,15 +31,23 @@ function [L1,L2,lccsd_resid] = lccsd(t1,t2,HBar,sys,opts)
         tic
         
         % get current L1 and L2
-        L1 = reshape(LAMBDA(posv1),size_L1);
-        L2 = reshape(LAMBDA(posv2),size_L2);
-        
-        % build LH diagrammatically with MP denominator separated out
-        flag_jacobi = 1;
-        [X_ia, X_ijab] = build_L_HBar(L1, L2, HBar, flag_ground, flag_jacobi);
+        l1a = reshape(LAMBDA(sys_ucc.posv{1}),szl1a);
+        l1b = reshape(LAMBDA(sys_ucc.posv{2}),szl1b);
+        l2a = reshape(LAMBDA(sys_ucc.posv{3}),szl2a);
+        l2b = reshape(LAMBDA(sys_ucc.posv{4}),szl2b);
+        l2c = reshape(LAMBDA(sys_ucc.posv{5}),szl2c);
 
         % update L1 and L2 by Jacobi
-        [L1,L2] = update_l1_l2(X_ia, X_ijab, omega, HBar, shift);
+        flag_jacobi = true;
+        X1A = update_l1a(l1a,l1b,l2a,l2b,l2c,HBar_t,sys_ucc,flag_jacobi);
+        X1B = update_l1b(l1a,l1b,l2a,l2b,l2c,HBar_t,sys_ucc,flag_jacobi);
+        X2A = update_l2a(l1a,l1b,l2a,l2b,l2c,HBar_t,sys_ucc,flag_jacobi);
+        X2B = update_l2b(l1a,l1b,l2a,l2b,l2c,HBar_t,sys_ucc,flag_jacobi);
+        X2C = update_l2c(l1a,l1b,l2a,l2b,l2c,HBar_t,sys_ucc,flag_jacobi);
+        
+        [l1a, l1b, l2a, l2b, l2c] = update_L(X1A,X1B,X2A,X2B,X2C,HBar_t,shift,sys_ucc);
+        [L1] = convert_spinint_to_spinorb({l1a,l1b},sys_ucc);
+        [L2] = convert_spinint_to_spinorb({l2a,l2b,l2c},sys_ucc);
         LAMBDA = cat(1,L1(:),L2(:));
         
         % buid LH - omega*L residual measure (use full LH)
@@ -87,6 +92,3 @@ function [L1,L2,lccsd_resid] = lccsd(t1,t2,HBar,sys,opts)
          
 
 end
-
-    
-  

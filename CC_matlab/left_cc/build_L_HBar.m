@@ -96,6 +96,7 @@ function [lambda1, lambda2] = build_L_HBar(L1, L2, HBar, flag_ground, flag_jacob
     lambda2 = D1_L2 + D2_L2 + D3_L2 + D4_L2 + D5_L2 +...
               D6_L2 + D7_L2 + D8_L2 + D9_L2 + D10_L2 +...
               D11_L2;
+
     
     % permute ijab into abij
     lambda2 = permute(lambda2,[3,4,1,2]);

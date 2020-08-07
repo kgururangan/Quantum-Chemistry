@@ -8,6 +8,8 @@ function [LAMBDA,E_lcc,lccsd_resid] = lefteomccsd(omega,Rvec,HBar,t1,t2,sys,opts
     tol = opts.tol;
     diis_size = opts.diis_size;
     maxit = opts.maxit;
+    shift = opts.shift;
+
     nroot = length(omega);
 
     Nunocc = sys.Nunocc; Nocc = sys.Nocc;
@@ -26,10 +28,10 @@ function [LAMBDA,E_lcc,lccsd_resid] = lefteomccsd(omega,Rvec,HBar,t1,t2,sys,opts
 
     idx_not_converged = 1:nroot;
 
-    it = 0; flag_conv = 0; flag_ground = 0;
-    while it < maxit && flag_conv == 0
+    it_micro = 0; it_macro = 0; flag_conv = 0; flag_ground = 0;
+    while it_micro < maxit && flag_conv == 0
         
-        fprintf('\nIter-%d:\n', it)
+        fprintf('\nIter-%d:\n', it_micro)
         fprintf('-------------------------------------------------------\n')
         
         for j = idx_not_converged
@@ -43,7 +45,7 @@ function [LAMBDA,E_lcc,lccsd_resid] = lefteomccsd(omega,Rvec,HBar,t1,t2,sys,opts
             [X_ia, X_ijab] = build_L_HBar(L1, L2, HBar, flag_ground, flag_jacobi);
 
             % update L1 and L2 by Jacobi
-            [L1,L2] = update_l1_l2(X_ia, X_ijab, omega(j), HBar);
+            [L1,L2] = update_l1_l2(X_ia, X_ijab, omega(j), HBar, shift);
             LAMBDA(:,j) = cat(1,L1(:),L2(:));
 
             % buid LH - omega*L residual measure (use full LH)
@@ -59,18 +61,21 @@ function [LAMBDA,E_lcc,lccsd_resid] = lefteomccsd(omega,Rvec,HBar,t1,t2,sys,opts
             lccsd_resid(j) = norm(LAMBDA_resid);
 
             % append trial and residual vectors to diis lists
-            LAMBDA_list{j}(:,mod(it,diis_size)+1) = LAMBDA(:,j);
-            LAMBDA_resid_list{j}(:,mod(it,diis_size)+1) = LAMBDA_resid;
+            LAMBDA_list{j}(:,mod(it_micro,diis_size)+1) = LAMBDA(:,j);
+            LAMBDA_resid_list{j}(:,mod(it_micro,diis_size)+1) = LAMBDA_resid;
 
             % diis extrapolate
-            if it >= diis_size
+            if mod(it_micro,diis_size) == 0 && it_micro > 1
+               %it_macro = it_macro + 1;
+               %fprintf('\nDIIS Cycle - %d',it_macro)
                LAMBDA(:,j) = diis_xtrap(LAMBDA_list{j},LAMBDA_resid_list{j});
             end
 
         end
         
         % biorthonormalize to right eigenvectors using full matrices
-        LAMBDA = LAMBDA/(LAMBDA'*Rvec(:,1:nroot));
+        %LAMBDA = LAMBDA/(LAMBDA'*Rvec(:,1:nroot));
+        [LAMBDA, ~] = biorth(LAMBDA,Rvec(:,1:nroot),'left');
         
         % print status
         for j = 1:nroot
@@ -83,7 +88,7 @@ function [LAMBDA,E_lcc,lccsd_resid] = lefteomccsd(omega,Rvec,HBar,t1,t2,sys,opts
             flag_conv = 1;
         end
         
-        it = it + 1;
+        it_micro = it_micro + 1;
         
     end
     
@@ -100,7 +105,7 @@ function [LAMBDA,E_lcc,lccsd_resid] = lefteomccsd(omega,Rvec,HBar,t1,t2,sys,opts
     end
     
     if flag_conv == 1
-        fprintf('\nLeft-EOMCCSD successfully converged in %d iterations (%4.2f seconds)\n',it,toc);
+        fprintf('\nLeft-EOMCCSD successfully converged in %d iterations (%4.2f seconds)\n',it_micro,toc);
     else
         fprintf('\nLeft-EOMCCSD failed to converged in %d iterations\n',maxit)
     end

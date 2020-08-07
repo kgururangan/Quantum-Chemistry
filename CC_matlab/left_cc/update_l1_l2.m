@@ -1,8 +1,8 @@
-function [L1,L2] = update_l1_l2(X_ia,X_ijab,omega,HBar,occ,unocc)
+function [L1,L2] = update_l1_l2(X_ia,X_ijab,omega,HBar,shift)
 
 % updates using abij order
 
-    Nocc = length(occ); Nunocc = length(unocc);
+    [Nocc, Nunocc] = size(HBar{1}{1,2});
     
     L1 = zeros(Nunocc,Nocc); L2 = zeros(Nunocc,Nunocc,Nocc,Nocc);
     
@@ -11,7 +11,7 @@ function [L1,L2] = update_l1_l2(X_ia,X_ijab,omega,HBar,occ,unocc)
             
             MP = HBar{1}{2,2}(a,a) - HBar{1}{1,1}(i,i);
 
-            L1(a,i) = -X_ia(a,i)./(MP - omega);
+            L1(a,i) = -X_ia(a,i)./(MP - omega + shift);
 
             for j = i+1:Nocc
                 for b = a+1:Nunocc
@@ -19,7 +19,7 @@ function [L1,L2] = update_l1_l2(X_ia,X_ijab,omega,HBar,occ,unocc)
                     MP =   HBar{1}{2,2}(a,a) - HBar{1}{1,1}(i,i)...
                           +HBar{1}{2,2}(b,b) - HBar{1}{1,1}(j,j);
                       
-                    L2(a,b,i,j) = -X_ijab(a,b,i,j)./(MP - omega);                   
+                    L2(a,b,i,j) = -X_ijab(a,b,i,j)./(MP - omega + shift);                   
                     L2(b,a,i,j) = -L2(a,b,i,j);
                     L2(a,b,j,i) = -L2(a,b,i,j);
                     L2(b,a,j,i) = L2(a,b,i,j);
