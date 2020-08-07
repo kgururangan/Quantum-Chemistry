@@ -1,0 +1,13 @@
+function xout = kinetic(a,La,Ra,b,Lb,Rb)
+
+    x0 = b*(2*sum(Lb)+3)*overlap(a,La,Ra,b,Lb,Rb);
+    x1 = -2*b^2*( overlap(a,La,Ra,b,Lb+[2,0,0],Rb) +...
+                     overlap(a,La,Ra,b,Lb+[0,2,0],Rb) +...
+                     overlap(a,La,Ra,b,Lb+[0,0,2],Rb) );
+    x2 = -0.5*(   Lb(1)*(Lb(1)-1)*overlap(a,La,Ra,b,Lb-[2,0,0],Rb) +...
+                     Lb(2)*(Lb(2)-1)*overlap(a,La,Ra,b,Lb-[0,2,0],Rb) +...
+                     Lb(3)*(Lb(3)-1)*overlap(a,La,Ra,b,Lb-[0,0,2],Rb) );
+                 
+    xout = x0 + x1 + x2;
+end
+
