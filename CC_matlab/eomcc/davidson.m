@@ -1,4 +1,4 @@
-function [ R, eigval, resid_norm, flag_conv] = davidson_update_R(Ax, Dai, Dabij, nroot, B0, opts)
+function [ R, eigval, resid_norm, flag_conv] = davidson(Ax, D, nroot, B0, opts)
 
 % Block-Davidson algorithm for diagonalizing large sparse (non-Hermitian)
 % matrices
@@ -22,9 +22,9 @@ function [ R, eigval, resid_norm, flag_conv] = davidson_update_R(Ax, Dai, Dabij,
 %        opts.flag_verbose = print verbosity, 1 or 0
 
 % Output
-% R - right eigenvectors
-% eigval - eigenvalues
-% resid_norm - residuals for each root
+% V - right eigenvectors
+% e - eigenvalues
+% res - residuals for each root
 % flag_conv - 1 if converged, 0 if not converged, 2 if stagnated
 
 
@@ -37,15 +37,14 @@ function [ R, eigval, resid_norm, flag_conv] = davidson_update_R(Ax, Dai, Dabij,
     if flag_verbose == 1
         fprintf('Beginning Davidson diagonlization algorithm...\n')
     end
-
+    
     tic
-
-    [Nunocc, Nocc] = size(Dai); Nov = Nunocc*Nocc;
 
     max_size = max_nvec_per_root*nroot;
     
     e = zeros(nroot,1);
 
+    
     % orthonormalize the initial trial space
     B = mgson(B0,1e-15);
     
@@ -80,6 +79,7 @@ function [ R, eigval, resid_norm, flag_conv] = davidson_update_R(Ax, Dai, Dabij,
 
         G = B'*SIGMA;
         
+
         [alpha,GD] = eig(G);
         [e,idx] = sort(diag(GD),'ascend');
 
@@ -91,11 +91,22 @@ function [ R, eigval, resid_norm, flag_conv] = davidson_update_R(Ax, Dai, Dabij,
         alpha = alpha(:,idx(1:nroot));  % expansion coefficients
         V = V(:,idx(1:nroot));
         
+%         RES = zeros(size(SIGMA,1),nroot);
+%         resid_norm = zeros(1,nroot);
+%         idx_unc = []; ct = 1;
+%         for j = 1:nroot
+%             RES(:,j) = SIGMA*alpha(:,j) - e(j)*V(:,j);
+%             resid_norm(j) = norm(RES(:,j));
+%             if resid_norm(j) > tol
+%                 idx_unc(ct) = j;
+%                 ct = ct + 1;
+%             end
+%         end
 
         % vectorized residual calculation
         RES = SIGMA*alpha - V*diag(e);
         resid_norm = sqrt(sum(RES.^2,1));
-        idx_not_converged = find(resid_norm > tol);
+        idx_unc = find(resid_norm > tol);
         
         % printing for verbose 
         if flag_verbose == 1
@@ -105,15 +116,11 @@ function [ R, eigval, resid_norm, flag_conv] = davidson_update_R(Ax, Dai, Dabij,
         end
 
         Btemp = [];
-        %for j = 1:length(idx_not_converged)
-        for J = 1:nroot
+        for j = 1:length(idx_unc)
             
-         %   J = idx_not_converged(j);
+            J = idx_unc(j);
 
-            q = RES(:,J);
-
-            q = update_R(reshape(q(1:Nov),Nunocc,Nocc),reshape(q(Nov+1:end),Nunocc,Nunocc,Nocc,Nocc),...
-                         e(J),Dai,Dabij);
+            q = RES(:,J)/(e(J)-D(J));
 
             q = q/norm(q);
             
@@ -158,44 +165,8 @@ function [ R, eigval, resid_norm, flag_conv] = davidson_update_R(Ax, Dai, Dabij,
     
 end
 
-function [R] = update_R(r1,r2,e,D1,D2)
 
-    [Nunocc,Nocc] = size(r1);
-
-    for a = 1:Nunocc
-        for i = 1:Nocc
-            r1(a,i) = r1(a,i)/(e - D1(a,i));
-            for b = 1:Nunocc
-                for j = 1:Nocc
-                    r2(a,b,i,j) = r2(a,b,i,j)/(e-D2(a,b,i,j));
-                end
-            end
-        end
-    end  
-
-    % don't explicitly antisymmetrize! Seems to mess things up in LCC
-    % and even slows down convergence!
-    % does this not work because R2 is not initially antisymmetric?
-    % note: D(a,b,i,j) = D(b,a,i,j) = D(a,b,j,i) = D(b,a,j,i)
-%     for a = 1:Nunocc
-%         for i = 1:Nocc
-%             r1(a,i) = r1(a,i)/(e-D1(a,i));
-%             for b = a+1:Nunocc
-%                 for j = i+1:Nocc
-%                     r2(a,b,i,j) = r2(a,b,i,j)/(e-D2(a,b,i,j));
-%                     r2(a,b,j,i) = -r2(a,b,i,j);
-%                     r2(b,a,i,j) = -r2(a,b,i,j);
-%                     r2(b,a,j,i) = r2(b,a,j,i);
-%                 end
-%             end
-%         end
-%     end
-%  
-
-    R = cat(1, r1(:),r2(:));
-
-end
-                   
+                    
        
 function [q] = ortho_root_vec(q,B)
 

@@ -1,4 +1,4 @@
-function [ R, eigval, resid_norm, flag_conv] = davidson_update_R(Ax, Dai, Dabij, nroot, B0, opts)
+function [ R, eigval, resid_norm, flag_conv] = davidson_solver2(Ax, HBar_t, cc_t, nroot, B0, sys, opts)
 
 % Block-Davidson algorithm for diagonalizing large sparse (non-Hermitian)
 % matrices
@@ -35,25 +35,29 @@ function [ R, eigval, resid_norm, flag_conv] = davidson_update_R(Ax, Dai, Dabij,
     thresh_vec = opts.thresh_vec;
     
     if flag_verbose == 1
-        fprintf('Beginning Davidson diagonlization algorithm...\n')
+        fprintf('Entering Davidson diagonlization routine...\n')
+        fprintf('Block Davidson Solver\n')
+        fprintf('Settings:\n')
+        fprintf('    nroot - %d    maxiter - %d    max subspace dim - %d\n',nroot,maxit,max_nvec_per_root*nroot)
+        fprintf('    tolerance - %.3fE-06\n', tol*1e6)
+        fprintf('    subspace vector threshold - %.3fE-06\n', thresh_vec*1e6)
     end
 
-    tic
-
-    [Nunocc, Nocc] = size(Dai); Nov = Nunocc*Nocc;
+    tic_Start = tic;
 
     max_size = max_nvec_per_root*nroot;
-    
-    e = zeros(nroot,1);
 
     % orthonormalize the initial trial space
     B = mgson(B0,1e-15);
     
     %%%%%%% SOLVE RIGHT EIGENPROBLEM %%%%%%%%%
-    
+ 
+    SIGMA = zeros(sys.doubles_dim,max_size);
         
     it = 0; flag_conv = 0; 
     while it < maxit && flag_conv == 0
+
+    tic
 
         if size(B,1) < size(B,2)
             fprintf('WARNING: Number of search vectors greater than dimension of search vectors... MGS will behave erratically!\n')
@@ -68,18 +72,19 @@ function [ R, eigval, resid_norm, flag_conv] = davidson_update_R(Ax, Dai, Dabij,
                 break
             end
         end
-
-        if flag_verbose == 1
-            fprintf('\nIter-%d    Subspace size - %d\n',it,curr_size)
-            fprintf('-------------------------------------------------------\n')
-        end
         
+        % orthonormalize search space using modified gram-schmidt
         B = mgson(B,thresh_vec);
-        
-        SIGMA = feval(Ax,B);
 
-        G = B'*SIGMA;
+        % evaluate HR sigma product for new search vectors (the last nroot 
+        % of them)
+        sigma = feval(Ax,B(:,max(curr_size-nroot+1,1):curr_size));
+        SIGMA(:,max(curr_size-nroot+1,1):curr_size) = sigma;
+        G = B'*SIGMA(:,1:curr_size);
+        %SIGMA = feval(Ax,B);
+        %G = B'*SIGMA;
         
+        % solve small projection subspace eigenvalue problem
         [alpha,GD] = eig(G);
         [e,idx] = sort(diag(GD),'ascend');
 
@@ -91,29 +96,21 @@ function [ R, eigval, resid_norm, flag_conv] = davidson_update_R(Ax, Dai, Dabij,
         alpha = alpha(:,idx(1:nroot));  % expansion coefficients
         V = V(:,idx(1:nroot));
         
-
         % vectorized residual calculation
-        RES = SIGMA*alpha - V*diag(e);
+        RES = SIGMA(:,1:curr_size)*alpha - V*diag(e);
+        %RES = SIGMA*alpha-V*diag(e);
         resid_norm = sqrt(sum(RES.^2,1));
         idx_not_converged = find(resid_norm > tol);
-        
-        % printing for verbose 
-        if flag_verbose == 1
-            for j = 1:nroot
-                    fprintf('   Root - %d     e = %4.10f     |r| = %4.10f\n',j,real(e(j)),resid_norm(j));
-            end
-        end
 
         Btemp = [];
-        %for j = 1:length(idx_not_converged)
-        for J = 1:nroot
+        for j = 1:length(idx_not_converged)
+        %for J = 1:nroot
             
-         %   J = idx_not_converged(j);
+            J = idx_not_converged(j);
 
             q = RES(:,J);
 
-            q = update_R(reshape(q(1:Nov),Nunocc,Nocc),reshape(q(Nov+1:end),Nunocc,Nunocc,Nocc,Nocc),...
-                         e(J),Dai,Dabij);
+            q = update_R(q,HBar_t,sys,e(J),0.0);
 
             q = q/norm(q);
             
@@ -125,11 +122,22 @@ function [ R, eigval, resid_norm, flag_conv] = davidson_update_R(Ax, Dai, Dabij,
 
         end
 
+
+        % printing for verbose
+        if flag_verbose == 1
+            fprintf('\nIter-%d    Subspace size - %d    Elapsed Time - %4.4fs\n',it,curr_size,toc)
+            fprintf('-------------------------------------------------------\n')
+            for j = 1:nroot
+                    fprintf('   Root - %d     e = %4.10f     |r| = %4.10f\n',j,real(e(j)),resid_norm(j));
+            end
+        end
+
+        % check convergence
         if all(resid_norm <= tol) 
             flag_conv = 1;
             R = V; eigval = e;
             if flag_verbose
-                fprintf('\nDavidson successfully converged in %d iterations (%4.2f seconds)\n',it, toc);
+                fprintf('\nDavidson successfully converged in %d iterations (%4.2f seconds)\n',it, toc(tic_Start));
             end
         else
             if curr_size >= max_size
@@ -156,84 +164,4 @@ function [ R, eigval, resid_norm, flag_conv] = davidson_update_R(Ax, Dai, Dabij,
     
     
     
-end
-
-function [R] = update_R(r1,r2,e,D1,D2)
-
-    [Nunocc,Nocc] = size(r1);
-
-    for a = 1:Nunocc
-        for i = 1:Nocc
-            r1(a,i) = r1(a,i)/(e - D1(a,i));
-            for b = 1:Nunocc
-                for j = 1:Nocc
-                    r2(a,b,i,j) = r2(a,b,i,j)/(e-D2(a,b,i,j));
-                end
-            end
-        end
-    end  
-
-    % don't explicitly antisymmetrize! Seems to mess things up in LCC
-    % and even slows down convergence!
-    % does this not work because R2 is not initially antisymmetric?
-    % note: D(a,b,i,j) = D(b,a,i,j) = D(a,b,j,i) = D(b,a,j,i)
-%     for a = 1:Nunocc
-%         for i = 1:Nocc
-%             r1(a,i) = r1(a,i)/(e-D1(a,i));
-%             for b = a+1:Nunocc
-%                 for j = i+1:Nocc
-%                     r2(a,b,i,j) = r2(a,b,i,j)/(e-D2(a,b,i,j));
-%                     r2(a,b,j,i) = -r2(a,b,i,j);
-%                     r2(b,a,i,j) = -r2(a,b,i,j);
-%                     r2(b,a,j,i) = r2(b,a,j,i);
-%                 end
-%             end
-%         end
-%     end
-%  
-
-    R = cat(1, r1(:),r2(:));
-
-end
-                   
-       
-function [q] = ortho_root_vec(q,B)
-
-    for i = 1:size(B,2)
-        b = B(:,i)/norm(B(:,i));
-        q = q - (b'*q)*b;
-    end
-    
-end
-
-function [Q2, Q, R] = mgson(X, varargin)
-% Modified Gram-Schmidt orthonormalization (numerical stable version of Gram-Schmidt algorithm) 
-% which produces the same result as [Q,R]=qr(X,0)
-% Written by Mo Chen (sth4nth@gmail.com).
-
-if isempty(varargin)
-    thresh_vec = 1e-15;
-else
-    thresh_vec = varargin{1};
-end
-
-[d,n] = size(X);
-m = min(d,n);
-R = zeros(m,n);
-Q = zeros(d,m);
-Q2 = [];
-for i = 1:m
-    v = X(:,i);
-    for j = 1:i-1
-        R(j,i) = Q(:,j)'*v;
-        v = v-R(j,i)*Q(:,j);
-    end
-    R(i,i) = norm(v);
-    Q(:,i) = v/R(i,i);
-    if norm(v) > thresh_vec
-        Q2(:,i) = v/R(i,i);
-    end
-end
-R(:,m+1:n) = Q'*X(:,m+1:n);
-
 end
