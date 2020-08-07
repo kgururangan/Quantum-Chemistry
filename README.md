@@ -3,15 +3,17 @@ Collection of codes used for quantum chemistry calculations based on Hartree-Foc
 
 Contents of Repository:
 
-CC_matlab - most up-to-date set of coupled-cluster codes. Available calculations:
+CC_matlab - most up-to-date set of spin-integrated coupled-cluster codes. Available spin-integrated calculations:
 
-    - CCSD (spinorbital & spin-integrated)
-    - CR-CC(2,3) (spinorbital)
-    - CCSDT (spinorbital)
-    - Active-space CCSDT(III) (spinorbital)
-    - Left-CCSD (spinorbital)
-    - EOM-CCSD (spinorbital)
-    - Left-EOMCCSD (spinorbital)
+    - CCSD 
+    - CR-CC(2,3) 
+    - Left-CCSD
+    - EOM-CCSD
+    - Left-EOMCCSD 
+    - CR-EOMCC(2,3) 
+    
+ Only available in spin-orbital form:
+    - CCSDT & CCSDT(III) active space variant
   
   
 Routines can be run using one- and two-body molecular orbital integrals inputs (along with system parameters like number of occupied and unoccupied alpha/beta electrons) which can be found in CC_matlab_tests. Run routines as shown in main.m
