@@ -69,10 +69,6 @@ lccopts.shift = 0.0;
 
 [cc_t,lccsd_resid] = luccsd(cc_t,HBar_t,sys_ucc,lccopts);
 
-%% CR-UCC(2,3)
-
-% double-check <ijkabc|H3|ijkabc> D denominators
-[Ecrcc23A,Ecrcc23B,Ecrcc23C,Ecrcc23D] = crucc23(cc_t,HBar_t,sys_ucc);
 
 %% EOM-UCCSD
 
@@ -101,11 +97,9 @@ lccopts.nroot = length(omega);
 
 [Lvec,eom_lcc_resid,cc_t] = lefteomuccsd(omega,Rvec,HBar_t,cc_t,sys_ucc,lccopts);
 
-%% CR-EOMUCCSD(2,3)
+%% CR-CC(2,3) 
 
-% we know that the moments match exactly. The denominators are close, but
-% perhaps not perfect. same for L3 amplitudes... however, the L3 amplitudes
-[omega_crcc23A,omega_crcc23B,omega_crcc23C,omega_crcc23D] = crcc23_wrap(cc_t,omega,HBar_t,sys_ucc);
+[Ecrcc23A,Ecrcc23B,Ecrcc23C,Ecrcc23D] = crcc23_wrap(cc_t,omega,HBar_t,sys_ucc,omega);
 
 %%
 %%%%%%%%%%%%%%%%%%%% Spinorbital CC Codes %%%%%%%%%%%%%%%%%%%%
