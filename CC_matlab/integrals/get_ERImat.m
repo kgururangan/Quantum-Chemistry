@@ -64,8 +64,9 @@ function [VVmat] = get_ERImat(varargin)
         % SCREENED 2-BODY ERI EVALUATION
         tic_pre = tic;
         % loop through permutationally unique 2-body integrals
+        fprintf('ERI integrals (ij|kl)\ni = ')
         for i = 0:Norb-1
-            i
+            fprintf('%d ',i+1);
             for j = 0:i
                 ij = i*(i+1)/2+j;
                 for k = 0:Norb-1
@@ -104,7 +105,7 @@ function [VVmat] = get_ERImat(varargin)
                 end
             end
         end
-        fprintf('Screened ERI tensor evaluation took %4.2f seconds\n',toc(tic_pre))
+        fprintf('\nScreened ERI tensor evaluation took %4.2f seconds\n',toc(tic_pre))
     
     else
         
@@ -112,8 +113,9 @@ function [VVmat] = get_ERImat(varargin)
         % FULL 2-BODY ERI EVALUATION
         tic
         % loop through permutationally unique 2-body integrals
+        fprintf('ERI integrals (ij|kl)\ni = ')
         for i = 0:Norb-1
-            i
+            fprintf('%d ',i+1);
             for j = 0:i
                 ij = i*(i+1)/2+j;
                 for k = 0:Norb-1
@@ -140,7 +142,7 @@ function [VVmat] = get_ERImat(varargin)
                 end
             end
         end
-        fprintf('Full ERI tensor evaluation took %4.2f seconds\n',toc)
+        fprintf('\nFull ERI tensor evaluation took %4.2f seconds\n',toc)
         
     end
 
