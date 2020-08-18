@@ -30,12 +30,12 @@ Nelec = 10;
 %%
 %load h2o-pvdz.mat
 %load h2-pvdz-integrals.mat
-%load h2o-631g-stretched
+load h2o-631g-stretched
 %load h2o-631g
 %load rectangle-pvdz-d2h
 %load square-pvdz-d2h
 %load h2o-pvdz-gms.mat
-load h2o-631g-gms.mat
+%load h2o-631g-gms.mat
 
 %%
 nfzc = 0; nfzv = 0; nact_h = 200; nact_p = 200;
@@ -50,10 +50,20 @@ ccopts.diis_size = 5;
 ccopts.maxit = 100;
 ccopts.tol = 1e-10;
 ccopts.shift = 0;
-% ERROR LIES IN T2A!!!
 [cc_t,Ecorr_ucc] = uccsd(sys_ucc,ccopts);
-%[T1] = convert_spinint_to_spinorb({cc_t.t1a,cc_t.t1b},sys_ucc);
-%[T2] = convert_spinint_to_spinorb({cc_t.t2a,cc_t.t2b,cc_t.t2c},sys_ucc);
+
+%% UCCSDT
+
+% 610  E(Ref)=  -75.7199662951565
+% 611  E(Cor)= -0.221361597785899
+% 612  E(CCSDT)=  -75.9413278929424
+
+ccopts.diis_size = 5;
+ccopts.maxit = 100;
+ccopts.tol = 1e-10;
+ccopts.shift = 0;
+
+[cc_t,Ecorr_uccsdt] = uccsdt(sys_ucc,ccopts);
 
 %% UCCSD HBar
 

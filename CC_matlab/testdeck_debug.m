@@ -27,6 +27,11 @@ nfzc = 0; nfzv = 0; nact_h = 200; nact_p = 200;
 sys_ucc = build_system_ucc(e1int,e2int,Vnuc,Nocc_a,Nocc_b,nfzc);
 sys_cc = build_system_cc(e1int,e2int,Vnuc,Nocc_a,Nocc_b,nfzc,nfzv,nact_h,nact_p);
 
+Nocc_a = sys_ucc.Nocc_alpha;
+Nocc_b = sys_ucc.Nocc_beta;
+Nunocc_a = sys_ucc.Nvir_alpha;
+Nunocc_b = sys_ucc.Nvir_beta;
+
 oa = [1:2:sys_ucc.Nelec];
 ua = [sys_ucc.Nelec+1:2:2*sys_ucc.Norb]-sys_ucc.Nelec;
 ob = 2:2:sys_ucc.Nelec;
@@ -301,33 +306,45 @@ fprintf('Error in EOMMM23C = %4.10f\n',get_error(EOMMM23C,EOMMM23C_conv))
 fprintf('Error in EOMMM23D = %4.10f\n',get_error(EOMMM23D,EOMMM23D_conv))
 
 
+
+
+%% Debug optimized CCSD HBar 
+
+[HBar_t_opt] = build_ucc_HBar_opt(cc_t,sys_ucc,false);
+
+H1A = HBar_t.H1A;
+H1B = HBar_t.H1B;
+H2A = HBar_t.H2A;
+H2B = HBar_t.H2B;
+H2C = HBar_t.H2C;
+
+H1A_opt = HBar_t_opt.H1A;
+H1B_opt = HBar_t_opt.H1B;
+H2A_opt = HBar_t_opt.H2A;
+H2B_opt = HBar_t_opt.H2B;
+H2C_opt = HBar_t_opt.H2C;
+
+get_error(H2A_opt.oovv,H2A.oovv)
+get_error(H2A_opt.ooov,H2A.ooov)
+get_error(H2A_opt.oooo,H2A.oooo)
+get_error(H2A_opt.vooo,H2A.vooo)
+
+%% Debug CCSDt builds
+
+[t1,t2,t3,Ecorr_ccsdt] = ccsdt(sys_cc,ccopts);
+
 %%
-sys = sys_cc;
+ua_act = 1:Nunocc_a;
+ub_act = 1:Nunocc_b;
+oa_act = 1:Nocc_a;
+ob_act = 1:Nocc_b;
 
-D1 =        einsum_kg(sys.Vvvvv,t2,'acfe,fbij->abcije')...
-           -einsum_kg(sys.Vvvvv,t2,'bcfe,faij->abcije')...
-           -einsum_kg(sys.Vvvvv,t2,'abfe,fcij->abcije');
-       
-D2 = einsum_kg(einsum_kg(sys.Voovo,t1,'mnei,cm->cnei'),t2,'cnei,abnj->abcije')...
-     -einsum_kg(einsum_kg(sys.Voovo,t1,'mnei,am->anei'),t2,'anei,cbnj->abcije')... % (ac)
-     -einsum_kg(einsum_kg(sys.Voovo,t1,'mnei,bm->bnei'),t2,'bnei,acnj->abcije')... % (bc)
-     -einsum_kg(einsum_kg(sys.Voovo,t1,'mnej,cm->cnej'),t2,'cnej,abni->abcije')... % (ij)
-     +einsum_kg(einsum_kg(sys.Voovo,t1,'mnei,am->anej'),t2,'anej,cbni->abcije')... % (ij)(ac)
-     +einsum_kg(einsum_kg(sys.Voovo,t1,'mnej,bm->bnej'),t2,'bnej,acni->abcije');   % (ij)(bc)
+t3a = t3(ua,ua,ua,oa,oa,oa);
+t3b = t3(ua,ua,ub,oa,oa,ob);
+t3c = t3(ua,ub,ub,oa,ob,ob);
+t3d = t3(ub,ub,ub,ob,ob,ob);
 
-D3 = -einsum_kg(einsum_kg(sys.Vvovv,t1,'amfe,fi->amie'),t2,'amie,bcjm->abcije')...
-     +einsum_kg(einsum_kg(sys.Vvovv,t1,'bmfe,fi->bmie'),t2,'bmie,acjm->abcije')... % (ab)
-     +einsum_kg(einsum_kg(sys.Vvovv,t1,'cmfe,fi->cmie'),t2,'cmie,bajm->abcije')... % (ac)
-     +einsum_kg(einsum_kg(sys.Vvovv,t1,'amfe,fj->amje'),t2,'amje,bcim->abcije')... % (ij)
-     -einsum_kg(einsum_kg(sys.Vvovv,t1,'bmfe,fj->bmje'),t2,'bmje,acim->abcije')... % (ij)(ab)
-     -einsum_kg(einsum_kg(sys.Vvovv,t1,'cmfe,fj->cmje'),t2,'cmje,baim->abcije');   % (ij)(ac)
-    
-D4 = -einsum_kg(einsum_kg(sys.Vvovv,t1,'amfe,cm->acfe'),t2,'acfe,fbij->abcije')...
-     +einsum_kg(einsum_kg(sys.Vvovv,t1,'amfe,cm->acfe'),t2,'acfe,fbij->abcije')...
-     +einsum_kg(einsum_kg(sys.Vvovv,t1,'amfe,cm->acfe'),t2,'acfe,fbij->abcije')...
-     +einsum_kg(einsum_kg(sys.Vvovv,t1,'amfe,cm->acfe'),t2,'acfe,fbij->abcije')...
-     -einsum_kg(einsum_kg(sys.Vvovv,t1,'amfe,cm->acfe'),t2,'acfe,fbij->abcije')...
-     -einsum_kg(einsum_kg(sys.Vvovv,t1,'amfe,cm->acfe'),t2,'acfe,fbij->abcije');
-
+D = einsum_kg(HBar_t.H1A.vv,t3b,'ae,ebcijk->abcijk'); D = D - permute(D,[2,1,3,4,5,6]);
+D2 = einsum_kg(HBar_t.H1A.vv(ua_act,ua_act),t3b(ua_act,ua_act,ub_act,
 
 

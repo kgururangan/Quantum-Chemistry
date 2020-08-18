@@ -2,13 +2,13 @@ clear all
 clc
 close all
 
-Nelec = 10;
+Nelec = 28;
 
-atoms = {'H','H', 'O'};
+atoms = {'H','H', 'H', 'H', 'C', 'C', 'C', 'C'};
 
-atom_valency = [1, 1, 8];
+atom_valency = [1, 1, 1, 1, 6, 6, 6, 6];
 
-nstates = 4; % including ground state
+nstates = 1; % including ground state
 
 ccopts.diis_size = 5;
 ccopts.maxit = 100;
@@ -28,7 +28,7 @@ eomopts.max_nvec_per_root = 5;
 eomopts.flag_verbose = 1;
 eomopts.mult = 1;
 eomopts.thresh_vec = 1e-3;
-eomopts.solver = 1;
+eomopts.solver = 2;
 
 leomccopts.maxit = 150;
 leomccopts.diis_size = 5;
@@ -44,14 +44,13 @@ scfopts.level_shift = 0.0;
 
 %
 
-HOH_angle = 104.5;
-OH_dist = linspace(1,3,20);
-num_pts = length(OH_dist); 
+theta = linspace(20,45,20);
+CC_dist = linspace(1,4,20);
+num_pts = length(CC_dist); 
 COORDS = cell(1,num_pts);
 for k = 1:num_pts
-    phi = deg2rad((180-HOH_angle)/2);
-    at_H1 = [0, OH_dist(k)*sin(phi), -OH_dist(k)*cos(phi)];
-    at_H2 = [0, OH_dist(k)*sin(phi), OH_dist(k)*cos(phi)];
+    at_H1 = [0, 1.55801763, 0];
+    at_H2 = [0, 1.55801763, 0];
     at_O = [0, 0, 0];
     COORDS{k} = [at_H1; at_H2; at_O];
 end
@@ -154,74 +153,20 @@ end
 
 %% Plot PES
 
-load GMS-PES-v3
-
-M = 4;
-
 cmap = lines(num_pts);
-
-close all
-
-figure(1)
 hold on
-for i = 1:M
-    g{i} = plot(OH_dist,ENERGY_CC(i,:),'ko','markersize',5,'markerfacecolor',cmap(i,:),'color',cmap(i,:));
-    plot(OH_dist,ENERGY_CC(i,:),'k-','Linewidth',1.5,'color',cmap(i,:));
+for i = 1:4
+    g{i} = plot(CC_dist,ENERGY_CC(i,:),'ko','markersize',5,'markerfacecolor',0.8*cmap(i,:),'color',0.8*cmap(i,:));
+    plot(CC_dist,ENERGY_CC(i,:),'k-.','Linewidth',2,'color',0.8*cmap(i,:));
+
+    %h{i} = plot(OH_dist,ENERGY_CRCC(i,:),'ko','markersize',5,'markerfacecolor',cmap(i,:),'color',cmap(i,:));
+    %plot(OH_dist,ENERGY_CRCC(i,:),'k-','Linewidth',1.5,'color',cmap(i,:));
 end
 hold off
+%ll1 = legend([h{1},h{2},h{3},h{4}],{'CR-CC(2,3)','S_1 CR-EOMCC(2,3)','S_2 CR-EOMCC(2,3)','S_3 CR-EOMCC(2,3)'}); set(ll1,'Location','NorthEast');
 ll2 = legend([g{1},g{2},g{3},g{4}],{'CCSD','S_1 EOMCCSD','S_2 EOMCCSD','S_3 EOMCCSD'}); set(ll2,'Location','NorthEast');
 xlabel('R_{OH} Distance / bohr')
 ylabel('Energy / Eh')
 set(gca,'FontSize',14,'Linewidth',2,'Box','off')
 axis([-inf,inf,-76.6,-74])
 grid on
-hold off
-
-figure(2)
-hold on
-for i = 1:M
-    h{i} = plot(OH_dist,ENERGY_CRCC(i,:),'ko','markersize',5,'markerfacecolor',cmap(i,:),'color',cmap(i,:));
-    plot(OH_dist,ENERGY_CRCC(i,:),'k-','Linewidth',1.5,'color',cmap(i,:));
-end
-ll1 = legend([h{1},h{2},h{3},h{4}],{'CR-CC(2,3)','S_1 CR-EOMCC(2,3)','S_2 CR-EOMCC(2,3)','S_3 CR-EOMCC(2,3)'}); set(ll1,'Location','NorthEast');
-xlabel('R_{OH} Distance / bohr')
-ylabel('Energy / Eh')
-set(gca,'FontSize',14,'Linewidth',2,'Box','off')
-axis([-inf,inf,-76.6,-74])
-grid on
-hold off
-
-figure(3)
-hold on
-for i = 1:M
-    h{i} = plot(OH_dist,(ENERGY_CC(i,:)-ENERGY_CRCC(i,:))*1000,'ko','markersize',5,'markerfacecolor',cmap(i,:),'color',cmap(i,:));
-    plot(OH_dist,(ENERGY_CC(i,:)-ENERGY_CRCC(i,:))*1000,'k-','Linewidth',1.5,'color',cmap(i,:));
-end
-ll3 = legend([h{1},h{2},h{3},h{4}],{'CCSD-CR-CC(2,3)','S_1 EOMCCSD-CR-EOMCC(2,3)','S_2 EOMCCSD-CR-EOMCC(2,3)','S_3 EOMCCSD-CR-EOMCC(2,3)'}); set(ll3,'Location','NorthEast');
-xlabel('R_{OH} Distance / bohr')
-ylabel('\Delta Energy / mEh')
-set(gca,'FontSize',14,'Linewidth',2,'Box','off')
-%axis([-inf,inf,-76.6,-74])
-grid on
-hold off
-%%
-
-Nt = 128;
-tmax = 5;
-dt = (tmax/Nt);
-t = 0:dt:(Nt-1)*dt;
-
-x = ifftshift(linspace(OH_dist(1),OH_dist(end),128));
-
-sigma0 = 10;
-x0 = exp(-(x-1.0).^2/sigma0^2); x0 = x0./(sqrt(sum(conj(x0).*x0)));
-
-sim_par.t = t;
-sim_par.x = x;
-sim_par.init = x0;
-sim_par.plot = true;
-sim_par.flag_centered = true;
-
-[WF,E] = split_fourier_prop(sim_par, @(y) interp1(OH_dist,ENERGY_CRCC(1,:),y,'spline'));
-
-
