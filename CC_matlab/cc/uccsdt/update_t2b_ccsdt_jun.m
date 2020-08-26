@@ -1,5 +1,6 @@
-function [t2b] = update_t2b_jun(t1a,t1b,t2a,t2b,t2c,sys,shift)
+function [t2b] = update_t2b_ccsdt_jun(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,sys,shift)
 
+    % CCSD part
     s17 = einsum_kg(sys.vB_ovvo,t1a,'mbej,ei->jbmi');
     s19 = einsum_kg(sys.vB_oooo,t1a,'mnij,am->ijna');
     s21 = einsum_kg(sys.vB_ovov,t1b,'mbie,ej->ibmj');
@@ -197,23 +198,43 @@ function [t2b] = update_t2b_jun(t1a,t1b,t2a,t2b,t2c,sys,shift)
     z16 = einsum_kg(x14,t2c,'iaem,bejm->iajb');
 
 
-    new_t = einsum_permute(sys.vB_vvoo,'abij->abij');
-    new_t = new_t - einsum_permute(z1,'ijba->abij');
-    new_t = new_t + einsum_permute(z2,'jabi->abij');
-    new_t = new_t - einsum_permute(z3,'ijab->abij');
-    new_t = new_t + einsum_permute(z4,'iabj->abij');
-    new_t = new_t + einsum_permute(z5,'jbia->abij');
-    new_t = new_t - einsum_permute(z6,'ijab->abij');
-    new_t = new_t + einsum_permute('aijb->abij', z7);
-    new_t = new_t - einsum_permute('jiab->abij', z8);
-    new_t = new_t + einsum_permute('bija->abij', z9);
-    new_t = new_t - einsum_permute('iajb->abij', z10);
-    new_t = new_t + einsum_permute('ijab->abij', z11);
-    new_t = new_t - einsum_permute('ibja->abij', z12);
-    new_t = new_t - einsum_permute('jaib->abij', z13);
-    new_t = new_t + einsum_permute('abij->abij', z14);
-    new_t = new_t - einsum_permute('jbia->abij', z15);
-    new_t = new_t + einsum_permute('iajb->abij', z16);
+    X2B_abij = einsum_permute(sys.vB_vvoo,'abij->abij');
+    X2B_abij = X2B_abij - einsum_permute(z1,'ijba->abij');
+    X2B_abij = X2B_abij + einsum_permute(z2,'jabi->abij');
+    X2B_abij = X2B_abij - einsum_permute(z3,'ijab->abij');
+    X2B_abij = X2B_abij + einsum_permute(z4,'iabj->abij');
+    X2B_abij = X2B_abij + einsum_permute(z5,'jbia->abij');
+    X2B_abij = X2B_abij - einsum_permute(z6,'ijab->abij');
+    X2B_abij = X2B_abij + einsum_permute('aijb->abij', z7);
+    X2B_abij = X2B_abij - einsum_permute('jiab->abij', z8);
+    X2B_abij = X2B_abij + einsum_permute('bija->abij', z9);
+    X2B_abij = X2B_abij - einsum_permute('iajb->abij', z10);
+    X2B_abij = X2B_abij + einsum_permute('ijab->abij', z11);
+    X2B_abij = X2B_abij - einsum_permute('ibja->abij', z12);
+    X2B_abij = X2B_abij - einsum_permute('jaib->abij', z13);
+    X2B_abij = X2B_abij + einsum_permute('abij->abij', z14);
+    X2B_abij = X2B_abij - einsum_permute('jbia->abij', z15);
+    X2B_abij = X2B_abij + einsum_permute('iajb->abij', z16);
+    
+    % CCSDT part
+    H1A = HBar_t.H1A;
+    H1B = HBar_t.H1B;
+    H2A = HBar_t.H2A;
+    H2B = HBar_t.H2B;
+    H2C = HBar_t.H2C;
+    
+    D1 = -0.5*einsum_kg(H2A.ooov,t3b,'mnif,afbmnj->abij');
+    D2 = -einsum_kg(H2B.oovo,t3b,'nmfj,afbinm->abij');
+    D3 = -0.5*einsum_kg(H2C.ooov,t3c,'mnjf,afbinm->abij');
+    D4 = -einsum_kg(H2B.ooov,t3c,'mnif,afbmnj->abij');
+    D5 = +0.5*einsum_kg(H2A.vovv,t3b,'anef,efbinj->abij');
+    D6 = +einsum_kg(H2B.vovv,t3c,'anef,efbinj->abij');
+    D7 = +einsum_kg(H2B.ovvv,t3b,'nbfe,afeinj->abij');
+    D8 = +0.5*einsum_kg(H2C.vovv,t3c,'bnef,afeinj->abij');
+    D9 = +einsum_kg(H1A.ov,t3b,'me,aebimj->abij');
+    D10 = +einsum_kg(H1B.ov,t3c,'me,aebimj->abij');
+      
+    X2B_abij = X2B_abij + D1 + D2 + D3 + D4 + D5 + D6 + D7 + D8 + D9 + D10;
 
     for i = 1:sys.Nocc_alpha
         for j = 1:sys.Nocc_beta
@@ -221,7 +242,7 @@ function [t2b] = update_t2b_jun(t1a,t1b,t2a,t2b,t2c,sys,shift)
                 for b = 1:sys.Nvir_beta
                     denom = (sys.fa_oo(i,i)+sys.fb_oo(j,j)-sys.fa_vv(a,a)-sys.fb_vv(b,b)-shift); 
                     %coef = -new_t(a,b,i,j) / denom;
-                    coef = new_t(a,b,i,j) / denom;
+                    coef = X2B_abij(a,b,i,j) / denom;
                     t2b(a,b,i,j) = t2b(a,b,i,j) + coef;
                 end
             end

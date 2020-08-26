@@ -33,22 +33,27 @@ function [t2c] = update_t2c_jun(t1a,t1b,t2a,t2b,t2c,sys)
     q14 = einsum_kg(s53,t1b,'fmni,fn->im');
     s54 = einsum_kg(s53,t1b,'fmni,fj->imnj');
     s62 = einsum_kg(s54,t1b,'imnj,am->ijna');
-    q10 = einsum_kg(sys.vA_oovv,t2c,'mnef,efjn->mj');
+    q10 = einsum_kg(sys.vC_oovv,t2c,'mnef,efjn->mj');
     q15 = einsum_kg(sys.vA_oovv,t1b,'mnef,fn->em');
     q16 = einsum_kg(q15,t1b,'em,bm->eb');
     s25 = einsum_kg(sys.vA_ooov,t2c,'mnie,aejm->inja');
 
-    x1 = np.einsum('ijmb->ijbm', v_a[o,o,o,u]) - np.einsum('ibmj->ijbm', s49) + 0.5*np.einsum('bmij->ijbm', s30)
-    z1 = np.einsum('ijbm,am->ijba', x1, t1b, optimize=True)
-    z2 = np.einsum('ieab,ej->iabj', v_a[o,u,u,u], t1b, optimize=True)
-    x2 = np.einsum('mbei->ibem', v_b[o,u,u,o]) + np.einsum('bemi->ibem', s19) + 0.5*np.einsum('emib->ibem', s33)
-    z3 = np.einsum('ibem,eamj->ibja', x2, t2b, optimize=True)
-    x3 = np.einsum('mi->im', f[o,o]) + np.einsum('im->im', q1) + np.einsum('mi->im', q3) + np.einsum('im->im', q5) + np.einsum('mi->im', q12) + np.einsum('mi->im', q7) + np.einsum('im->im', q14) + 0.5*np.einsum('mi->im', q10)
-    z4 = np.einsum('im,abjm->ijab', x3, t2c, optimize=True)
-    x4 = np.einsum('be->be', f[u,u]) + np.einsum('be->be', q2) - np.einsum('eb->be', q4) - np.einsum('be->be', q6) - np.einsum('eb->be', q8) + 0.5*np.einsum('eb->be', q9) - np.einsum('eb->be', q13) - np.einsum('eb->be', q16)
-    z5 = np.einsum('be,aeij->bija', x4, t2c, optimize=True)
-    x5 = np.einsum('mnij->ijmn', v_a[o,o,o,o]) + 0.5*np.einsum('mnij->ijmn', s40) + np.einsum('imnj->ijmn', s54)
-    z6 = np.einsum('ijmn,abmn->ijab', x5, t2c, optimize=True)
+    x1 = einsum_permute(sys.vC_ooov,'ijmb->ijbm') - einsum_permute(s49,'ibmj->ijbm') + 0.5*einsum_permute(s30,'bmij->ijbm');
+    z1 = einsum_kg(x1,t1b,'ijbm,am->ijba');
+    z2 = einsum_kg(sys.vA_ovvv,t1b,'ieab,ej->iabj');
+    x2 = einsum_permute(sys.vB_ovvo,'mbei->ibem') + einsum_permute('bemi->ibem', s19) + 0.5*einsum_permute('emib->ibem', s33);
+    z3 = einsum_kg(x2,t2b,'ibem,eamj->ibja');    
+    x3 = einsum_permute('mi->im', sys.fb_oo) + einsum_permute('im->im', q1) + einsum_permute('mi->im', q3)...
+         + einsum_permute('im->im', q5) + einsum_permute('mi->im', q12) + einsum_permute('mi->im', q7) ...
+         + einsum_permute('im->im', q14) + 0.5*einsum_permute('mi->im', q10);     
+    z4 = einsum_kg(x3,t3c,'im,abjm->ijab');
+    x4 = einsum_permute('be->be', sys.fb_vv) + einsum_permute('be->be', q2) - einsum_permute('eb->be', q4)...
+         - einsum_permute('be->be', q6) - einsum_permute('eb->be', q8) + 0.5*einsum_permute('eb->be', q9)...
+         - einsum_permute('eb->be', q13) - einsum_permute('eb->be', q16);     
+    z5 = einsum_kg(x4,t2c,'be,aeij->bija');
+    x5 = einsum_permute('mnij->ijmn', sys.vC_oooo) + 0.5*einsum_permute('mnij->ijmn', s40) + einsum_permute('imnj->ijmn', s54);
+    
+    z6 = einsum_kg(x5,t2c,'ijmn,abmn->ijab');
     x6 = np.einsum('mbie->ibem', v_a[o,u,o,u]) - np.einsum('bemi->ibem', s28) - np.einsum('emib->ibem', s35)
     z7 = np.einsum('ibem,aejm->ibja', x6, t2c, optimize=True)
     z8 = np.einsum('abef,efij->abij', v_a[u,u,u,u], t2c, optimize=True)

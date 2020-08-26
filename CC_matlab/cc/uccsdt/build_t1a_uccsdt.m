@@ -1,6 +1,11 @@
-function [t1a] = update_t1a(t1a, t1b, t2a, t2b, t2c, chi1A, chi1B, chi2A, chi2B, chi2C, sys, shift)
+function [X1a_ai] = build_t1a_uccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys)
 
-    X1a_ia = sys.fa_vo +... % 1
+    [chi1A, chi1B, chi2A, chi2B, chi2C] = build_ucc_intermediates_v2(t1a, t1b, t2a, t2b, t2c, sys);
+    [HBar_t, VT3_t] = build_ucc_hbar_intermediates(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys);
+
+
+    % CCSD part
+    X1a_ai = sys.fa_vo +... % 1
              +einsum_kg(chi1A.ae_bar,t1a,'ae,ei->ai')... % 8
              -einsum_kg(chi1A.mi_bar,t1a,'mi,am->ai')... % 8 (effectively 5... 3 in common between chi.ae and chi.mi)
              +einsum_kg(chi1A.me,t2a,'me,aeim->ai') ... % 3
@@ -12,14 +17,10 @@ function [t1a] = update_t1a(t1a, t1b, t2a, t2b, t2c, chi1A, chi1B, chi2A, chi2B,
              +einsum_kg(sys.vA_voov,t1a,'amie,em->ai')... % 1
              +einsum_kg(sys.vB_voov,t1b,'amie,em->ai'); % 1
 
-         
-    omega = 1;          
-    for i = 1:sys.Nocc_alpha
-        for a = 1:sys.Nvir_alpha
-            temp = X1a_ia(a,i)/(sys.fa_oo(i,i) - sys.fa_vv(a,a) - shift);
-            t1a(a,i) = (1-omega)*t1a(a,i) + omega*temp;
-        end
-    end
-             
+    % CCSDT part
+    X1a_ai = X1a_ai...
+             +0.25*einsum_kg(sys.vA_oovv,t3a,'mnef,aefimn->ai')...
+             +einsum_kg(sys.vB_oovv,t3b,'mnef,aefimn->ai')...
+             +0.25*einsum_kg(sys.vC_oovv,t3c,'mnef,aefimn->ai');
          
 end
