@@ -1,0 +1,9 @@
+function [HC_1A] = build_HC_1A(c1a,c1b,sys)
+    
+    HC_1A = +einsum_kg(sys.fa_vv,c1a,'ba,aj->bj')...
+            -einsum_kg(sys.fa_oo,c1a,'ij,bi->bj')...
+            +einsum_kg(sys.vA_ovvo,c1a,'ibaj,ai->bj')...
+            +einsum_kg(sys.vB_voov,c1b,'bija,ai->bj');
+    
+end
+
