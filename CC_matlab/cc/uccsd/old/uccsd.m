@@ -43,11 +43,14 @@ function [cc_t,Ecorr] = uccsd(sys,opts,T_guess)
         Ecorr = ucc_energy(t1a,t1b,t2a,t2b,t2c,sys);
        
         % update t1 and t2 by Jacobi                        
-        t1a = update_t1a(t1a,t1b,t2a,t2b,t2c,sys,shift);
-        t1b = update_t1b(t1a,t1b,t2a,t2b,t2c,sys,shift);
-        t2a = update_t2a(t1a,t1b,t2a,t2b,t2c,sys,shift);
-        t2b = update_t2b(t1a,t1b,t2a,t2b,t2c,sys,shift);
-        %t2c = update_t2c(t1a,t1b,t2a,t2b,t2c,sys,shift);
+        [chi1A, chi1B, chi2A, chi2B, chi2C] = build_ucc_intermediates_v2(t1a, t1b, t2a, t2b, t2c, sys);
+        t1a = update_t1a(t1a,t1b,t2a,t2b,t2c,chi1A,chi1B,chi2A,chi2B,chi2C,sys,shift);
+        %t1a = update_t1a_v2(t1a,t1b,t2a,t2b,t2c,sys,shift);
+        t1b = t1a;
+        %t2a = update_t2a(t1a,t1b,t2a,t2b,t2c,chi1A,chi1B,chi2A,chi2B,chi2C,sys);
+        t2a = update_t2a_jun(t1a,t1b,t2a,t2b,t2c,sys,shift);
+        %t2b = update_t2b(t1a,t1b,t2a,t2b,t2c,chi1A,chi1B,chi2A,chi2B,chi2C,sys,shift);
+        t2b = update_t2b_jun(t1a,t1b,t2a,t2b,t2c,sys,shift);
         t2c = t2a;
         
         % store vectorized results

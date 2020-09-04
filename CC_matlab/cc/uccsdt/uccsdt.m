@@ -52,23 +52,20 @@ function [cc_t,Ecorr] = uccsdt(sys,opts,T_guess)
         Ecorr = ucc_energy(t1a,t1b,t2a,t2b,t2c,sys);
        
         % update t1 and t2 by Jacobi                        
-        [chi1A, chi1B, chi2A, chi2B, chi2C] = build_ucc_intermediates_v2(t1a, t1b, t2a, t2b, t2c, sys);
         [HBar_t, VT3_t] = build_ucc_hbar_intermediates(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys);
         
-        t1a = update_t1a_ccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,chi1A,chi1B,chi2A,chi2B,chi2C,sys,shift);
-        t1b = t1a;
-        
+        t1a = update_t1a_ccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,sys,shift);
+        t1b = update_t1b_ccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,sys,shift);
         t2a = update_t2a_ccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,sys,shift);
-        %t2b = update_t2b_ccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,chi1A,chi1B,chi2A,chi2B,chi2C,HBar_t,sys,shift);
-        t2b = update_t2b_ccsdt_jun(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,sys,shift);
+        t2b = update_t2b_ccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,sys,shift);
         t2c = t2a;
         
         t3a = update_t3a(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,VT3_t,sys,shift);
         t3b = update_t3b(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,VT3_t,sys,shift);
-        t3c = update_t3c(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,VT3_t,sys,shift);
-        t3d = update_t3d(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,VT3_t,sys,shift);
-        %t3c = permute(t3b,[3,1,2,6,4,5]);
-        %t3d = t3a;
+        %t3c = update_t3c(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,VT3_t,sys,shift);
+        %t3d = update_t3d(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,VT3_t,sys,shift);
+        t3c = permute(t3b,[3,1,2,6,4,5]);
+        t3d = t3a;
         
         % store vectorized results
         T(sys.posv{1}) = t1a(:); T(sys.posv{2}) = t1b(:);

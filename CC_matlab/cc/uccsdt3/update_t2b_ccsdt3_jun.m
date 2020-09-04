@@ -1,4 +1,4 @@
-function [t2b] = update_t2b_ccsdt_jun(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,sys,shift)
+function [t2b] = update_t2b_ccsdt3_jun(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,sys,shift)
 
     % CCSD part
     s17 = einsum_kg(sys.vB_ovvo,t1a,'mbej,ei->jbmi');
@@ -234,20 +234,16 @@ function [t2b] = update_t2b_ccsdt_jun(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t
     D9 = +einsum_kg(H1A.ov,t3b,'me,aebimj->abij');
     D10 = +einsum_kg(H1B.ov,t3c,'me,aebimj->abij');
       
-    %X2B_abij = X2B_abij + (  D1 + D2 + D3 + D4 + D5 + D6 + D7 + D8 + D9 + D10 );
-    
-    CCSDT = + (  D1 + D2 + D3 + D4 + D5 + D6 + D7 + D8 + D9 + D10 );
+    X2B_abij = X2B_abij + D1 + D2 + D3 + D4 + D5 + D6 + D7 + D8 + D9 + D10;
 
     for i = 1:sys.Nocc_alpha
         for j = 1:sys.Nocc_beta
             for a = 1:sys.Nvir_alpha
                 for b = 1:sys.Nvir_beta
-                    
                     denom = (sys.fa_oo(i,i)+sys.fb_oo(j,j)-sys.fa_vv(a,a)-sys.fb_vv(b,b)-shift); 
-                    coef_1 = X2B_abij(a,b,i,j) / denom;
-                    coef_2 = CCSDT(a,b,i,j) / denom;
-                    
-                    t2b(a,b,i,j) = t2b(a,b,i,j) + coef_1 + coef_2;
+                    %coef = -new_t(a,b,i,j) / denom;
+                    coef = X2B_abij(a,b,i,j) / denom;
+                    t2b(a,b,i,j) = t2b(a,b,i,j) + coef;
                 end
             end
         end
