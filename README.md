@@ -6,17 +6,11 @@ Contents of Repository:
 CC_matlab - most up-to-date set of non-relativistic, spin-integrated coupled-cluster codes compatible with molecular orbital (MO) integrals obtained from any commercial quantum cheimstry software (any SCF reference including RHF, UHF, ROHF, and even Kohn-Sham orbitals may be used). Also contains SCF solvers so that MO integrals can be generated in a self-contained manner, although there is currently no symmetry adaptation. Currently supported calculations include:
 
     - RHF + Analytical Gradients
-    - CCSD 
-    - CR-CC(2,3) 
-    - Left-CCSD
-    - EOM-CCSD
-    - Left-EOMCCSD 
-    - CR-EOMCC(2,3) 
-    
- Only available in spin-orbital form:
- 
-    - CCSDT & CCSDT(III) active space variant
-  
+    - CCSD + Left-CCSD
+    - EOMCCSD + Left-EOMCCSD
+    - CR-CC(2,3) + CR-EOMCC(2,3)
+    - CCSDT
+    - CCSDT(III) active-space variant
   
 Routines can be run using one- and two-body molecular orbital integrals inputs (along with system parameters like number of occupied and unoccupied alpha/beta electrons) which can be found in CC_matlab_tests. Run routines as shown in main.m
 
