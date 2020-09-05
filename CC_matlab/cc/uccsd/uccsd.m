@@ -47,8 +47,7 @@ function [cc_t,Ecorr] = uccsd(sys,opts,T_guess)
         t1b = update_t1b(t1a,t1b,t2a,t2b,t2c,sys,shift);
         t2a = update_t2a(t1a,t1b,t2a,t2b,t2c,sys,shift);
         t2b = update_t2b(t1a,t1b,t2a,t2b,t2c,sys,shift);
-        %t2c = update_t2c(t1a,t1b,t2a,t2b,t2c,sys,shift);
-        t2c = t2a;
+        t2c = update_t2c(t1a,t1b,t2a,t2b,t2c,sys,shift);
         
         % store vectorized results
         T(sys.posv{1}) = t1a(:); T(sys.posv{2}) = t1b(:);
