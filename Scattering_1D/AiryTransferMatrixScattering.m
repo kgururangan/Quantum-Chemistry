@@ -96,6 +96,19 @@ ylabel('log_{10}(|T|^2) Transmission')
 set(gca,'FontSize',14,'Linewidth',2,'Box','off')
 grid on
 
+%%
+clear all 
+clc
+close all
+
+A = rand(5,5);
+b = rand(5,1);
+x = A\b
+
+[U,s,V] = svd(A,'econ');
+Ainv = V*diag(diag(s).^-1)*U';
+x2 = Ainv*b
+
 %% Functions
 
 function [M] = airyMatrix(alpha,x,y_start,x_start,e,m)
