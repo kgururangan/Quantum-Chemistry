@@ -62,10 +62,10 @@ function [cc_t,Ecorr] = uccsdt(sys,opts,T_guess)
         %[HBar_t, VT3_t] = build_ucc_hbar_intermediates(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys);
         t3a = update_t3a(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift);
         t3b = update_t3b(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift);
-        %t3c = update_t3c(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,VT3_t,sys,shift);
-        %t3d = update_t3d(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,VT3_t,sys,shift);
-        t3c = permute(t3b,[3,1,2,6,4,5]);
-        t3d = t3a;
+        t3c = update_t3c(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift);
+        t3d = update_t3d(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift);
+        %t3c = permute(t3b,[3,1,2,6,4,5]);
+        %t3d = t3a;
         
         %t3a = 0*t3a; t3b = 0*t3b; t3c = 0*t3c; t3d = 0*t3d;
         
