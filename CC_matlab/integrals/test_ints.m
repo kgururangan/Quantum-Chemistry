@@ -30,17 +30,17 @@ close all
 
 
 %%
-flag_check = true;
+flag_check = false;
 
 if flag_check
     load h2o-pvdz-ao-ints.mat
 end
 %
-Nelec = 10;
+Nelec = 12;
 
-atoms = {'H','H','O'};
+atoms = {'C','C'};
 
-atom_valency = [1, 1, 8];
+atom_valency = [6, 6];
 
 geometry = '2.5Re';
 
@@ -80,8 +80,8 @@ atom_coordinates = [ R0*cos(theta), R0*sin(theta), 0;
                     -R0*cos(theta), R0*sin(theta), 0;
                           0       ,      0       , 0 ];  
 
-% atom_coordinates = [0, 0, -0.739;
-%                     0, 0, 0.739];
+atom_coordinates = [0, 0, -0.739;
+                    0, 0, 0.739];
 
 basis = get_basis_ccpvdz(atoms, atom_coordinates);
 
@@ -145,6 +145,7 @@ Vnuc = calc_nuclear_nuclear(atom_coordinates,atom_valency);
 
 sys.Vnuc = Vnuc;
 
+
 %%
 tic
 Smat = get_Smat(basis);
@@ -183,7 +184,35 @@ opts.level_shift = 0.0;
 
 [Escf, C, P, eps_mo, Fock] = rhf(sys,opts);
 
+%% Test H2 cc-pvdz integrals
+clear all
+clc
+close all
 
+atoms = {'H', 'H'};
+atom_valency = [1, 1];
+Nelec = 2;
+
+atom_coordinates = [0, 0, -0.6991986157742016;
+                    0, 0,  0.6991986157742016]; 
+                
+basis = get_basis_ccpvdz(atoms, atom_coordinates);
+
+Norb = length(basis);
+
+Smat = get_Smat(basis);
+Zmat = get_Zmat(basis,atom_coordinates,atom_valency);
+[VVmat] = get_ERImat(basis,0.0);
+
+% for i = 1:Norb
+%     for j = i:Norb
+%         for k = j:Norb
+%             for l = k:Norb
+%                 fprintf('V(%d,%d,%d,%d) = %4.10f\n',i,j,k,l,VVmat(i,j,k,l))
+%             end
+%         end
+%     end
+% end
 %%
 
 err = zeros(Norb,Norb,Norb,Norb);

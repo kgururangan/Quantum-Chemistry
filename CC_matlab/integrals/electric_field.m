@@ -1,4 +1,4 @@
-function [val] = electric_field(a,lmn1,A,b,lmn2,B,C,direction)
+function [val] = electric_field(a,lmn1,A,b,lmn2,B,C,direction) 
 
     l1 = lmn1(1); m1 = lmn1(2); n1 = lmn1(3);
     l2 = lmn2(1); m2 = lmn2(2); n2 = lmn2(3);
