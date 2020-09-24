@@ -22,7 +22,7 @@ Davidson_matlab_test - Matlab implementation of davidson diagonalization routine
 
 gaussian_integrals - Fortran implementation of McMurchie-Davidson atomic orbital integral evaluation scheme. I largely translated the Python implementation originally written by Joshua Goings https://github.com/jjgoings/McMurchie-Davidson
 
-hf_python_v* - My initial Python implementation of Hartree-Fock (with integral routines directly taken from Joshua Goings again) which lead into spinorbital CCSD and EOMCCSD. Big and unwieldy code which is streamlined and properly implemented in CC_matlab (however, it's useful for generated one- and two-body integrals needed to run the Matlab version).
+hf_python_v* - My initial Python implementation of Hartree-Fock (with integral routines directly taken from Joshua Goings again) which lead into spinorbital CCSD and EOMCCSD. Big and unwieldy code which is streamlined and properly implemented in CC_matlab.
 
 Davidson_test - Python implementation of Davidson routine (use Matlab versions as they are more stable)
 
