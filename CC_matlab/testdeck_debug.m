@@ -17,10 +17,10 @@ Nelec = 10;
 %%
 %load h2o-pvdz.mat
 %load h2-pvdz-integrals.mat
-%load h2o-631g-stretched
+load h2o-631g-stretched
 %load h2o-631g
 %load rectangle-pvdz-d2h
-load h2o-631g-gms
+%load h2o-631g-gms
 
 nfzc = 0; nfzv = 0; nact_h = 200; nact_p = 200;
 
@@ -71,7 +71,7 @@ lccopts.shift = 0.0;
 
 eomopts.nroot = 1;
 eomopts.maxit = 100;
-eomopts.tol = 1e-10;
+eomopts.tol = 1e-8;
 eomopts.nvec_per_root = 1;
 eomopts.max_nvec_per_root = 5;
 eomopts.flag_verbose = 1;
@@ -177,7 +177,18 @@ clc
 t1 = convert_spinint_to_spinorb({cc_t.t1a,cc_t.t1b},sys_ucc);
 t2 = convert_spinint_to_spinorb({cc_t.t2a,cc_t.t2b,cc_t.t2c},sys_ucc);
 
-[MM23] = build_MM23(t1,t2,HBar_conv);
+[MM23_v2] = build_MM23(t1,t2,HBar_conv);
+[MM23] = build_MM23_debug(t1,t2,sys_cc);
+
+% h_vooo_v2 = HBar_conv{2}{2,1,1,1};
+% h_vvov_v2 = HBar_conv{2}{2,2,1,2};
+% h_ov_v2 = HBar_conv{1}{1,2};
+% 
+% get_error(h_vooo,h_vooo_v2)
+% get_error(h_vvov,h_vvov_v2)
+% get_error(h_ov,h_ov_v2)
+
+%
 
 MM23A_conv = MM23(ua,ua,ua,oa,oa,oa);
 MM23B_conv = MM23(ua,ua,ub,oa,oa,ob);
@@ -329,22 +340,73 @@ get_error(H2A_opt.ooov,H2A.ooov)
 get_error(H2A_opt.oooo,H2A.oooo)
 get_error(H2A_opt.vooo,H2A.vooo)
 
-%% Debug CCSDt builds
 
-[t1,t2,t3,Ecorr_ccsdt] = ccsdt(sys_cc,ccopts);
+
+%% Debug CCSDT
+
+% I think there's an issue with naively setting t3b = t3c in the uccsdt
+% routine. The reason why is because t3b has permutational symmetry with
+% respect to dimensions (1,2) and (4,5) while t3c has permutational
+% symmetry with respect to dimensions (2,3) and (5,6).
+
+ccopts.diis_size = 5;
+ccopts.maxit = 100;
+ccopts.tol = 1e-10;
+ccopts.shift = 0;
+
+[cc_t,Ecorr_uccsdt] = uccsdt(sys_ucc,ccopts);
+
+t1a = cc_t.t1a; t1b = cc_t.t1b;
+t2a = cc_t.t2a; t2b = cc_t.t2b; t2c = cc_t.t2c;
+t3a = cc_t.t3a; t3b = cc_t.t3b; t3c = cc_t.t3c; t3d = cc_t.t3d;
 
 %%
-ua_act = 1:Nunocc_a;
-ub_act = 1:Nunocc_b;
-oa_act = 1:Nocc_a;
-ob_act = 1:Nocc_b;
 
-t3a = t3(ua,ua,ua,oa,oa,oa);
-t3b = t3(ua,ua,ub,oa,oa,ob);
-t3c = t3(ua,ub,ub,oa,ob,ob);
-t3d = t3(ub,ub,ub,ob,ob,ob);
+[t1] = convert_spinint_to_spinorb({t1a,t1b},sys_ucc);
+[t2] = convert_spinint_to_spinorb({t2a,t2b,t2c},sys_ucc);
+[t3] = convert_spinint_to_spinorb({t3a,t3b,t3c,t3d},sys_ucc);
 
-D = einsum_kg(HBar_t.H1A.vv,t3b,'ae,ebcijk->abcijk'); D = D - permute(D,[2,1,3,4,5,6]);
-D2 = einsum_kg(HBar_t.H1A.vv(ua_act,ua_act),t3b(ua_act,ua_act,ub_act,
+%
+[X1A] = build_t1a_uccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys_ucc);
+X1B = X1A;
 
+[X2A] = build_t2a_uccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys_ucc);
+[X2B] = build_t2b_uccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys_ucc);
+X2C = X2A;
+
+[X3A] = build_t3a_uccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys_ucc);
+[X3B] = build_t3b_uccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys_ucc);
+[X3C] = build_t3c_uccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys_ucc);
+[X3D] = build_t3d_uccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys_ucc);
+
+[t1] = convert_spinint_to_spinorb({t1a,t1b},sys_ucc);
+[t2] = convert_spinint_to_spinorb({t2a,t2b,t2c},sys_ucc);
+[t3] = convert_spinint_to_spinorb({t3a,t3b,t3c,t3d},sys_ucc);
+
+[X1] = build_t1_ccsdt(t1,t2,t3,sys_cc);
+[X2] = build_t2_ccsdt(t1,t2,t3,sys_cc);
+[X3] = build_t3_ccsdt(t1,t2,t3,sys_cc);
+
+[X1_ucc] = convert_spinint_to_spinorb({X1A,X1B},sys_ucc);
+[X2_ucc] = convert_spinint_to_spinorb({X2A,X2B,X2C},sys_ucc);
+[X3_ucc] = convert_spinint_to_spinorb({X3A,X3B,X3C,X3D},sys_ucc);
+
+fprintf('\nError in T1 = %4.12f\n',get_error(X1,X1_ucc))
+fprintf('Error in T2 = %4.12f\n',get_error(X2,X2_ucc))
+fprintf('Error in T3 = %4.12f\n',get_error(X3,X3_ucc))
+
+
+%%
+
+D0 = rand(3,3,3,6,6,6);
+
+D1 = D0 - permute(D0,[2,1,3,4,5,6]) - permute(D0,[3,2,1,4,5,6]);
+D1 = D1 - permute(D1,[1,2,3,6,5,4]) - permute(D1,[1,2,3,4,6,5]);
+
+D2 = D0 - permute(D0,[2,1,3,4,5,6]) - permute(D0,[3,2,1,4,5,6]) ...
+        - permute(D0,[1,2,3,6,5,4]) - permute(D0,[1,2,3,4,6,5]) ...
+        + permute(D0,[2,1,3,6,5,4]) + permute(D0,[2,1,3,4,6,5]) ...
+        + permute(D0,[3,2,1,6,5,4]) + permute(D0,[3,2,1,4,6,5]);
+    
+    
 

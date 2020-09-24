@@ -8,7 +8,7 @@ atoms = {'H','H', 'O'};
 
 atom_valency = [1, 1, 8];
 
-nstates = 4; % including ground state
+nstates = 1; % including ground state
 
 ccopts.diis_size = 5;
 ccopts.maxit = 100;
@@ -28,7 +28,7 @@ eomopts.max_nvec_per_root = 5;
 eomopts.flag_verbose = 1;
 eomopts.mult = 1;
 eomopts.thresh_vec = 1e-3;
-eomopts.solver = 1;
+eomopts.solver = 2;
 
 leomccopts.maxit = 150;
 leomccopts.diis_size = 5;
@@ -60,7 +60,7 @@ end
 ENERGY_RHF = zeros(1,num_pts);
 ENERGY_CC = zeros(nstates,num_pts);
 ENERGY_CRCC = zeros(nstates,num_pts);
-
+ENERGY_CCSDT = zeros(1,num_pts);
 
 int_lab = {'1.0','1.1','1.2','1.3','1.4','1.5','1.6','1.7','1.8','1.9','2.05' ...
            '2.16','2.26','2.37','2.47','2.58','2.68','2.79','2.89','3.0'};
@@ -111,9 +111,10 @@ for JJ = 1:num_pts
         if JJ == 1 % use 0 T vectors as guess
             [cc_t,Ecorr_ucc] = uccsd(sys,ccopts);
         else % use previous cluster amplitudes as guess
-            [cc_t,Ecorr_cc] = uccsd(sys,ccopts,T_init);
+            [cc_t,Ecorr_ucc] = uccsd(sys,ccopts,T_init_ccsd);
         end
-        T_init = cat(1,cc_t.t1a(:),cc_t.t1b(:),cc_t.t2a(:),cc_t.t2b(:),cc_t.t2c(:));
+        T_init_ccsd = cat(1,cc_t.t1a(:),cc_t.t1b(:),cc_t.t2a(:),cc_t.t2b(:),cc_t.t2c(:));
+
 
         % UCCSD HBar
         flag_3body = true;
@@ -121,22 +122,22 @@ for JJ = 1:num_pts
 
         % Left UCCSD
         [cc_t,lccsd_resid] = luccsd(cc_t,HBar_t,sys,lccopts);
-
-        % EOM-UCCSD
-        %if JJ == 1 % use CIS guess
-            eomopts.init_guess = 'cis';
-            [Rvec, omega, eom_residual, cc_t] = eomuccsd(HBar_t,cc_t,sys,eomopts);
-        %else % use previous R vectors as guess
-        %    eomopts.init_guess = 'custom';
-        %    [Rvec, omega, eom_residual, cc_t] = eomuccsd(HBar_t,cc_t,sys,eomopts,Rvec);
-        %end
-
-        % Left EOM-UCCSD
-        [Lvec,eom_lcc_resid,cc_t] = lefteomuccsd(omega,Rvec,HBar_t,cc_t,sys,leomccopts);
-
+% 
+%         % EOM-UCCSD
+%         %if JJ == 1 % use CIS guess
+%             eomopts.init_guess = 'cis';
+%             [Rvec, omega, eom_residual, cc_t] = eomuccsd(HBar_t,cc_t,sys,eomopts);
+%         %else % use previous R vectors as guess
+%         %    eomopts.init_guess = 'custom';
+%         %    [Rvec, omega, eom_residual, cc_t] = eomuccsd(HBar_t,cc_t,sys,eomopts,Rvec);
+%         %end
+% 
+%         % Left EOM-UCCSD
+%         [Lvec,eom_lcc_resid,cc_t] = lefteomuccsd(omega,Rvec,HBar_t,cc_t,sys,leomccopts);
+% 
         % CR-CC(2,3)
-        [Ecrcc23A,Ecrcc23B,Ecrcc23C,Ecrcc23D] = crcc23_wrap(cc_t,HBar_t,sys,omega);
-
+        [Ecrcc23A,Ecrcc23B,Ecrcc23C,Ecrcc23D] = crcc23_wrap(cc_t,HBar_t,sys);
+% 
         % record energies
         for n = 1:nstates
             if n == 1
@@ -146,6 +147,18 @@ for JJ = 1:num_pts
             end
             ENERGY_CRCC(n,JJ) = Ecrcc23D(n);
         end
+        
+        % UCCSDT
+        if JJ == 1 % use 0 T vectors as guess
+              [cc_t,Ecorr_uccsdt] = uccsdt(sys,ccopts);
+        else % use previous cluster amplitudes as guess
+              [cc_t,Ecorr_uccsdt] = uccsdt(sys,ccopts,T_init_ccsdt);
+        end
+        T_init_ccsdt = cat(1,cc_t.t1a(:),cc_t.t1b(:),...
+                       cc_t.t2a(:),cc_t.t2b(:),cc_t.t2c(:),...
+                       cc_t.t3a(:),cc_t.t3b(:),cc_t.t3c(:),cc_t.t3d(:));
+                 
+        ENERGY_CCSDT(JJ) = sys.Escf + Ecorr_uccsdt;
 
         clear sys cc_t 
 
@@ -224,4 +237,8 @@ sim_par.flag_centered = true;
 
 [WF,E] = split_fourier_prop(sim_par, @(y) interp1(OH_dist,ENERGY_CRCC(1,:),y,'spline'));
 
+%%
 
+newName = input('I want to save the variable under the name:', 's');
+S.(newName) = ENERGY_CC;
+save('h2o_ccpvdz_ccsdt', '-struct', 'S')  % EDITED

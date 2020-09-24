@@ -7,56 +7,78 @@ format long
 %addpath(genpath('/Users/karthik/Dropbox/Hartree Fock/hartree_fock/v4/CC_matlab/'));
 %addpath(genpath('/Users/karthik/Dropbox/Davidson_methods/davidson_cheb_test/Davidson_matlab_test'));
 %addpath(genpath('/Users/karthik/Dropbox/Davidson_methods/davidson_cheb_test/GDav'));
-%addpath(genpath('/Users/karthik/Dropbox/Davidson_methods/davidson_cheb_test/B»chdav'));
+%addpath(genpath('/Users/karthik/Dropbox/Davidson_methods/davidson_cheb_test/Bchdav'));
 
 % addpath(genpath('/Users/karthik/Desktop/CC_matlab_tests/h2o-pvdz/'));
 % addpath(genpath('/Users/karthik/Desktop/CC_matlab_tests/h2o-631g/'));
 % addpath(genpath('/Users/karthik/Desktop/CC_matlab_tests/h2-pvdz/'));
 % addpath(genpath('/Users/karthik/Desktop/CC_matlab_tests/rectangle-d2h-pvdz/'));
 
-%addpath(genpath('/Users/karthik/Dropbox/Hartree Fock/hartree_fock/v4/CC_matlab'));
-%addpath(genpath('/Users/karthik/Desktop/CC_matlab_tests'));
+addpath(genpath('/Users/karthik/Dropbox/Hartree Fock/hartree_fock/v4/CC_matlab'));
+addpath(genpath('/Users/karthik/Desktop/CC_matlab_tests'));
 
-addpath(genpath('/Users/harellab/Dropbox/Hartree Fock/hartree_fock/v4/CC_matlab'));
-addpath(genpath('/Users/harellab/Desktop/CC_matlab_tests/'));
+%addpath(genpath('/Users/harellab/Dropbox/Hartree Fock/hartree_fock/v4/CC_matlab'));
+%addpath(genpath('/Users/harellab/Desktop/CC_matlab_tests/'));
 
 %%
-workpath = '/Users/harellab/Desktop/CC_matlab_tests/h2o-631g-gms/';
+workpath = '/Users/karthik/Desktop/CC_matlab_tests/f2-1.0-pvdz/';
 [e1int, e2int, Vnuc, Norb] = load_integrals(workpath);
-Nocc_a = 5;
-Nocc_b = 5;
-Nelec = 10;
+Nocc_a = 9;
+Nocc_b = 9;
+Nelec = 18;
 %
 %%
 %load h2o-pvdz.mat
 %load h2-pvdz-integrals.mat
-load h2o-631g-stretched
+%load h2o-631g-stretched
 %load h2o-631g
-%load rectangle-pvdz-d2h
-%load square-pvdz-d2h
+%load rectangle-pvdz-d2h % NEEDS NFZC = 4    
+%load square-pvdz-d2h % NEEDS NFZC = 4
 %load h2o-pvdz-gms.mat
 %load h2o-631g-gms.mat
+load f2-2.0-pvdz.mat % NEEDS NFZC = 2
+%load f2-1.0-pvdz.mat % NEEDS NFZC = 2
 
 %%
-nfzc = 0; nfzv = 0; nact_h = 200; nact_p = 200;
+nfzc = 2; nfzv = 0; nact_h = 200; nact_p = 200;
 
 sys_ucc = build_system_ucc(e1int,e2int,Vnuc,Nocc_a,Nocc_b,nfzc);
-sys_cc = build_system_cc(e1int,e2int,Vnuc,Nocc_a,Nocc_b,nfzc,nfzv,nact_h,nact_p);
-clear ans e1int e2int
+%sys_cc = build_system_cc(e1int,e2int,Vnuc,Nocc_a,Nocc_b,nfzc,nfzv,nact_h,nact_p);
+%clear ans e1int e2int
+
+%% CIS
+
+cisopts.nroot = 10;
+cisopts.maxit = 50;
+cisopts.tol = 1e-8;
+cisopts.nvec_per_root = 1;
+cisopts.max_nvec_per_root = 5;
+cisopts.flag_verbose = 1;
+cisopts.thresh_vec = 1e-3;
+
+[C, omega_cis, c0] = cis(sys_ucc,cisopts);
 
 %% UCCSD
 
 ccopts.diis_size = 5;
-ccopts.maxit = 100;
-ccopts.tol = 1e-10;
+ccopts.maxit = 200;
+ccopts.tol = 1e-8;
 ccopts.shift = 0;
-[cc_t,Ecorr_ucc] = uccsd(sys_ucc,ccopts);
+[cc_t,Ecorr_uccsd] = uccsd(sys_ucc,ccopts);
 
 %% UCCSDT
 
-% 610  E(Ref)=  -75.7199662951565
-% 611  E(Cor)= -0.221361597785899
-% 612  E(CCSDT)=  -75.9413278929424
+% problem still with t3d
+
+% H2O / 631G (C1) - stretched 
+% E(Ref)=  -75.7199662951565
+% E(Cor)= -0.221361597785899
+% E(CCSDT)=  -75.9413278929424
+
+% F2 / cc-pVDZ (D2h) - R/Re = 2.0 
+% E(Ref)= -198.420096281519
+% E(Cor)= -0.638105013177
+% E(CCSDT)= -199.058201294696
 
 ccopts.diis_size = 5;
 ccopts.maxit = 100;
@@ -67,7 +89,7 @@ ccopts.shift = 0;
 
 %% UCCSD HBar
 
-flag_3body = true;
+flag_3body = false;
 [HBar_t] = build_ucc_HBar( cc_t, sys_ucc, flag_3body);
 
 %% Left UCCSD
@@ -82,15 +104,15 @@ lccopts.shift = 0.0;
 
 %% EOM-UCCSD
 
-eomopts.nroot = 2;
+eomopts.nroot = 5;
 eomopts.maxit = 100;
-eomopts.tol = 1e-10;
+eomopts.tol = 1e-6;
 eomopts.nvec_per_root = 1;
 eomopts.max_nvec_per_root = 5;
 eomopts.flag_verbose = 1;
 eomopts.init_guess = 'cis';
 eomopts.mult = 1;
-eomopts.thresh_vec = 10*eomopts.tol;
+eomopts.thresh_vec = 1e-3;
 eomopts.solver = 2;
 
 [Rvec, omega, eom_residual, cc_t] = eomuccsd(HBar_t,cc_t,sys_ucc,eomopts);
@@ -109,7 +131,7 @@ lccopts.nroot = length(omega);
 
 %% CR-CC(2,3) 
 
-[Ecrcc23A,Ecrcc23B,Ecrcc23C,Ecrcc23D] = crcc23_wrap(cc_t,omega,HBar_t,sys_ucc,omega);
+[Ecrcc23A,Ecrcc23B,Ecrcc23C,Ecrcc23D] = crcc23_wrap(cc_t,HBar_t,sys_ucc);
 
 %%
 %%%%%%%%%%%%%%%%%%%% Spinorbital CC Codes %%%%%%%%%%%%%%%%%%%%
@@ -118,12 +140,17 @@ lccopts.nroot = length(omega);
 
 ccopts.diis_size = 5;
 ccopts.maxit = 100;
-ccopts.tol = 1e-9;
+ccopts.tol = 1e-10;
 ccopts.shift = 0.0;
 
 [t1,t2,Ecorr_ccsd] = ccsd(sys_cc,ccopts);
 
 %% CCSDT
+
+ccopts.diis_size = 5;
+ccopts.maxit = 100;
+ccopts.tol = 1e-10;
+ccopts.shift = 0;
 
 % CCSDT errors on order of 10^-5... be VERY careful checking all antisymmetrizers with einsum!
 [t1,t2,t3,Ecorr_ccsdt] = ccsdt(sys_cc,ccopts);
@@ -146,8 +173,8 @@ lccopts.shift = 0.0;
 
 %% CR-CC(2,3)
 
-%[crcc23A, crcc23B, crcc23C, crcc23D] = crcc23(t1,t2,lambda1,lambda2,HBar,sys_cc);
-[Ecorr_crcc23A,Ecorr_crcc23B,Ecorr_crcc23C,Ecorr_crcc23D] = crcc23_opt(t1,t2,lambda1,lambda2,HBar,sys_cc);
+[crcc23A, crcc23B, crcc23C, crcc23D] = crcc23(t1,t2,lambda1,lambda2,HBar,sys_cc);
+%[Ecorr_crcc23A,Ecorr_crcc23B,Ecorr_crcc23C,Ecorr_crcc23D] = crcc23_opt(t1,t2,lambda1,lambda2,HBar,sys_cc);
 
 %% EOM-CCSD
 
@@ -232,11 +259,13 @@ fid = fopen('L-CCSDt');
 L = fread(fid,Inf,'double');
 fclose(fid)
 
-%iroot = [0, 2, 5, 6];
+iroot = [0, 2, 5, 6];
 %iroot_jun = [1, 2, 3, 4];
-iroot_jun = [1, 2];
-iroot = [0, 2];
+% iroot_jun = [1, 2];
+% iroot = [0, 2];
 
+
+iroot_jun = [1];
 for idx = 1:length(iroot_jun)
     
     J = iroot_jun(idx);
@@ -303,7 +332,7 @@ for idx = 1:length(iroot_jun)
         fprintf('      Max Error = %4.12f\n',max_err)
 
     else 
-        fprintf('Error on ground state: E0 = %4.12f\n',sys_ucc.Escf+Ecorr_ucc)
+        fprintf('Error on ground state: E0 = %4.12f\n',sys_ucc.Escf+Ecorr_uccsd)
        %fprintf('Error(L1) = %4.12f\n',get_error(l1,l1_jun))
        %fprintf('Error(L2) = %4.12f\n',get_error(l2,l2_jun))
         fprintf('Error(L1A) = %4.12f\n',get_error(l1a,l1a_jun))
@@ -374,10 +403,144 @@ prD = @(i,j,k,a,b,c) print_moments(EOMMM23D,EOML3D,sys_ucc,cc_t,HBar_t,omega(iro
 % pr1(1,2,3,6,8,11)
 % pr1(1,2,3,6,8,13)
 % pr1(1,2,3,6,9,12)
+%%
 
+fidMA = fopen('~/Desktop/CC_matlab_tests/h2o-631g/stretched/M3A');
+fidMB = fopen('~/Desktop/CC_matlab_tests/h2o-631g/stretched/M3B');
+fidMC = fopen('~/Desktop/CC_matlab_tests/h2o-631g/stretched/M3C');
+fidMD = fopen('~/Desktop/CC_matlab_tests/h2o-631g/stretched/M3D');
+
+[M3A] = build_MM23A(cc_t,HBar_t,sys_ucc);
+[M3B] = build_MM23B(cc_t,HBar_t,sys_ucc);
+[M3C] = build_MM23C(cc_t,HBar_t,sys_ucc);
+[M3D] = build_MM23D(cc_t,HBar_t,sys_ucc);
+
+M3A_lin = zeros(get_number_unique('3A',sys_ucc),1);
+M3A_jun = zeros(get_number_unique('3A',sys_ucc),1);
+M3B_lin = zeros(get_number_unique('3B',sys_ucc),1);
+M3B_jun = zeros(get_number_unique('3B',sys_ucc),1);
+M3C_lin = zeros(get_number_unique('3C',sys_ucc),1);
+M3C_jun = zeros(get_number_unique('3C',sys_ucc),1);
+M3D_lin = zeros(get_number_unique('3D',sys_ucc),1);
+M3D_jun = zeros(get_number_unique('3D',sys_ucc),1);
+
+% we're not accessing M3B and M3C correctly so there's a mismatch between
+% mine and Jun's..
+
+ct = 1;
+for i = 1:sys_ucc.Nocc_alpha
+    for j = i+1:sys_ucc.Nocc_alpha
+        for k = j+1:sys_ucc.Nocc_alpha
+            for a = 1:sys_ucc.Nvir_alpha
+                for b = a+1:sys_ucc.Nvir_alpha
+                    for c = b+1:sys_ucc.Nvir_alpha
+
+                        tlineMA = fgetl(fidMA);
+
+                        M3A_jun(ct) = str2double(tlineMA);
+                        M3A_lin(ct) = M3A(a,b,c,i,j,k);
+                        
+%                         if abs(M3A_jun(ct)) > 1e-6
+%                             fprintf('M3A(%d) = %4.8f\n',ct,M3A_lin(ct))
+%                             fprintf('M3A_jun(%d) = %4.8f\n',ct,M3A_jun(ct))   
+%                         end
+                        
+                        ct = ct + 1;
+                    end
+                end
+            end
+         end
+     end
+end
+
+fprintf('Error in M3A: %4.12f\n',get_error(M3A_lin,M3A_jun))
+
+ct = 1;
+for i = 1:sys_ucc.Nocc_alpha
+    for j = i+1:sys_ucc.Nocc_alpha
+        for k = 1:sys_ucc.Nocc_beta
+            for a = 1:sys_ucc.Nvir_alpha
+                for b = a+1:sys_ucc.Nvir_alpha
+                    for c = 1:sys_ucc.Nvir_beta
+
+                        tlineMB = fgetl(fidMB); 
+
+                        M3B_jun(ct) = str2double(tlineMB);
+                        M3B_lin(ct) = M3B(a,b,c,i,j,k);
+                        
+%                         if abs(M3B_jun(ct)) > 1e-6
+%                             fprintf('M3B(%d) = %4.8f\n',ct,M3B_lin(ct))
+%                             fprintf('M3B_jun(%d) = %4.8f\n',ct,M3B_jun(ct))   
+%                         end
+                        
+                        ct = ct + 1;
+                    end
+                end
+            end
+         end
+     end
+end
+
+fprintf('Error in M3B: %4.12f\n',get_error(M3B_lin,M3B_jun))
+
+ct = 1;
+for i = 1:sys_ucc.Nocc_alpha
+    for j = 1:sys_ucc.Nocc_beta
+        for k = i+1:sys_ucc.Nocc_beta
+            for a = 1:sys_ucc.Nvir_alpha
+                for b = 1:sys_ucc.Nvir_beta
+                    for c = b+1:sys_ucc.Nvir_beta
+
+                        tlineMC = fgetl(fidMC); 
+
+                        M3C_jun(ct) = str2double(tlineMC);
+                        M3C_lin(ct) = M3C(a,b,c,i,j,k);
+                        
+                        if abs(M3C_jun(ct)) > 1e-6
+                            fprintf('M3C(%d) = %4.8f\n',ct,M3C_lin(ct))
+                            fprintf('M3C_jun(%d) = %4.8f\n',ct,M3C_jun(ct))   
+                        end
+                        
+                        ct = ct + 1;
+                    end
+                end
+            end
+         end
+     end
+end
+
+fprintf('Error in M3C: %4.12f\n',get_error(M3C_lin,M3C_jun))
+
+ct = 1;
+for i = 1:sys_ucc.Nocc_beta
+    for j = i+1:sys_ucc.Nocc_beta
+        for k = j+1:sys_ucc.Nocc_beta
+            for a = 1:sys_ucc.Nvir_beta
+                for b = a+1:sys_ucc.Nvir_beta
+                    for c = b+1:sys_ucc.Nvir_beta
+
+                        tlineMD = fgetl(fidMD); 
+
+                        M3D_jun(ct) = str2double(tlineMD);
+                        M3D_lin(ct) = M3D(a,b,c,i,j,k);
+                        
+%                         if abs(M3D_jun(ct)) > 1e-6
+%                             fprintf('M3D(%d) = %4.8f\n',ct,M3D_lin(ct))
+%                             fprintf('M3D_jun(%d) = %4.8f\n',ct,M3D_jun(ct))   
+%                         end
+                        
+                        ct = ct + 1;
+                    end
+                end
+            end
+         end
+     end
+end
+
+fprintf('Error in M3D: %4.12f\n',get_error(M3D_lin,M3D_jun))
 %%
 ct = 1;
-fidD = fopen('L3D'); fidA = fopen('L3A'); fidB = fopen('L3B'); fidC = fopen('L3C');
+fidD = fopen('~/Desktop/CC_matlab_tests/h2o-631g/stretched/L3D'); fidA = fopen('L3A'); fidB = fopen('L3B'); fidC = fopen('L3C');
 fidDD = fopen('D3D'); fidDA = fopen('D3A'); fidDB = fopen('D3B'); fidDC = fopen('D3C');
 fidMD = fopen('M3D'); fidMA = fopen('M3A'); fidMB = fopen('M3B'); fidMC = fopen('M3C');
 L3D_jun = []; L3A_jun = []; L3B_jun = []; L3C_jun = [];
@@ -515,4 +678,4 @@ end
 
 
 
-
+%%
