@@ -31,7 +31,7 @@ function [Lvec,resid,cc_t] = leftcc_solver1(omega,Rvec,HBar_t,cc_t,sys,opts)
 
         tic_Root = tic;
 
-        fprintf('DIIS Cycle - %d',it_macro)
+        %fprintf('DIIS Cycle - %d',it_macro)
         while it_micro < maxit
             
             tic
@@ -87,10 +87,10 @@ function [Lvec,resid,cc_t] = leftcc_solver1(omega,Rvec,HBar_t,cc_t,sys,opts)
             LAMBDA_resid_list(:,mod(it_micro,diis_size)+1) = LAMBDA_resid;
 
             % diis extrapolate
-            if mod(it_micro,diis_size) == 0 && it_micro > 1
-            %if it_micro > diis_size
+            %if mod(it_micro,diis_size) == 0 && it_micro > 1
+            if it_micro > diis_size
                it_macro = it_macro + 1;
-               fprintf('\nDIIS Cycle - %d',it_macro)
+               %fprintf('\nDIIS Cycle - %d',it_macro)
                LAMBDA = diis_xtrap(LAMBDA_list,LAMBDA_resid_list);
             end        
 

@@ -32,15 +32,16 @@ function [LAMBDA,lccsd_resid,cc_t] = leftcc_solver2(omega,Rvec,HBar_t,cc_t,sys,o
     it_micro = 0; it_macro = 1;
     flag_conv = 0; flag_ground = false; flag_diis = false;
 
-    fprintf('\nDIIS Cycle - %d\n', it_macro)
+    %fprintf('\nDIIS Cycle - %d\n', it_macro)
     while it_micro < maxit && flag_conv == 0
 
         tic
        
-        if mod(it_micro,diis_size) == 0 && it_micro > 1
+        %if mod(it_micro,diis_size) == 0 && it_micro > 1
+        if it_micro > diis_size
             flag_diis = true;
             it_macro = it_macro + 1;
-            fprintf('\nDIIS Cycle - %d\n',it_macro)
+            %fprintf('\nDIIS Cycle - %d\n',it_macro)
         end
         
         for j = idx_not_converged

@@ -68,9 +68,9 @@ function [cc_t,lccsd_resid] = luccsd(cc_t,HBar_t,sys,opts)
         LAMBDA_resid_list(:,mod(it_micro,diis_size)+1) = LAMBDA_resid;
  
         % diis extrapolate
-        if mod(it_micro,diis_size) == 0 && it_micro > 1
+        if it_micro > diis_size %mod(it_micro,diis_size) == 0 && it_micro > 1
            it_macro = it_macro + 1;
-           fprintf('\nDIIS Cycle - %d',it_macro)
+           %fprintf('\nDIIS Cycle - %d',it_macro)
            LAMBDA = diis_xtrap(LAMBDA_list,LAMBDA_resid_list);
         end
 
