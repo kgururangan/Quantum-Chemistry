@@ -5,7 +5,7 @@ function [t3d] = update_t3d(t1a, t1b, t2a, t2b, t2c, t3a, t3b, t3c, t3d, HBar_t,
     H2C = HBar_t.H2C;
     VTC = VT3_t.C;
 
-    I2C_vvov = H2C.vvov-einsum_kg(H1B.ov,t2c,'me,abim->abie');
+    I2C_vvov = H2C.vvov+einsum_kg(H1B.ov,t2c,'me,abim->abie');
     
     % MM23A
     M23_D1 =   -einsum_kg(H2C.vooo + VTC.vooo,t2c,'amij,bcmk->abcijk'); 

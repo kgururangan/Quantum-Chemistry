@@ -1,4 +1,4 @@
-function [t2b] = update_t2b_ccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,sys,shift)
+function [t2b] = update_t2b_ccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift)
 
     % MM12 contribution
     d1 = sys.vB_ovoo;
@@ -144,22 +144,25 @@ function [t2b] = update_t2b_ccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,sys
     X2B = MM12B + CCS_T2;
     
     % CCSDT part
-    H1A = HBar_t.H1A;
-    H1B = HBar_t.H1B;
-    H2A = HBar_t.H2A;
-    H2B = HBar_t.H2B;
-    H2C = HBar_t.H2C;
+    h2A_ooov = sys.vA_ooov + einsum_kg(sys.vA_oovv,t1a,'mnfe,fi->mnie');
+    h2A_vovv = sys.vA_vovv - einsum_kg(sys.vA_oovv,t1a,'mnfe,an->amef');
+    h2B_vovv = sys.vB_vovv - einsum_kg(sys.vB_oovv,t1a,'nmef,an->amef');
+    h2B_ovvv = sys.vB_ovvv - einsum_kg(sys.vB_oovv,t1b,'mnfe,an->mafe');
+    h2B_ooov = sys.vB_ooov + einsum_kg(sys.vB_oovv,t1a,'mnfe,fi->mnie');
+    h2B_oovo = sys.vB_oovo + einsum_kg(sys.vB_oovv,t1b,'nmef,fi->nmei');
+    h2C_ooov = sys.vC_ooov + einsum_kg(sys.vC_oovv,t1b,'mnfe,fi->mnie');
+    h2C_vovv = sys.vC_vovv - einsum_kg(sys.vC_oovv,t1b,'mnfe,an->amef');
     
-    TR_D1 = -0.5*einsum_kg(H2A.ooov,t3b,'mnif,afbmnj->abij');
-    TR_D2 = -einsum_kg(H2B.oovo,t3b,'nmfj,afbinm->abij');
-    TR_D3 = -0.5*einsum_kg(H2C.ooov,t3c,'mnjf,afbinm->abij');
-    TR_D4 = -einsum_kg(H2B.ooov,t3c,'mnif,afbmnj->abij');
-    TR_D5 = +0.5*einsum_kg(H2A.vovv,t3b,'anef,efbinj->abij');
-    TR_D6 = +einsum_kg(H2B.vovv,t3c,'anef,efbinj->abij');
-    TR_D7 = +einsum_kg(H2B.ovvv,t3b,'nbfe,afeinj->abij');
-    TR_D8 = +0.5*einsum_kg(H2C.vovv,t3c,'bnef,afeinj->abij');
-    TR_D9 = +einsum_kg(H1A.ov,t3b,'me,aebimj->abij');
-    TR_D10 = +einsum_kg(H1B.ov,t3c,'me,aebimj->abij');
+    TR_D1 = -0.5*einsum_kg(h2A_ooov,t3b,'mnif,afbmnj->abij');
+    TR_D2 = -einsum_kg(h2B_oovo,t3b,'nmfj,afbinm->abij');
+    TR_D3 = -0.5*einsum_kg(h2C_ooov,t3c,'mnjf,afbinm->abij');
+    TR_D4 = -einsum_kg(h2B_ooov,t3c,'mnif,afbmnj->abij');
+    TR_D5 = +0.5*einsum_kg(h2A_vovv,t3b,'anef,efbinj->abij');
+    TR_D6 = +einsum_kg(h2B_vovv,t3c,'anef,efbinj->abij');
+    TR_D7 = +einsum_kg(h2B_ovvv,t3b,'nbfe,afeinj->abij');
+    TR_D8 = +0.5*einsum_kg(h2C_vovv,t3c,'bnef,afeinj->abij');
+    TR_D9 = +einsum_kg(h1A_ov,t3b,'me,aebimj->abij');
+    TR_D10 = +einsum_kg(h1B_ov,t3c,'me,aebimj->abij');
     
     X2B = X2B + TR_D1 + TR_D2 + TR_D3 + TR_D4 + TR_D5 + TR_D6 + TR_D7 + TR_D8 + TR_D9 + TR_D10;
     

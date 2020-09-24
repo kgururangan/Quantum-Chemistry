@@ -1,5 +1,4 @@
-function [t2a] = update_t2a_ccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,sys,shift)
-
+function [t2a] = update_t2a_ccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift)
 
     % <ijab|H(CCS)|0>
     I2A_vooo = sys.vA_vooo ...
@@ -105,23 +104,24 @@ function [t2a] = update_t2a_ccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,sys
     % total contribution
     X2A = sys.vA_vvoo + D13 + D24 + D56 + D7 + D8;
     
-    % CCSDT part
-    H1A = HBar_t.H1A;
-    H1B = HBar_t.H1B;
-    H2A = HBar_t.H2A;
-    H2B = HBar_t.H2B;
+    % CCSDT part    
+    h1B_ov = sys.fb_ov + einsum_kg(sys.vB_oovv,t1a,'nmfe,fn->me') + einsum_kg(sys.vC_oovv,t1b,'mnef,fn->me');
+    h2B_ooov = sys.vB_ooov + einsum_kg(sys.vB_oovv,t1a,'mnfe,fi->mnie');
+    h2A_ooov = sys.vA_ooov + einsum_kg(sys.vA_oovv,t1a,'mnfe,fi->mnie');
+    h2A_vovv = sys.vA_vovv - einsum_kg(sys.vA_oovv,t1a,'mnfe,an->amef');
+    h2B_vovv = sys.vB_vovv - einsum_kg(sys.vB_oovv,t1a,'nmef,an->amef');
     
-    TR_D1 = einsum_kg(H1A.ov,t3a,'me,abeijm->abij');
+    TR_D1 = einsum_kg(h1A_ov,t3a,'me,abeijm->abij');
     
-    TR_D2 = einsum_kg(H1B.ov,t3b,'me,abeijm->abij');
+    TR_D2 = einsum_kg(h1B_ov,t3b,'me,abeijm->abij');
     
-    TR_D3 = -einsum_kg(H2B.ooov,t3b,'mnif,abfmjn->abij');
+    TR_D3 = -einsum_kg(h2B_ooov,t3b,'mnif,abfmjn->abij');
     
-    TR_D4 = -0.5*einsum_kg(H2A.ooov,t3a,'mnif,abfmjn->abij');
+    TR_D4 = -0.5*einsum_kg(h2A_ooov,t3a,'mnif,abfmjn->abij');
     
-    TR_D5 = 0.5*einsum_kg(H2A.vovv,t3a,'anef,ebfijn->abij');
+    TR_D5 = 0.5*einsum_kg(h2A_vovv,t3a,'anef,ebfijn->abij');
     
-    TR_D6 = einsum_kg(H2B.vovv,t3b,'anef,ebfijn->abij');
+    TR_D6 = einsum_kg(h2B_vovv,t3b,'anef,ebfijn->abij');
 
     TR_D34 = TR_D3 + TR_D4;
     TR_D34 = TR_D34 - permute(TR_D34,[1,2,4,3]);

@@ -30,7 +30,8 @@ function [cc_t,Ecorr] = uccsdt(sys,opts,T_guess)
     szt3d = [sys.Nvir_beta, sys.Nvir_beta, sys.Nvir_beta, sys.Nocc_beta, sys.Nocc_beta, sys.Nocc_beta];
     
     % Jacobi/DIIS iterations
-    it_micro = 0; flag_conv = 0; it_macro = 0;
+    it_micro = 0; flag_conv = 0; it_macro = 0; Ecorr_old = 0.0;
+    %fprintf('\nDIIS Cycle - %d',it_macro)
     while it_micro < maxit
         
         tic
@@ -51,21 +52,22 @@ function [cc_t,Ecorr] = uccsdt(sys,opts,T_guess)
         % CC correlation energy
         Ecorr = ucc_energy(t1a,t1b,t2a,t2b,t2c,sys);
        
-        % update t1 and t2 by Jacobi                        
-        [HBar_t, VT3_t] = build_ucc_hbar_intermediates(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys);
+        % update t1 and t2 by Jacobi                          
+        t1a = update_t1a_ccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift);
+        t1b = update_t1b_ccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift);
+        t2a = update_t2a_ccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift);
+        t2b = update_t2b_ccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift);
+        t2c = update_t2c_ccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift);
         
-        t1a = update_t1a_ccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,sys,shift);
-        t1b = update_t1b_ccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,sys,shift);
-        t2a = update_t2a_ccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,sys,shift);
-        t2b = update_t2b_ccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,sys,shift);
-        t2c = t2a;
-        
-        t3a = update_t3a(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,VT3_t,sys,shift);
-        t3b = update_t3b(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,VT3_t,sys,shift);
+        %[HBar_t, VT3_t] = build_ucc_hbar_intermediates(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys);
+        t3a = update_t3a(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift);
+        t3b = update_t3b(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift);
         %t3c = update_t3c(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,VT3_t,sys,shift);
         %t3d = update_t3d(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,VT3_t,sys,shift);
         t3c = permute(t3b,[3,1,2,6,4,5]);
         t3d = t3a;
+        
+        %t3a = 0*t3a; t3b = 0*t3b; t3c = 0*t3c; t3d = 0*t3d;
         
         % store vectorized results
         T(sys.posv{1}) = t1a(:); T(sys.posv{2}) = t1b(:);
@@ -73,11 +75,14 @@ function [cc_t,Ecorr] = uccsdt(sys,opts,T_guess)
         T(sys.posv{6}) = t3a(:); T(sys.posv{7}) = t3b(:); T(sys.posv{8}) = t3c(:); T(sys.posv{9}) = t3d(:);
 
         % build DIIS residual
-        T_resid = T - T_old;
+        T_resid = T - T_old;  
+        
+        % change in Ecorr
+        deltaE = Ecorr - Ecorr_old;
 
         % check for exit condition
-        ccsd_resid = sqrt(mean(T_resid.^2));
-        if ccsd_resid < tol
+        ccsdt_resid = sqrt(mean(T_resid.^2));
+        if ccsdt_resid < tol && abs(deltaE) < tol
             flag_conv = 1;
             break;
         end
@@ -87,15 +92,18 @@ function [cc_t,Ecorr] = uccsdt(sys,opts,T_guess)
         T_resid_list(:,mod(it_micro,diis_size)+1) = T_resid;
          
         % diis extrapolate
-        if mod(it_micro,diis_size) == 0 && it_micro > 1
+        if it_micro > diis_size
            it_macro = it_macro + 1;
-           fprintf('\nDIIS Cycle - %d',it_macro)
            T = diis_xtrap(T_list,T_resid_list);
         end        
 
-        fprintf('\n    Iter-%d     Residuum = %4.12f      Ecorr = %4.12f      Elapsed Time = %4.2f s',it_micro,ccsd_resid,Ecorr,toc);
+        % extract time per iteration in minutes and seconds
+        toc_S = toc; toc_M = floor(toc_S/60); toc_S = toc_S - toc_M*60;
+
+        fprintf('\n   Iter-%d    Residuum = %4.10f    dE = %4.10f    Ecorr = %4.10f   (%dm %.1fs)',it_micro,ccsdt_resid,deltaE,Ecorr,toc_M,toc_S);
         
         it_micro = it_micro + 1;
+        Ecorr_old = Ecorr;
          
     end
 

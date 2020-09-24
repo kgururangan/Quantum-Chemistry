@@ -26,7 +26,8 @@ function [cc_t,Ecorr] = uccsd(sys,opts,T_guess)
     szt2c = [sys.Nvir_beta, sys.Nvir_beta, sys.Nocc_beta, sys.Nocc_beta];
     
     % Jacobi/DIIS iterations
-    it_micro = 0; flag_conv = 0; it_macro = 0;
+    it_micro = 0; flag_conv = 0; it_macro = 0; Ecorr_old = 0.0;
+    %fprintf('DIIS Cycle - %d',it_macro)
     while it_micro < maxit
         
         tic
@@ -55,10 +56,13 @@ function [cc_t,Ecorr] = uccsd(sys,opts,T_guess)
 
         % build DIIS residual
         T_resid = T - T_old;
+        
+        % change in Ecorr
+        deltaE = Ecorr - Ecorr_old;
 
         % check for exit condition
         ccsd_resid = sqrt(mean(T_resid.^2));
-        if ccsd_resid < tol
+        if ccsd_resid < tol && abs(deltaE) < tol
             flag_conv = 1;
             break;
         end
@@ -67,17 +71,27 @@ function [cc_t,Ecorr] = uccsd(sys,opts,T_guess)
         T_list(:,mod(it_micro,diis_size)+1) = T;
         T_resid_list(:,mod(it_micro,diis_size)+1) = T_resid;
          
-        % diis extrapolate
-        if mod(it_micro,diis_size) == 0 && it_micro > 1
+        % diis extrapolate - seems to be better if you just extrapolate
+        % every iteration after you get at least diis_size vectors
+        if it_micro > diis_size
            it_macro = it_macro + 1;
-           fprintf('\nDIIS Cycle - %d',it_macro)
            T = diis_xtrap(T_list,T_resid_list);
-        end        
+        end   
+        
+%         if mod(it_micro,diis_size) == 0 && it_micro > 1
+%            it_macro = it_macro + 1;
+%            fprintf('\nDIIS Cycle - %d',it_macro)
+%            T = diis_xtrap(T_list,T_resid_list);
+%         end        
+        
+        % extract time per iteration in minutes and seconds
+        toc_S = toc; toc_M = floor(toc_S/60); toc_S = toc_S - toc_M*60;
 
-        fprintf('\n    Iter-%d     Residuum = %4.12f      Ecorr = %4.12f      Elapsed Time = %4.2f s',it_micro,ccsd_resid,Ecorr,toc);
+        fprintf('\n   Iter-%d    Residuum = %4.10f    dE = %4.10f    Ecorr = %4.10f   (%dm %.1fs)',it_micro,ccsd_resid,deltaE,Ecorr,toc_M,toc_S);
         
         it_micro = it_micro + 1;
-%         
+        Ecorr_old = Ecorr;
+        
     end
 
     % return final amplitudes and correlation energy
@@ -94,7 +108,7 @@ function [cc_t,Ecorr] = uccsd(sys,opts,T_guess)
     else
         fprintf('\nUCCSD failed to converged in %d iterations\n',maxit)
     end   
-        
+       
 
 end
 

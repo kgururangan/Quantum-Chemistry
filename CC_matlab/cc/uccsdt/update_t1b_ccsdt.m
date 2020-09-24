@@ -1,4 +1,4 @@
-function [t1b] = update_t1b_ccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,HBar_t,sys,shift)
+function [t1b] = update_t1b_ccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift)
 
     chi1B_vv = sys.fb_vv_masked + einsum_kg(sys.vC_vovv,t1b,'anef,fn->ae') + einsum_kg(sys.vB_ovvv,t1a,'nafe,fn->ae');
     chi1B_oo = sys.fb_oo_masked + einsum_kg(sys.vC_ooov,t1b,'mnif,fn->mi') + einsum_kg(sys.vB_oovo,t1b,'nmfi,fn->mi');

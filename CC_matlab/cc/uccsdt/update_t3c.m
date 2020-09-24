@@ -9,9 +9,9 @@ function [t3c] = update_t3c(t1a, t1b, t2a, t2b, t2c, t3a, t3b, t3c, t3d, HBar_t,
     VTC = VT3_t.C;
     
     % MM23C
-    I2B_vooo = H2B.vooo + einsum_kg(H1B.ov,t2b,'me,aeij->amij');
-    I2C_ovoo = H2C.ovoo + einsum_kg(H1B.ov,t2c,'me,ecjk->mcjk');
-    I2B_ovoo = H2B.ovoo + einsum_kg(H1A.ov,t2b,'me,ebij->mbij');
+    I2B_vooo = H2B.vooo - einsum_kg(H1B.ov,t2b,'me,aeij->amij');
+    I2C_ovoo = H2C.ovoo - einsum_kg(H1B.ov,t2c,'me,ecjk->mcjk');
+    I2B_ovoo = H2B.ovoo - einsum_kg(H1A.ov,t2b,'me,ebij->mbij');
     
     M23_D1 = +einsum_kg(H2B.vvov + VTB.vvov,t2c,'abie,ecjk->abcijk');
 
@@ -100,4 +100,9 @@ function [t3c] = update_t3c(t1a, t1b, t2a, t2b, t2c, t3a, t3b, t3c, t3d, HBar_t,
 
 
 end
+
+% function [H1A,H1B,H2A,H2B,H2C,VTB,VTC] = get_t3c_intermediates(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys)
+% 
+% 
+% end
 
