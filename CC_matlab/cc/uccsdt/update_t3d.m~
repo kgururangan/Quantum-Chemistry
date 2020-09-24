@@ -1,5 +1,10 @@
 function [t3d] = update_t3d(t1a, t1b, t2a, t2b, t2c, t3a, t3b, t3c, t3d, sys, shift)
 
+%     H1B = HBar_t.H1B;
+%     H2B = HBar_t.H2B;
+%     H2C = HBar_t.H2C;
+%     VTC = VT3_t.V2C;
+
     [H1B, H2B, H2C, VTC] = get_t3d_intermediates(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys);
 
     I2C_vvov = H2C.vvov+einsum_kg(H1B.ov,t2c,'me,abim->abie');
@@ -27,6 +32,18 @@ function [t3d] = update_t3d(t1a, t1b, t2a, t2b, t2c, t3a, t3b, t3c, t3d, sys, sh
     D5 = einsum_kg(H2B.ovvo,t3c,'maei,ebcmjk->abcijk');
     D6 = einsum_kg(H2C.voov,t3d,'amie,ebcmjk->abcijk');
 
+%     D13 = D1 + D3;
+%     D13 = D13 - permute(D13,[1,2,3,6,4,5]) - permute(D13,[1,2,3,4,6,5]);
+% 
+%     D24 = D2 + D4;
+%     D24 = D24 - permute(D24,[3,2,1,4,5,6]) - permute(D24,[1,3,2,4,5,6]);
+% 
+%     D56 = D5 + D6;
+%     D56 = D56 - permute(D56,[1,2,3,6,4,5]) - permute(D56,[1,2,3,5,4,6])...
+%                -permute(D56,[2,1,3,4,5,6]) - permute(D56,[3,2,1,4,5,6]) ...
+%                +permute(D56,[2,1,3,6,4,5]) + permute(D56,[2,1,3,5,4,6]) ...
+%                +permute(D56,[3,2,1,6,4,5]) + permute(D56,[3,2,1,5,4,6]); 
+
     % A(k/ij)
     D13 = D1 + D3;
     D13 = D13 - permute(D13,[1,2,3,6,5,4]) - permute(D13,[1,2,3,4,6,5]);
@@ -35,12 +52,12 @@ function [t3d] = update_t3d(t1a, t1b, t2a, t2b, t2c, t3a, t3b, t3c, t3d, sys, sh
     D24 = D2 + D4;
     D24 = D24 - permute(D24,[3,2,1,4,5,6]) - permute(D24,[1,3,2,4,5,6]);
    
-    % A(i/jk)A(a/bc)
+    % A(k/ij)A(c/ab)
     D56 = D5 + D6;
-    D56 = D56 - permute(D56,[1,2,3,5,4,6]) - permute(D56,[1,2,3,6,5,4])...
+    D56 = D56 - permute(D56,[1,2,3,6,4,5]) - permute(D56,[1,2,3,5,4,6])...
                -permute(D56,[2,1,3,4,5,6]) - permute(D56,[3,2,1,4,5,6]) ...
-               +permute(D56,[2,1,3,5,4,6]) + permute(D56,[2,1,3,6,5,4]) ...
-               +permute(D56,[3,2,1,5,4,6]) + permute(D56,[3,2,1,6,5,4]);  
+               +permute(D56,[2,1,3,6,4,5]) + permute(D56,[2,1,3,5,4,6]) ...
+               +permute(D56,[3,2,1,6,4,5]) + permute(D56,[3,2,1,5,4,6]);  
      
      X3D_abcijk = MM23D + D13 + D24 + D56;
      
