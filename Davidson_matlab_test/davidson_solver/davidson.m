@@ -1,4 +1,4 @@
-function [ R, eigval, resid_norm] = davidson_fcn_v2(Ax, D, nroot, opts)
+function [ R, eigval, resid_norm] = davidson(Ax, D, nroot, opts)
 
 % Block-Davidson algorithm for diagonalizing large sparse (non-Hermitian)
 % matrices
@@ -45,33 +45,42 @@ function [ R, eigval, resid_norm] = davidson_fcn_v2(Ax, D, nroot, opts)
     max_size = nvec*nroot;
     vec_dim = length(D);
     
-    e = zeros(nroot,1); e_old = zeros(nroot,1);
+    e = zeros(nroot,1); 
     
     % diagonal guess for trial space
     [~,idx_diag] = sort(D,'ascend');
     Id = eye(vec_dim);
-    B = Id(:,idx_diag(1:nroot));
+    B0 = Id(:,idx_diag(1:nroot));
+    
+    B = zeros(vec_dim,max_size);
+    SIGMA = zeros(vec_dim,max_size);
+    B(:,1:nroot) = B0;
         
     curr_size = nroot;
     for it = 1:maxit
 
-        curr_size_old = curr_size;
-        e_old = e;
+        if it == 1
+        	n_prev = 1;
+        else
+            n_prev = curr_size - ct_add + 1;
+        end
 
         fprintf('\nIter-%d    Subspace size - %d\n',it,curr_size)
         fprintf('-------------------------------------------------------\n')
         
-        B = mgson(B,thresh_vec);
+        B0 = mgson(B(:,1:curr_size));
+        %B0 = gramschmidt(B(:,1:curr_size));
+        B(:,1:curr_size) = B0;
         
-        SIGMA = feval(Ax,B);
-
-        G = B'*SIGMA;
-
+        sigma = feval(Ax,B(:,n_prev:curr_size));
+        SIGMA(:,n_prev:curr_size) = sigma;
+        
+        G = B(:,1:curr_size)'*SIGMA(:,1:curr_size);
         [alpha,GD] = eig(G);
         [e,idx] = sort(diag(GD),'ascend');
 
         % Right ritz vectors
-        V = B*alpha;
+        V = B(:,1:curr_size)*alpha;
 
         % sorting eigenpairs
         e = e(1:nroot);
@@ -79,7 +88,7 @@ function [ R, eigval, resid_norm] = davidson_fcn_v2(Ax, D, nroot, opts)
         V = V(:,idx(1:nroot));
 
         % vectorized residual calculation
-        RES = SIGMA*alpha - V*diag(e);
+        RES = SIGMA(:,1:curr_size)*alpha - V*diag(e);
         resid_norm = sqrt(sum(RES.^2,1));
         idx_unc = find(resid_norm > tol);
         
@@ -88,7 +97,7 @@ function [ R, eigval, resid_norm] = davidson_fcn_v2(Ax, D, nroot, opts)
                 fprintf('   Root - %d     e = %4.10f     |r| = %4.10f\n',j,real(e(j)),resid_norm(j));
         end
 
-        Btemp = [];
+        add_B = zeros(vec_dim,nroot); ct_add = 0;
         for j = 1:length(idx_unc)
             
             J = idx_unc(j);
@@ -96,10 +105,15 @@ function [ R, eigval, resid_norm] = davidson_fcn_v2(Ax, D, nroot, opts)
             RES(:,J) = update_R(RES(:,J),e(J),D);
             RES(:,J) = RES(:,J)/norm(RES(:,J));
             
-            r_orth = ortho_root_vec(RES(:,J),[B,Btemp]);
+            if ct_add > 0
+                r_orth = orthogonalize_root(RES(:,J),[B(:,1:curr_size),add_B(:,1:ct_add)]);
+            else
+                r_orth = orthogonalize_root(RES(:,J),B(:,1:curr_size));
+            end
+            
             if norm(r_orth)/norm(RES(:,J)) > thresh_vec
-                r_orth = r_orth/norm(r_orth);
-                Btemp = cat(2,Btemp,r_orth);
+                ct_add = ct_add + 1;
+                add_B(:,ct_add) = r_orth/norm(r_orth);
             end
 
         end
@@ -112,17 +126,11 @@ function [ R, eigval, resid_norm] = davidson_fcn_v2(Ax, D, nroot, opts)
             if curr_size >= max_size
                 fprintf('\nRestarting and collapsing...\n')
                 B = B*alpha;
+                curr_size = nroot;
             else
-                B = cat(2,B,Btemp);
+                B(:,curr_size+1:curr_size+ct_add) = add_B(:,1:ct_add);
+                curr_size = curr_size + ct_add;
             end
-        end
-        
-        curr_size = size(B,2);
-        
-        if curr_size == curr_size_old
-            fprintf('\nDavidson algorithm stangated without converging... exiting\n')
-            R = V; eigval = e;
-            return
         end
 
 
@@ -132,13 +140,4 @@ function [ R, eigval, resid_norm] = davidson_fcn_v2(Ax, D, nroot, opts)
     R = V; eigval = e; 
         
 end
-                    
-       
-function [q] = ortho_root_vec(q,B)
 
-    for i = 1:size(B,2)
-        b = B(:,i)/norm(B(:,i));
-        q = q - (b'*q)*b;
-    end
-    
-end

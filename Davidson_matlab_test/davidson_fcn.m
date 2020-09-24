@@ -98,7 +98,7 @@ function [ R, L, eigval, res, it, flag_conv] = davidson_fcn(Ax, D, mat_dim, nroo
                 fprintf('WARNING: Number of search vectors greater than dimension of search vectors... MGS will behave erratically!\n')
             end
 
-            [B,~,~] = mgson(B,1e-15);
+            %[B,~,~] = mgson(B,thresh_vec);
             %[~,B] = qr(B);
 
             curr_size = size(B,2);
