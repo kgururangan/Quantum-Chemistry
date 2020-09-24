@@ -1,26 +1,22 @@
 %****************************************************************
 % Program 6: Wavepacket propagation using exponential of H
 %****************************************************************
-
 % Parameters for solving the problem in the interval 0 < x < L
 L = 100; % Interval Length
 N = 400; % No of points
 x = linspace(0,L,N)'; % Coordinate vector
 dx = x(2) - x(1); % Coordinate step
-
 % Parameters for making intial momentum space wavefunction phi(k)
 ko = 2; % Peak momentum
 a = 20; % Momentum width parameter
 dk = 2*pi/L; % Momentum step
 km=N*dk; % Momentum limit
 k=linspace(0,+km,N)'; % Momentum vector
-
 % Make psi(x,0) from Gaussian kspace wavefunction phi(k) using
 % fast fourier transform :
 phi = exp(-a*(k-ko).^2).*exp(-1i*6*k.^2); % unnormalized phi(k)
 psi = ifft(phi); % multiplies phi by expikx and integrates vs. x
 psi = psi/sqrt(psi'*psi*dx); % normalize the psi(x,0)
-
 % Expectation value of energy; e.g. for the parameters
 % chosen above <E> = 2.062.
 avgE = phi'*0.5*diag(k.^2,0)*phi*dk/(phi'*phi*dk);

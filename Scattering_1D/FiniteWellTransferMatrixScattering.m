@@ -93,7 +93,7 @@ R = zeros(1,length(E));
 
 %phi_left = [0,1]';
 
-L = 2;
+L = 20;
 
 for i = 1:length(E)
     
