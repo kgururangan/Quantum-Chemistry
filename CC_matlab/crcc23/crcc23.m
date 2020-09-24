@@ -4,7 +4,8 @@ function [Ecorr_crcc23A,Ecorr_crcc23B,Ecorr_crcc23C,Ecorr_crcc23D] = crcc23(t1,t
 
     fprintf('\n')
 
-    MM23 = build_MM23(t1,t2,HBar);
+    [MM23] = build_MM23(t1,t2,HBar);
+    %[MM23] = build_MM23_debug(t1,t2,sys);
     L3 = build_L3_approx(L1,L2,HBar);
 
     deltaA = 0.0; % using MP denominator -(f_aa - f_ii + f_bb - f_jj + f_cc - f_kk)
@@ -64,7 +65,7 @@ function [Ecorr_crcc23A,Ecorr_crcc23B,Ecorr_crcc23C,Ecorr_crcc23D] = crcc23(t1,t
 
     fprintf(' finished in %4.2f s\n',toc)
     
-    fprintf('<LR> %4.12f\',LR)
+    fprintf('<LR> %4.12f\n',LR)
 
     fprintf('\n')
     fprintf('CR-CC(2,3)_A = %4.12f Eh     Ecorr = %4.12f Eh     Delta_A = %4.12f Eh\n',E_crcc23A,Ecorr_crcc23A,deltaA)

@@ -139,6 +139,12 @@ function [deltaA,deltaB,deltaC,deltaD] = crucc23(cc_t,HBar_t,sys)
     %clear MM23B L3B
     fprintf('MM23B correction completed in %4.4fs\n\n',toc(ticB))
     
+    % closed shell
+%     deltaA = 2*deltaA;
+%     deltaB = 2*deltaB;
+%     deltaC = 2*deltaC;
+%     deltaD = 2*deltaD;
+    
     % MM23C correction
     [MM23C] = build_MM23C(cc_t,HBar_t,sys);
     [L3C] = build_L3C_approx(cc_t,HBar_t,sys,0);

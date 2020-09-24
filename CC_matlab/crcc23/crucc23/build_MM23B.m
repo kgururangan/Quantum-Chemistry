@@ -16,9 +16,9 @@ function [MM23B] = build_MM23B(cc_t,HBar_t,sys)
     
     t2a = cc_t.t2a; t2b = cc_t.t2b;
     
-    I1 = h_mcjk + einsum_kg(h1A_me,t2b,'me,ecjk->mcjk');
-    I2 = h_amik + einsum_kg(h1B_me,t2b,'me,aeik->amik');
-    I3 = h_amij + einsum_kg(h1A_me,t2a,'me,aeij->amij');
+    I1 = h_mcjk - einsum_kg(h1A_me,t2b,'me,ecjk->mcjk');
+    I2 = h_amik - einsum_kg(h1B_me,t2b,'me,aeik->amik');
+    I3 = h_amij - einsum_kg(h1A_me,t2a,'me,aeij->amij');
     
    
     MM23B = einsum_kg(h_bcek,t2a,'bcek,aeij->abcijk')...
@@ -42,7 +42,7 @@ function [MM23B] = build_MM23B(cc_t,HBar_t,sys)
             - einsum_kg(I3,t2b,'amij,bcmk->abcijk')...
             + einsum_kg(I3,t2b,'bmij,acmk->abcijk');
         
-    fprintf(' finished in %4.2f s\n',toc)
+    fprintf('finished in %4.2f s\n',toc)
 
 end
 

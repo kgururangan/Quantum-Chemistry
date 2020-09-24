@@ -1,6 +1,7 @@
 function [Ecrcc23A, Ecrcc23B, Ecrcc23C, Ecrcc23D] = crcc23_wrap(cc_t,HBar_t,sys,omega)
     fprintf('\n==================================++Entering CR-CC(2,3) Routine++=============================\n')
 
+    Ecorr_ccsd = ucc_energy(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,sys);
 
     if nargin < 4
         fprintf('\n')
@@ -27,8 +28,6 @@ function [Ecrcc23A, Ecrcc23B, Ecrcc23C, Ecrcc23D] = crcc23_wrap(cc_t,HBar_t,sys,
         Ecrcc23C = zeros(1,length(omega)+1);
         Ecrcc23D = zeros(1,length(omega)+1);
     
-
-        Ecorr_ccsd = ucc_energy(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,sys);
 
         for iroot = 0:length(omega)
 

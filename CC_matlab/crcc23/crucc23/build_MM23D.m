@@ -9,7 +9,7 @@ function [MM23D] = build_MM23D(cc_t,HBar_t,sys)
     h_abie = HBar_t.H2C.vvov;
     t2c = cc_t.t2c;
 
-    I12 = h_abie-einsum_kg(h_me,t2c,'me,abim->abie');
+    I12 = h_abie+einsum_kg(h_me,t2c,'me,abim->abie');
     
     % < phi_{ijkabc} | H_{CCSD} | 0 >
     % = -A(k/ij)A(a/bc) h(amij)*t(bcmk) + A(i/jk)A(c/ab)(h(abie)-h(me)*t(abim))*t(ecjk)
@@ -33,6 +33,6 @@ function [MM23D] = build_MM23D(cc_t,HBar_t,sys)
                   +einsum_kg(I12,t2c,'cbke,eaji->abcijk') ... % (ac)(ik)
                   +einsum_kg(I12,t2c,'acke,ebji->abcijk');    % (bc)(ik)
 
-    fprintf(' finished in %4.2f s\n',toc)
+    fprintf('finished in %4.2f s\n',toc)
 
 end
