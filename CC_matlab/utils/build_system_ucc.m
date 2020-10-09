@@ -122,15 +122,7 @@ function [sys] = build_system_ucc(e1int,e2int,Vnuc,Nocc_alpha,Nocc_beta,nfzc,nac
     Nunact_h_beta = Nocc_beta - Nact_h_beta;
     Nunact_p_beta = Nvir_beta - Nact_p_beta;
     
-    iact_p_alpha = [Nocc_alpha+1 : Nocc_alpha+Nact_p_alpha];
-    iunact_p_alpha = iact_p_alpha(end)+1:Norb;
-    iact_h_alpha = [Nocc_alpha-Nact_h_alpha+1 : Nocc_alpha];
-    iunact_h_alpha = 1:iact_h_alpha(1)-1;
-    iact_p_beta = [Nocc_beta+1 : Nocc_beta+Nact_p_beta];
-    iunact_p_beta = [iact_p_beta(end)+1:Norb];
-    iact_h_beta = [Nocc_beta-Nact_h_beta+1 : Nocc_beta];
-    iunact_h_beta = 1:iact_h_beta(1)-1;
-    
+    % store active space dimensions
     sys.Nact_h_alpha = Nact_h_alpha;
     sys.Nact_h_beta = Nact_h_beta;
     sys.Nact_p_alpha = Nact_p_alpha;
@@ -139,26 +131,26 @@ function [sys] = build_system_ucc(e1int,e2int,Vnuc,Nocc_alpha,Nocc_beta,nfzc,nac
     sys.Nunact_h_beta = Nunact_h_beta;
     sys.Nunact_p_alpha = Nunact_p_alpha;
     sys.Nunact_p_beta = Nunact_p_beta;
+   
+    % VA, VB, VC slicing vectors
+    iact_p_alpha = [Nocc_alpha+nfzc+1 : Nocc_alpha+nfzc+Nact_p_alpha];
+    iunact_p_alpha = [iact_p_alpha(end)+1:Norb];
+    iact_h_alpha = [Nocc_alpha+nfzc-Nact_h_alpha+1 : Nocc_alpha+nfzc];
+    iunact_h_alpha = [nfzc+1:iact_h_alpha(1)-1];
+    iact_p_beta = [Nocc_beta+nfzc+1 : Nocc_beta+nfzc+Nact_p_beta];
+    iunact_p_beta = [iact_p_beta(end)+1:Norb];
+    iact_h_beta = [Nocc_beta+nfzc-Nact_h_beta+1 : Nocc_beta+nfzc];
+    iunact_h_beta = [nfzc+1:iact_h_beta(1)-1];
     
     % T vector active slicing indices
     sys.HA = (Nocc_alpha-Nact_h_alpha+1):Nocc_alpha;
-    sys.hA = 1:(iact_h_alpha(1)-1);
+    sys.hA = 1:(iact_h_alpha(1)-nfzc-1);
     sys.PA = 1:Nact_p_alpha;
     sys.pA = (Nact_p_alpha+1):Nvir_alpha;
     sys.HB = (Nocc_beta-Nact_h_beta+1):Nocc_beta;
-    sys.hB = 1:(iact_h_beta(1)-1);
+    sys.hB = 1:(iact_h_beta(1)-nfzc-1);
     sys.PB = 1:Nact_p_beta;
     sys.pB = (Nact_p_beta+1):Nvir_beta;
-    
-%     % V vector active slicing indices
-%     sys.vHA = iact_h_alpha;
-%     sys.vhA = iunact_h_alpha;
-%     sys.vPA = iact_p_alpha;
-%     sys.vpA = iunact_p_alpha;
-%     sys.vHB = iact_h_beta;
-%     sys.vhB = iunact_h_beta;
-%     sys.vPB = iact_p_beta;
-%     sys.vpB = iunact_p_beta;
     
     % calculate Hilbert subspace dimension sizes
     sys.singles_dim = Nocc_alpha*Nvir_alpha + ...
@@ -205,7 +197,7 @@ function [sys] = build_system_ucc(e1int,e2int,Vnuc,Nocc_alpha,Nocc_beta,nfzc,nac
                         [Nvir_alpha, Nvir_beta, Nvir_beta, Nocc_alpha, Nocc_beta, Nocc_beta],...
                         [Nvir_beta, Nvir_beta, Nvir_beta, Nocc_beta, Nocc_beta, Nocc_beta]};
             
-            if Norb < 30 % allocate full triples
+            if Norb < 40 % allocate full triples
 
                 post3a = [post2c(end)+1:post2c(end)+Nocc_alpha^3*Nvir_alpha^3];
 
@@ -310,7 +302,7 @@ function [sys] = build_system_ucc(e1int,e2int,Vnuc,Nocc_alpha,Nocc_beta,nfzc,nac
                         [Nact_p_alpha, Nact_p_beta, Nact_p_beta, Nact_h_alpha, Nact_h_beta, Nact_h_beta],...
                         [Nact_p_beta, Nact_p_beta, Nact_p_beta, Nact_h_beta, Nact_h_beta, Nact_h_beta]};
             
-            if Norb < 30 % allocate active triples 3
+            if Norb < 40 % allocate active triples 3
                 
                     % IJK^ABC = IJK^ABC + IJK~^ABC~ + IJ~K~^AB~C~ + I~J~K~^A~B~C~
                     n1_A = Nact_h_alpha^3*Nact_p_alpha^3;
