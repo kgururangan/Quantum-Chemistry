@@ -100,12 +100,12 @@ function [t2c] = update_t2c_ccsdt(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift)
     h2B_ovvv = sys.vB_ovvv - einsum_kg(sys.vB_oovv,t1b,'mnfe,an->mafe');
     h2B_oovo = sys.vB_oovo + einsum_kg(sys.vB_oovv,t1b,'nmef,fi->nmei');
     
-    TR_D1 = einsum_kg(h1A_ov,t3c,'me,eabmij->abcijk');
-    TR_D2 = einsum_kg(h1B_ov,t3d,'me,abeijm->abcijk');
-    TR_D3 = 0.5*einsum_kg(h2C_vovv,t3d,'anef,ebfijn->abcijk');
-    TR_D4 = einsum_kg(h2B_ovvv,t3c,'nafe,febnij->abcijk');
-    TR_D5 = -0.5*einsum_kg(h2C_ooov,t3d,'mnif,abfmjn->abcijk');
-    TR_D6 = -einsum_kg(h2B_oovo,t3c,'nmfi,fabnmj->abcijk');
+    TR_D1 = einsum_kg(h1A_ov,t3c,'me,eabmij->abij');
+    TR_D2 = einsum_kg(h1B_ov,t3d,'me,abeijm->abij');
+    TR_D3 = 0.5*einsum_kg(h2C_vovv,t3d,'anef,ebfijn->abij');
+    TR_D4 = einsum_kg(h2B_ovvv,t3c,'nafe,febnij->abij');
+    TR_D5 = -0.5*einsum_kg(h2C_ooov,t3d,'mnif,abfmjn->abij');
+    TR_D6 = -einsum_kg(h2B_oovo,t3c,'nmfi,fabnmj->abij');
     
     TR_D34 = TR_D3 + TR_D4;
     TR_D34 = TR_D34 - permute(TR_D34,[2,1,3,4]);
