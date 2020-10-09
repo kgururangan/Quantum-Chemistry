@@ -21,12 +21,12 @@ addpath(genpath('/Users/karthik/Desktop/CC_matlab_tests'));
 %addpath(genpath('/Users/harellab/Desktop/CC_matlab_tests/'));
 
 %%
-workpath = '/Users/karthik/Desktop/CC_matlab_tests/f2-1.0-pvdz/';
+workpath = '/Users/karthik/Desktop/CC_matlab_tests/square-d2h-pvdz/';
 [e1int, e2int, Vnuc, Norb] = load_integrals(workpath);
-Nocc_a = 9;
-Nocc_b = 9;
-Nelec = 18;
-%
+Nocc_a = 14;
+Nocc_b = 14;
+Nelec = 28;
+
 %%
 %load h2o-pvdz.mat
 %load h2-pvdz-integrals.mat
@@ -40,11 +40,15 @@ load f2-2.0-pvdz.mat % NEEDS NFZC = 2
 %load f2-1.0-pvdz.mat % NEEDS NFZC = 2
 
 %%
-nfzc = 2; nfzv = 0; nact_h = 200; nact_p = 200;
-
-sys_ucc = build_system_ucc(e1int,e2int,Vnuc,Nocc_a,Nocc_b,nfzc);
+nfzc = 2; nfzv = 0; nact = 100;
+nact_h_alpha = nact; nact_h_beta = nact; nact_p_alpha = nact; nact_p_beta = nact;
+flag_act_scheme = 0;
+%nact_h = 200; nact_p = 200;
+sys_ucc = build_system_ucc(e1int,e2int,Vnuc,Nocc_a,Nocc_b,nfzc,...
+                         nact_h_alpha,nact_p_alpha,nact_h_beta,nact_p_beta,flag_act_scheme);
 %sys_cc = build_system_cc(e1int,e2int,Vnuc,Nocc_a,Nocc_b,nfzc,nfzv,nact_h,nact_p);
 %clear ans e1int e2int
+
 
 %% CIS
 
@@ -68,7 +72,6 @@ ccopts.shift = 0;
 
 %% UCCSDT
 
-% problem still with t3d
 
 % H2O / 631G (C1) - stretched 
 % E(Ref)=  -75.7199662951565
@@ -86,6 +89,15 @@ ccopts.tol = 1e-10;
 ccopts.shift = 0;
 
 [cc_t,Ecorr_uccsdt] = uccsdt(sys_ucc,ccopts);
+
+%% Active space CCSDt-3 variant
+
+ccopts.diis_size = 5;
+ccopts.maxit = 100;
+ccopts.tol = 1e-10;
+ccopts.shift = 0;
+
+[cc_t,Ecorr_uccsdt] = uccsdt3(sys_ucc,ccopts);
 
 %% UCCSD HBar
 
