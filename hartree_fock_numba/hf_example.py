@@ -13,27 +13,23 @@ WATER = """H -0.0000000000       -1.5152630000       -1.0588980000
 H 0.0000000000        1.5152630000       -1.0588980000
 O 0.0000000000        0.0000000000       -0.0090000000"""
 
-
 @click.command()
 def main():
 
+    # HF configuration
     mol = Molecule(geometry=WATER, basis='STO-3G', angs=False)
     nocc = int(mol.nel / 2)
     norb = mol.norb
 
-    import pdb
-    pdb.set_trace()
+    tol_scf = 1e-10
 
-    # build integrals
+
     print("Building integrals")
     start = time.time()
     Smat, Hcore = build_onebody(mol)
-    #Vmat = build_twobody(mol)
-    #np.save("Vmat.npy", Vmat)
-    #sys.exit()
-    Vmat = np.load("Vmat.npy")
+    Vmat = build_twobody(mol)
     end = time.time()
-    print("Took {:.3f}s".format(end-start))
+    print(" -> Took {:.3f}s".format(end-start))
 
     X = orthomat(Smat, 0.0, 'symmetric')
 
@@ -54,6 +50,13 @@ def main():
     F_list = []
     resid_F = []
 
+    print("\nStarting SCF procedure:\n")
+
+    header = "{:>4} {:>20} {:>20}".format("It.", "Energy", "Residuum")
+    line = len(header) * "-"
+    fmt = "{:>4} {:>20.10f} {:>20.10f}"
+    print(header)
+    print(line)
 
     for it in range(30):
 
@@ -65,10 +68,10 @@ def main():
         diis_r = X.dot(F.dot(P).dot(Smat) - Smat.dot(P).dot(F)).dot(X)
         scf_resid = np.mean(diis_r**2)**0.5
 
-        #if scf_resid <= tol_scf:
-        #    flag_conv_scf = True
-        #    it_scf = it
-        #    break
+        if scf_resid <= tol_scf:
+            flag_conv_scf = True
+            it_scf = it
+            break
 
         # Append trial & residual vectors to lists
         # (Note: do NOT use extrapolated matrices in F_list!)
@@ -90,16 +93,11 @@ def main():
 
         H00 = 0.5*np.einsum('qp,pq->', P, Hcore + F,
                 optimize=True) + mol.e_nn
-        print(it, H00)
+        print(fmt.format(it, H00, scf_resid))
 
-
-
-
-
-
-
-    #eri = ERI()
-
+    print("\n SCF energy: {:>20.8f}".format(
+        0.5*np.einsum('qp,pq->', P, Hcore + F,
+            optimize=True) + mol.e_nn))
 
 if __name__ == "__main__":
     main()
