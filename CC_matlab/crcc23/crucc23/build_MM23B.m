@@ -19,7 +19,10 @@ function [MM23B] = build_MM23B(cc_t,HBar_t,sys)
     I1 = h_mcjk - einsum_kg(h1A_me,t2b,'me,ecjk->mcjk');
     I2 = h_amik - einsum_kg(h1B_me,t2b,'me,aeik->amik');
     I3 = h_amij - einsum_kg(h1A_me,t2a,'me,aeij->amij');
-    
+
+%     I1 = h_mcjk + einsum_kg(h1A_me,t2b,'me,ecjk->mcjk');
+%     I2 = h_amik + einsum_kg(h1B_me,t2b,'me,aeik->amik');
+%     I3 = h_amij + einsum_kg(h1A_me,t2a,'me,aeij->amij');    
    
     MM23B = einsum_kg(h_bcek,t2a,'bcek,aeij->abcijk')...
             - einsum_kg(h_bcek,t2a,'acek,beij->abcijk')...

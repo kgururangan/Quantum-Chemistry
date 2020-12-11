@@ -9,14 +9,13 @@ function [D3A_V,D3A_O,D3B_V,D3B_O,D3C_V,D3C_O,D3D_V,D3D_O] = get_triples_diagona
     t2a = cc_t.t2a; t2b = cc_t.t2b; t2c = cc_t.t2c;
 
     % D3A2(b,a,i) -> 
-    %d3A_V = @(a,i,b) -dot(squeeze(sys.vA_oovv(i,:,b,a)),squeeze(t2a(a,b,i,:))); % works better but wrong..?
     d3A_V = @(a,i,b) -dot(squeeze(sys.vA_oovv(i,:,a,b)),squeeze(t2a(a,b,i,:)));
     % D3A1(a,j,i) -> 
     d3A_O = @(a,i,j) dot(squeeze(sys.vA_oovv(i,j,a,:)),squeeze(t2a(a,:,i,j)));
     
-    % D3B2(b,a,i) -> b = c, 
+    % D3B2(c,a,i) ->  
     d3B_V = @(a,i,c) -dot(squeeze(sys.vB_oovv(i,:,a,c)),squeeze(t2b(a,c,i,:)));
-    % D3B1(a,j,i) -> j = k
+    % D3B1(a,k,i) -> 
     d3B_O = @(a,i,k) dot(squeeze(sys.vB_oovv(i,k,a,:)),squeeze(t2b(a,:,i,k)));
     
     % D3C2(b,a,j) -> j = k, b = c
