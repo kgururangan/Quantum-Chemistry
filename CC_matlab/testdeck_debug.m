@@ -395,18 +395,5 @@ fprintf('\nError in T1 = %4.12f\n',get_error(X1,X1_ucc))
 fprintf('Error in T2 = %4.12f\n',get_error(X2,X2_ucc))
 fprintf('Error in T3 = %4.12f\n',get_error(X3,X3_ucc))
 
-
 %%
-
-D0 = rand(3,3,3,6,6,6);
-
-D1 = D0 - permute(D0,[2,1,3,4,5,6]) - permute(D0,[3,2,1,4,5,6]);
-D1 = D1 - permute(D1,[1,2,3,6,5,4]) - permute(D1,[1,2,3,4,6,5]);
-
-D2 = D0 - permute(D0,[2,1,3,4,5,6]) - permute(D0,[3,2,1,4,5,6]) ...
-        - permute(D0,[1,2,3,6,5,4]) - permute(D0,[1,2,3,4,6,5]) ...
-        + permute(D0,[2,1,3,6,5,4]) + permute(D0,[2,1,3,4,6,5]) ...
-        + permute(D0,[3,2,1,6,5,4]) + permute(D0,[3,2,1,4,6,5]);
-    
-    
 

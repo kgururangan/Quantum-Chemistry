@@ -56,8 +56,8 @@ function [] = calc_driver_main(input_file)
 
     hf_energy = calculate_hf_energy(e1int,e2int,Nocc_a,Nocc_b);
 
-    sys_cc = build_system_cc(e1int,e2int,Vnuc,Nocc_a,Nocc_b,nfzc,nfzv,nact_h,nact_p);
-    sys_ucc = build_system_ucc(e1int,e2int,Vnuc,Nocc_a,Nocc_b);
+    %sys_cc = build_system_cc(e1int,e2int,Vnuc,Nocc_a,Nocc_b,nfzc,nfzv,nact_h,nact_p);
+    sys_ucc = build_system_ucc(e1int,e2int,Vnuc,Nocc_a,Nocc_b,nfzc);
 
     fprintf('System Information:\n')
     fprintf('---------------------\n')

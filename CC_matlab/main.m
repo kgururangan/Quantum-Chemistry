@@ -17,15 +17,20 @@ format long
 addpath(genpath('/Users/karthik/Dropbox/Hartree Fock/hartree_fock/v4/CC_matlab'));
 addpath(genpath('/Users/karthik/Desktop/CC_matlab_tests'));
 
+
 %addpath(genpath('/Users/harellab/Dropbox/Hartree Fock/hartree_fock/v4/CC_matlab'));
 %addpath(genpath('/Users/harellab/Desktop/CC_matlab_tests/'));
 
 %%
-workpath = '/Users/karthik/Desktop/CC_matlab_tests/square-d2h-pvdz/';
+workpath = '/Users/karthik/Desktop/CC_matlab_tests/f2-2.0-pvdz/';
 [e1int, e2int, Vnuc, Norb] = load_integrals(workpath);
-Nocc_a = 14;
-Nocc_b = 14;
-Nelec = 28;
+Nocc_a = 9;
+Nocc_b = 9;
+Nelec = 18;
+
+%%
+
+save([workpath,'f2-2.0-pvdz.mat'])
 
 %%
 %load h2o-pvdz.mat
@@ -37,15 +42,17 @@ Nelec = 28;
 %load h2o-pvdz-gms.mat
 %load h2o-631g-gms.mat
 load f2-2.0-pvdz.mat % NEEDS NFZC = 2
+%load f2-2.0-pvdz-qp2.mat % NEEDS NFZC = 2
 %load f2-1.0-pvdz.mat % NEEDS NFZC = 2
-
+%load chplus-1.0-olsen.mat
 %%
-nfzc = 2; nfzv = 0; nact = 100;
-nact_h_alpha = nact; nact_h_beta = nact; nact_p_alpha = nact; nact_p_beta = nact;
+nfzc = 2; nfzv = 0; 
+nact_h = 100; nact_p = 100; % BE CAREFUL ABOUT SINGLETON DIMENSIONS!
+nact_h_alpha = nact_h; nact_h_beta = nact_h; nact_p_alpha = nact_p; nact_p_beta = nact_p;
 flag_act_scheme = 0;
-%nact_h = 200; nact_p = 200;
+
 sys_ucc = build_system_ucc(e1int,e2int,Vnuc,Nocc_a,Nocc_b,nfzc,...
-                         nact_h_alpha,nact_p_alpha,nact_h_beta,nact_p_beta,flag_act_scheme);
+                           nact_h_alpha,nact_p_alpha,nact_h_beta,nact_p_beta,flag_act_scheme);
 %sys_cc = build_system_cc(e1int,e2int,Vnuc,Nocc_a,Nocc_b,nfzc,nfzv,nact_h,nact_p);
 %clear ans e1int e2int
 
@@ -90,7 +97,7 @@ ccopts.shift = 0;
 
 [cc_t,Ecorr_uccsdt] = uccsdt(sys_ucc,ccopts);
 
-%% Active space CCSDt-3 variant
+%% Active space UCCSDt-3 variant
 
 ccopts.diis_size = 5;
 ccopts.maxit = 100;
@@ -108,17 +115,17 @@ flag_3body = false;
 
 lccopts.diis_size = 5;
 lccopts.maxit = 500;
-lccopts.tol = ccopts.tol;
-lccopts.shift = 0.0;
+lccopts.tol = 1e-8;
+lccopts.ground_shift = 0.0;
 
 [cc_t,lccsd_resid] = luccsd(cc_t,HBar_t,sys_ucc,lccopts);
 
 
 %% EOM-UCCSD
 
-eomopts.nroot = 5;
-eomopts.maxit = 100;
-eomopts.tol = 1e-6;
+eomopts.nroot = 1;
+eomopts.maxit = 200;
+eomopts.tol = 1e-7;
 eomopts.nvec_per_root = 1;
 eomopts.max_nvec_per_root = 5;
 eomopts.flag_verbose = 1;
@@ -132,7 +139,7 @@ eomopts.solver = 2;
 
 %% Left EOM-UCCSD
 
-lccopts.maxit = 50;
+lccopts.maxit = 100;
 lccopts.diis_size = 5;
 lccopts.tol = 1e-8; 
 lccopts.shift = 0;
@@ -142,6 +149,26 @@ lccopts.nroot = length(omega);
 [Lvec,eom_lcc_resid,cc_t] = lefteomuccsd(omega,Rvec,HBar_t,cc_t,sys_ucc,lccopts);
 
 %% CR-CC(2,3) 
+% There's still a problem with CR-EOMCC(2,3)... errors ~0.1 mEh
+% I think I fixed it by changing the orthogonalization on the left-eomCC
+% solver... 
+
+% Jun's code output:
+% CC(P) of ground state =  -75.934962966623615 au
+%     CC(t;3)A=  -75.940162270442897 au
+%     CC(t;3)B=  -75.939737739739158 au
+%     CC(t;3)C=  -75.942192390564259 au
+%     CC(t;3)D=  -75.942009670481582 au
+% Root 1 - EOM-CCSDt=  -75.853887686639581 au
+%     CC(t;3)A=  -75.861054403471513       -7.1667168319327571E-003
+%     CC(t;3)B=  -75.860579939051490       -6.6922524119136908E-003
+%     CC(t;3)C=  -75.864020440422252       -1.0132753782665604E-002
+%     CC(t;3)D=  -75.863999883913024       -1.0112197273443589E-002
+% Vertical excitation energies of root                    1
+%     CC(t;3)A=   7.9107866971381127E-002 au   2.1526345313065338 eV   49.640934920499944 kcal/mol
+%     CC(t;3)B=   7.9157800687666272E-002 au   2.1539932968259068 eV   49.672268799864256 kcal/mol
+%     CC(t;3)C=   7.8171950142002705E-002 au   2.1271669392391130 eV   49.053638255871348 kcal/mol
+%     CC(t;3)D=   7.8009786568560543E-002 au   2.1227542440006237 eV   48.951879079396136 kcal/mol
 
 [Ecrcc23A,Ecrcc23B,Ecrcc23C,Ecrcc23D] = crcc23_wrap(cc_t,HBar_t,sys_ucc);
 
@@ -452,10 +479,10 @@ for i = 1:sys_ucc.Nocc_alpha
                         M3A_jun(ct) = str2double(tlineMA);
                         M3A_lin(ct) = M3A(a,b,c,i,j,k);
                         
-%                         if abs(M3A_jun(ct)) > 1e-6
-%                             fprintf('M3A(%d) = %4.8f\n',ct,M3A_lin(ct))
-%                             fprintf('M3A_jun(%d) = %4.8f\n',ct,M3A_jun(ct))   
-%                         end
+                        if abs(M3A_jun(ct)) > 1e-6
+                            fprintf('M3A(%d) = %4.8f\n',ct,M3A_lin(ct))
+                            fprintf('M3A_jun(%d) = %4.8f\n',ct,M3A_jun(ct))   
+                        end
                         
                         ct = ct + 1;
                     end
@@ -508,10 +535,10 @@ for i = 1:sys_ucc.Nocc_alpha
                         M3C_jun(ct) = str2double(tlineMC);
                         M3C_lin(ct) = M3C(a,b,c,i,j,k);
                         
-                        if abs(M3C_jun(ct)) > 1e-6
-                            fprintf('M3C(%d) = %4.8f\n',ct,M3C_lin(ct))
-                            fprintf('M3C_jun(%d) = %4.8f\n',ct,M3C_jun(ct))   
-                        end
+%                         if abs(M3C_jun(ct)) > 1e-6
+%                             fprintf('M3C(%d) = %4.8f\n',ct,M3C_lin(ct))
+%                             fprintf('M3C_jun(%d) = %4.8f\n',ct,M3C_jun(ct))   
+%                         end
                         
                         ct = ct + 1;
                     end
