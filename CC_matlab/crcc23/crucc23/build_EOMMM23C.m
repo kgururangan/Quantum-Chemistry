@@ -82,14 +82,10 @@ function [EOMMM23C] = build_EOMMM23C(cc_t,HBar_t,iroot)
     D23 = -einsum_kg(einsum_kg(I1A,t2b,'me,ecik->mcik'),t2b,'mcik,abmj->abcijk');
     D23 = D23 - permute(D23,[1,3,2,4,5,6]) - permute(D23,[1,2,3,4,6,5]) + permute(D23,[1,3,2,4,6,5]);
 
-     EOMMM23C = D1 + D2 + D3 + D4;
-% 
-     EOMMM23C = EOMMM23C + D5 + D6 + D7 + D8;
-%     
-     EOMMM23C = EOMMM23C + D9 + D10 + D11 + D12 + D13 + D14;
-% 
-     EOMMM23C = EOMMM23C + D15 + D16 + D17 + D18 + D19 + D20;
-
+    EOMMM23C = D1 + D2 + D3 + D4;
+    EOMMM23C = EOMMM23C + D5 + D6 + D7 + D8;    
+    EOMMM23C = EOMMM23C + D9 + D10 + D11 + D12 + D13 + D14;
+    EOMMM23C = EOMMM23C + D15 + D16 + D17 + D18 + D19 + D20;
     EOMMM23C = EOMMM23C + D21 + D22 + D23;
      
     fprintf(' finished in %4.2f s\n',toc)

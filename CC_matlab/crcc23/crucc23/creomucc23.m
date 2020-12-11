@@ -10,9 +10,6 @@ function [deltaA,deltaB,deltaC,deltaD] = creomucc23(cc_t,omega,HBar_t,sys,iroot)
     H1A = HBar_t.H1A; H1B = HBar_t.H1B;
     H2A = HBar_t.H2A; H2B = HBar_t.H2B; H2C = HBar_t.H2C;
     
-    % CCSD correlation energy
-%     [Ecorr_ccsd] = ucc_energy(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,sys);
-    
     % get the 3-body HBar triples diagonal
     [D3A_V,D3A_O,D3B_V,D3B_O,D3C_V,D3C_O,D3D_V,D3D_O] = get_triples_diagonal(cc_t,sys);
 
@@ -68,7 +65,7 @@ function [deltaA,deltaB,deltaC,deltaD] = creomucc23(cc_t,omega,HBar_t,sys,iroot)
                             D_B = omega(iroot)-D1;
                             D_C = omega(iroot)-(D1+D2);
                             D_D = omega(iroot)-(D1+D2+D3);
-
+% 
 %                             if abs(temp) > 1e-6
 %                                 fprintf('\n%d  %d  %d->  %d %d %d\n',i,j,k,a+Nocc_a,b+Nocc_a,c+Nocc_a)
 %                                 fprintf('M3A*L3A = %4.12f\n',temp)
@@ -278,7 +275,8 @@ function [deltaA,deltaB,deltaC,deltaD] = creomucc23(cc_t,omega,HBar_t,sys,iroot)
                             D_A = omega(iroot)-DMP;
                             D_B = omega(iroot)-D1;
                             D_C = omega(iroot)-(D1+D2);
-      % 
+                            D_D = omega(iroot)-(D1+D2+D3);
+       
 %                             if abs(temp) > 1e-6
 %                                 fprintf('\n%d  %d  %d->  %d %d %d\n',i,j,k,a+Nocc_b,b+Nocc_b,c+Nocc_b)
 %                                 fprintf('M3D*L3D = %4.12f\n',temp)
@@ -289,7 +287,6 @@ function [deltaA,deltaB,deltaC,deltaD] = creomucc23(cc_t,omega,HBar_t,sys,iroot)
 %                                 fprintf('D_C = %4.12f\n',D_C)
 %                                 fprintf('D_D = %4.12f\n',D_D)
 %                             end
-                      D_D = omega(iroot)-(D1+D2+D3);
 
                             deltaA = deltaA + temp/D_A;
                             deltaB = deltaB + temp/D_B;
