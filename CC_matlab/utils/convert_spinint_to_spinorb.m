@@ -7,6 +7,7 @@ function [T_out] = convert_spinint_to_spinorb(T, sys)
     iocc_beta = zeros(1,sys.Nocc_beta);
     ivir_alpha = zeros(1,sys.Nvir_alpha);
     ivir_beta = zeros(1,sys.Nvir_beta);
+   
     
     % THIS ONLY ACCOMODATES CLOSED SHELL CASE!
     cta = 1; ctb = 1;
@@ -37,6 +38,9 @@ function [T_out] = convert_spinint_to_spinorb(T, sys)
     %ivir_beta = sys.ivir_beta - Nocc;
     %ivir_alpha = sys.ivir_alpha - Nocc;
     
+    oa = iocc_alpha; ob = iocc_beta;
+    ua = ivir_alpha; ub = ivir_beta;
+    
     if length(T) == 2 % t1a, t1b
         
         t1a = T{1};
@@ -60,6 +64,46 @@ function [T_out] = convert_spinint_to_spinorb(T, sys)
         
         T_out(ivir_beta,ivir_beta,iocc_beta,iocc_beta) = t2c;
        
+    elseif length(T) == 4 % t3a, t3b, t3c, t3d
+        
+            % The only spin-cases for 3-body are
+    % A - ((a,a,a,a,a,a), 
+    % B - (a,a,b,a,a,b), (a,b,a,a,a,b), (b,a,a,a,a,b)
+    %     (a,a,b,a,b,a), (a,b,a,a,b,a), (b,a,a,a,b,a)
+    %     (a,a,b,b,a,a), (a,b,a,b,a,a), (b,a,a,b,a,a)
+    % C - (a,b,b,a,b,b), (b,a,b,a,b,b), (b,b,a,a,b,b)
+    %     (a,b,b,b,a,b), (b,a,b,b,a,b), (b,b,a,b,a,b)
+    %     (a,b,b,b,b,a), (b,a,b,b,b,a), (b,b,a,b,b,a)
+    % D - (b,b,b,b,b,b)
+        
+        
+        t3a = T{1}; t3b = T{2}; t3c = T{3}; t3d = T{4};
+        T_out = zeros(Nvir,Nvir,Nvir,Nocc,Nocc,Nocc);
+        
+        T_out(ua,ua,ua,oa,oa,oa) = t3a;
+        
+        T_out(ua,ua,ub,oa,oa,ob) = t3b;
+        T_out(ua,ua,ub,oa,ob,oa) = -permute(t3b,[1,2,3,4,6,5]);
+        T_out(ua,ua,ub,ob,oa,oa) = -permute(t3b,[1,2,3,6,5,4]);
+        T_out(ua,ub,ua,oa,oa,ob) = -permute(t3b,[1,3,2,4,5,6]);
+        T_out(ua,ub,ua,oa,ob,oa) = permute(t3b,[1,3,2,4,6,5]);
+        T_out(ua,ub,ua,ob,oa,oa) = permute(t3b,[1,3,2,6,5,4]);
+        T_out(ub,ua,ua,oa,oa,ob) = -permute(t3b,[3,2,1,4,5,6]);
+        T_out(ub,ua,ua,oa,ob,oa) = permute(t3b,[3,2,1,4,6,5]);
+        T_out(ub,ua,ua,ob,oa,oa) = permute(t3b,[3,2,1,6,5,4]);
+        
+        T_out(ua,ub,ub,oa,ob,ob) = t3c;
+        T_out(ua,ub,ub,ob,oa,ob) = -permute(t3c,[1,2,3,5,4,6]);
+        T_out(ua,ub,ub,ob,ob,oa) = -permute(t3c,[1,2,3,6,5,4]);      
+        T_out(ub,ua,ub,oa,ob,ob) = -permute(t3c,[2,1,3,4,5,6]);
+        T_out(ub,ua,ub,ob,oa,ob) = permute(t3c,[2,1,3,5,4,6]);
+        T_out(ub,ua,ub,ob,ob,oa) = permute(t3c,[2,1,3,6,5,4]);        
+        T_out(ub,ub,ua,oa,ob,ob) = -permute(t3c,[3,2,1,4,5,6]);
+        T_out(ub,ub,ua,ob,oa,ob) = permute(t3c,[3,2,1,5,4,6]);
+        T_out(ub,ub,ua,ob,ob,oa) = permute(t3c,[3,2,1,6,5,4]);
+        
+        T_out(ub,ub,ub,ob,ob,ob) = t3d;
+        
     else
         disp('Size of T is not supported!')
     end

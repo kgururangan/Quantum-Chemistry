@@ -53,6 +53,8 @@ function [sys] = build_system_cc(e1int,e2int,Vnuc,Nocc_a,Nocc_b,NFZ_core,NFZ_vir
     VM = VM - permute(VM,[1,2,4,3]);
     
     Norb = size(ZM,1);
+    sys.Nvir_a = Norb/2 - Nocc_a;
+    sys.Nvir_b = Norb/2 - Nocc_b;
     
     Nunocc = Norb - Nelec - 2*NFZ_vir;
     Nocc = Nelec - 2*NFZ_core;
@@ -85,6 +87,7 @@ function [sys] = build_system_cc(e1int,e2int,Vnuc,Nocc_a,Nocc_b,NFZ_core,NFZ_vir
     sys.Norb = Norb;
     sys.FM = FM;
     sys.VM = VM;
+    sys.ZM = ZM;
     sys.occ_list = occ;
     sys.unocc_list = unocc;
     sys.act_h_list = iact_h;

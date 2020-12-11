@@ -88,7 +88,7 @@ function [sys] = build_system_ucc(e1int,e2int,Vnuc,Nocc_alpha,Nocc_beta,nfzc,nac
     sys.vB = VB;
     sys.vC = VC;
     
-    % freeze orbitals and define slicing vectors
+    % freeze orbitals and define V, F slicing vectors
     iocc_alpha = nfzc+1:Nocc_alpha;
     iocc_beta = nfzc+1:Nocc_beta;
     ivir_alpha = Nocc_alpha+1:Norb;
@@ -132,7 +132,7 @@ function [sys] = build_system_ucc(e1int,e2int,Vnuc,Nocc_alpha,Nocc_beta,nfzc,nac
     sys.Nunact_p_alpha = Nunact_p_alpha;
     sys.Nunact_p_beta = Nunact_p_beta;
    
-    % VA, VB, VC slicing vectors
+    % VA, VB, VC active space slicing vectors
     iact_p_alpha = [Nocc_alpha+nfzc+1 : Nocc_alpha+nfzc+Nact_p_alpha];
     iunact_p_alpha = [iact_p_alpha(end)+1:Norb];
     iact_h_alpha = [Nocc_alpha+nfzc-Nact_h_alpha+1 : Nocc_alpha+nfzc];
@@ -141,6 +141,11 @@ function [sys] = build_system_ucc(e1int,e2int,Vnuc,Nocc_alpha,Nocc_beta,nfzc,nac
     iunact_p_beta = [iact_p_beta(end)+1:Norb];
     iact_h_beta = [Nocc_beta+nfzc-Nact_h_beta+1 : Nocc_beta+nfzc];
     iunact_h_beta = [nfzc+1:iact_h_beta(1)-1];
+   
+    sys.iPA = iact_p_alpha;     sys.iPB = iact_p_beta;
+    sys.ipA = iunact_p_alpha;   sys.ipB = iunact_p_beta;
+    sys.iHA = iact_h_alpha;     sys.iHB = iact_h_beta;
+    sys.ihA = iunact_h_alpha;   sys.ihB = iunact_h_beta;
     
     % T vector active slicing indices
     sys.HA = (Nocc_alpha-Nact_h_alpha+1):Nocc_alpha;
@@ -210,23 +215,16 @@ function [sys] = build_system_ucc(e1int,e2int,Vnuc,Nocc_alpha,Nocc_beta,nfzc,nac
                 sys.posv = {post1a, post1b, post2a, post2b, post2c, post3a, post3b, post3c, post3d};
 
             else
-                fprintf('Due to problem size, triples space not allocated\n')
+                fprintf('Due to problem size, full triples space not allocated\n')
+                sys.posv = {post1a, post1b, post2a, post2b, post2c};
             end
             
         case 2
             
-            sys.size = {[Nvir_alpha, Nocc_alpha], [Nvir_beta, Nocc_beta], ...
-                        [Nvir_alpha, Nvir_alpha, Nocc_alpha, Nocc_alpha],...
-                        [Nvir_alpha, Nvir_beta, Nocc_alpha, Nocc_beta],...
-                        [Nvir_beta, Nvir_beta, Nocc_beta, Nocc_beta],...
-                        [Nvir_alpha, Nvir_alpha, Nvir_alpha, Nocc_alpha, Nocc_alpha, Nocc_alpha],...
-                        [Nvir_alpha, Nvir_alpha, Nvir_beta, Nocc_alpha, Nocc_alpha, Nocc_beta],...
-                        [Nvir_alpha, Nvir_beta, Nvir_beta, Nocc_alpha, Nocc_beta, Nocc_beta],...
-                        [Nvir_beta, Nvir_beta, Nvir_beta, Nocc_beta, Nocc_beta, Nocc_beta]};
-    
-            if Norb < 30 % allocate active triples 2
-                
-                % IJK^ABC = IJK^ABC + IJK~^ABC~ + IJ~K~^AB~C~ + I~J~K~^A~B~C~
+                % IJK^ABC = IJK^ABC + 
+                %           IJK~^ABC~ + 
+                %           IJ~K~^AB~C~ + 
+                %           I~J~K~^A~B~C~
                 num_proj1 =  Nact_h_alpha^3*Nact_p_alpha^3 + ...
                              Nact_h_alpha^2*Nact_h_beta*Nact_p_alpha^2*Nact_p_beta + ...
                              Nact_h_alpha*Nact_h_beta^2*Nact_p_alpha*Nact_p_beta^2 + ...
@@ -269,29 +267,101 @@ function [sys] = build_system_ucc(e1int,e2int,Vnuc,Nocc_alpha,Nocc_beta,nfzc,nac
                              Nact_h_alpha*Nunact_h_beta*Nact_h_beta*Nunact_p_alpha*Nact_p_beta*Nact_p_beta + ...
                              Nact_h_alpha*Nunact_h_beta*Nact_h_beta*Nact_p_alpha*Nact_p_beta*Nunact_p_beta + ... % C
                              Nunact_h_beta*Nact_h_beta*Nact_h_beta*Nact_p_beta*Nact_p_beta*Nunact_p_beta;  % D
-    
-                post3a = [post2c(end)+1:post2c(end)+Nocc_alpha^3*Nvir_alpha^3];
-
-                post3b = [post3a(end)+1:post3a(end)+Nocc_alpha^2*Nocc_beta*Nvir_alpha^2*Nvir_beta];
-
-                post3c = [post3b(end)+1:post3b(end)+Nocc_alpha*Nocc_beta^2*Nvir_alpha*Nvir_beta^2];
-
-                post3d = [post3c(end)+1:post3c(end)+Nocc_beta^3*Nvir_beta^3];
-
-                sys.posv = {post1a, post1b, post2a, post2b, post2c, post3a, post3b, post3c, post3d};
-                
-                sys.act_triples_dim = Nocc_alpha*Nvir_alpha + ...
+            
+            sys.size = {[Nvir_alpha, Nocc_alpha], [Nvir_beta, Nocc_beta], ...
+                        [Nvir_alpha, Nvir_alpha, Nocc_alpha, Nocc_alpha],...
+                        [Nvir_alpha, Nvir_beta, Nocc_alpha, Nocc_beta],...
+                        [Nvir_beta, Nvir_beta, Nocc_beta, Nocc_beta],...
+                        [Nact_p_alpha, Nact_p_alpha, Nact_p_alpha, Nact_h_alpha, Nact_h_alpha, Nact_h_alpha],...
+                        [Nact_p_alpha, Nact_p_alpha, Nunact_p_alpha, Nact_h_alpha, Nact_h_alpha, Nact_h_alpha],...
+                        [Nact_p_alpha, Nact_p_alpha, Nact_p_alpha, Nunact_h_alpha, Nact_h_alpha, Nact_h_alpha],...
+                        [Nact_p_alpha, Nact_p_alpha, Nunact_p_alpha, Nunact_h_alpha, Nact_h_alpha, Nact_h_alpha],...
+                        [Nact_p_alpha, Nact_p_alpha, Nact_p_beta, Nact_h_alpha, Nact_h_alpha, Nact_h_beta],...
+                        [Nact_p_alpha, Nact_p_alpha, Nunact_p_beta, Nact_h_alpha, Nact_h_alpha, Nact_h_beta],...
+                        [Nact_p_alpha, Nunact_p_alpha, Nact_p_beta, Nact_h_alpha, Nact_h_alpha, Nact_h_beta],...
+                        [Nact_p_alpha, Nact_p_alpha, Nact_p_beta, Nact_h_alpha, Nact_h_alpha, Nunact_h_beta],...
+                        [Nact_p_alpha, Nact_p_alpha, Nact_p_beta, Nunact_h_alpha, Nact_h_alpha, Nact_h_beta],...
+                        [Nact_p_alpha, Nact_p_alpha, Nunact_p_beta, Nunact_h_alpha, Nact_h_alpha, Nact_h_beta],...
+                        [Nact_p_alpha, Nact_p_alpha, Nunact_p_beta, Nact_h_alpha, Nact_h_alpha, Nunact_h_beta],...
+                        [Nact_p_alpha, Nunact_p_alpha, Nact_p_beta, Nunact_h_alpha, Nact_h_alpha, Nact_h_beta],...
+                        [Nact_p_alpha, Nunact_p_alpha, Nact_p_beta, Nact_h_alpha, Nact_h_alpha, Nunact_h_beta],...
+                        [Nact_p_alpha, Nact_p_beta, Nact_p_beta, Nact_h_alpha, Nact_h_beta, Nact_h_beta],...
+                        [Nact_p_alpha, Nact_p_beta, Nunact_p_beta, Nact_h_alpha, Nact_h_beta, Nact_h_beta],...
+                        [Nunact_p_alpha, Nact_p_beta, Nact_p_beta, Nact_h_alpha, Nact_h_beta, Nact_h_beta],...
+                        [Nact_p_alpha, Nact_p_beta, Nact_p_beta, Nact_h_alpha, Nunact_h_beta, Nact_h_beta],...
+                        [Nact_p_alpha, Nact_p_beta, Nact_p_beta, Nunact_h_alpha, Nact_h_beta, Nact_h_beta],...
+                        [Nact_p_alpha, Nact_p_beta, Nunact_p_beta, Nact_h_alpha, Nunact_h_beta, Nact_h_beta],...
+                        [Nact_p_alpha, Nact_p_beta, Nunact_p_beta, Nunact_h_alpha, Nact_h_beta, Nact_h_beta],...
+                        [Nunact_p_alpha, Nact_p_beta, Nact_p_beta, Nact_h_alpha, Nunact_h_beta, Nact_h_beta],...
+                        [Nunact_p_alpha, Nact_p_beta, Nact_p_beta, Nunact_h_alpha, Nact_h_beta, Nact_h_beta],...
+                        [Nact_p_beta, Nact_p_beta, Nact_p_beta, Nact_h_beta, Nact_h_beta, Nact_h_beta],...
+                        [Nact_p_beta, Nact_p_beta, Nunact_p_beta, Nact_h_beta, Nact_h_beta, Nact_h_beta],...
+                        [Nact_p_beta, Nact_p_beta, Nact_p_beta, Nunact_h_beta, Nact_h_beta, Nact_h_beta],...
+                        [Nact_p_beta, Nact_p_beta, Nunact_p_beta, Nunact_h_beta, Nact_h_beta, Nact_h_beta]}; 
+                    
+                                    
+           sys.act_triples_dim = Nocc_alpha*Nvir_alpha + ...
                                       Nocc_beta*Nvir_beta + ...
                                       Nocc_alpha^2*Nvir_alpha^2 + ...
                                       Nocc_alpha*Nocc_beta*Nvir_alpha*Nvir_beta + ...
                                       Nocc_beta^2*Nvir_beta^2 + ...
                                       num_proj1 + num_proj2 + num_proj3 + num_proj4;
+                     
+            if Norb < 30 % allocate active triples 2
+                
+
+    
+                post3a_PPPHHH = [post2c(end)+1:post2c(end)+Nact_h_alpha^3*Nact_p_alpha^3];
+                post3a_PPpHHH = [post3a_PPPHHH(end)+1:post3a_PPPHHH(end)+Nact_h_alpha^3*Nact_p_alpha^2*Nunact_p_alpha];
+                post3a_PPPhHH = [post3a_PPpHHH(end)+1:post3a_PPpHHH(end)+Nact_h_alpha^2*Nunact_h_alpha*Nact_p_alpha^3];
+                post3a_PPphHH = [post3a_PPPhHH(end)+1:post3a_PPPhHH(end)+Nact_h_alpha^2*Nunact_h_alpha*Nact_p_alpha^2*Nunact_p_alpha];
+
+                post3b_PPPHHH = [post3a_PPphHH(end)+1:post3a_PPphHH(end)+Nact_h_alpha^2*Nact_h_beta*Nact_p_alpha^2*Nact_p_beta];
+                post3b_PPpHHH = [post3b_PPPHHH(end)+1:post3b_PPPHHH(end)+Nact_h_alpha^2*Nact_h_beta*Nact_p_alpha^2*Nunact_p_beta];
+                post3b_PpPHHH = [post3b_PPpHHH(end)+1:post3b_PPpHHH(end)+Nact_h_alpha^2*Nact_h_beta*Nact_p_alpha*Nunact_p_alpha*Nact_p_beta];
+                post3b_PPPHHh = [post3b_PpPHHH(end)+1:post3b_PpPHHH(end)+Nact_h_alpha^2*Nunact_h_beta*Nact_p_alpha^2*Nact_p_beta];
+                post3b_PPPhHH = [post3b_PPPHHh(end)+1:post3b_PPPHHh(end)+Nunact_h_alpha*Nact_h_alpha*Nact_h_beta*Nact_p_alpha^2*Nact_p_beta];
+                post3b_PPphHH = [post3b_PPPhHH(end)+1:post3b_PPPhHH(end)+Nunact_h_alpha*Nact_h_alpha*Nact_h_beta*Nact_p_alpha^2*Nunact_p_beta];
+                post3b_PPpHHh = [post3b_PPphHH(end)+1:post3b_PPphHH(end)+Nact_h_alpha^2*Nunact_h_beta*Nact_p_alpha^2*Nunact_p_beta];
+                post3b_PpPhHH = [post3b_PPpHHh(end)+1:post3b_PPpHHh(end)+Nunact_h_alpha*Nact_h_alpha*Nact_h_beta*Nact_p_alpha*Nunact_p_alpha*Nact_p_beta];
+                post3b_PpPHHh = [post3b_PpPhHH(end)+1:post3b_PpPhHH(end)+Nact_h_alpha^2*Nunact_h_beta*Nact_p_alpha*Nunact_p_beta*Nact_p_beta];
+                
+                post3c_PPPHHH = [post3b_PpPHHh(end)+1:post3b_PpPHHh(end)+Nact_h_alpha*Nact_h_beta^2*Nact_p_alpha*Nact_p_beta^2];
+                post3c_PPpHHH = [post3c_PPPHHH(end)+1:post3c_PPPHHH(end)+Nact_h_alpha*Nact_h_beta^2*Nact_p_alpha*Nact_p_beta*Nunact_p_beta];
+                post3c_pPPHHH = [post3c_PPpHHH(end)+1:post3c_PPpHHH(end)+Nact_h_alpha*Nact_h_beta^2*Nunact_p_alpha*Nact_p_beta^2];
+                post3c_PPPHhH = [post3c_pPPHHH(end)+1:post3c_pPPHHH(end)+Nact_h_alpha*Nact_h_beta*Nunact_h_beta*Nact_p_alpha*Nact_p_beta^2];
+                post3c_PPPhHH = [post3c_PPPHhH(end)+1:post3c_PPPHhH(end)+Nunact_h_alpha*Nact_h_beta^2*Nact_p_alpha*Nact_p_beta^2];
+                post3c_PPpHhH = [post3c_PPPhHH(end)+1:post3c_PPPhHH(end)+Nact_h_alpha*Nact_h_beta*Nunact_h_beta*Nact_p_alpha*Nact_p_beta*Nunact_p_beta];
+                post3c_PPphHH = [post3c_PPpHhH(end)+1:post3c_PPpHhH(end)+Nunact_h_alpha*Nact_h_beta^2*Nact_p_alpha*Nact_p_beta*Nunact_p_beta];
+                post3c_pPPHhH = [post3c_PPphHH(end)+1:post3c_PPphHH(end)+Nact_h_alpha*Nact_h_beta*Nunact_h_beta*Nunact_p_alpha*Nact_p_beta^2];
+                post3c_pPPhHH = [post3c_pPPHhH(end)+1:post3c_pPPHhH(end)+Nunact_h_alpha*Nact_h_beta^2*Nunact_p_alpha*Nact_p_beta^2];
+                
+                post3d_PPPHHH = [post3c_pPPhHH(end)+1:post3c_pPPhHH(end)+Nact_h_beta^3*Nact_p_beta^3];
+                post3d_PPpHHH = [post3d_PPPHHH(end)+1:post3d_PPPHHH(end)+Nact_h_beta^3*Nact_p_beta^2*Nunact_p_beta];
+                post3d_PPPhHH = [post3d_PPpHHH(end)+1:post3d_PPpHHH(end)+Nact_h_beta^2*Nunact_h_beta*Nact_p_beta^3];
+                post3d_PPphHH = [post3d_PPPhHH(end)+1:post3d_PPPhHH(end)+Nact_h_beta^2*Nunact_h_beta*Nact_p_beta^2*Nunact_p_beta];
+           
+
+                sys.posv = {post1a, post1b, post2a, post2b, post2c,...
+                            post3a_PPPHHH, post3a_PPpHHH, post3a_PPPhHH, post3a_PPphHH, ...
+                            post3b_PPPHHH, post3b_PPpHHH, post3b_PpPHHH, post3b_PPPHHh, post3b_PPPhHH, post3b_PPphHH, post3b_PPpHHh, post3b_PpPhHH, post3b_PpPHHh, ...
+                            post3c_PPPHHH, post3c_PPpHHH, post3c_pPPHHH, post3c_PPPHhH, post3c_PPPhHH, post3c_PPpHhH, post3c_PPphHH, post3c_pPPHhH, post3c_pPPhHH, ... 
+                            post3d_PPPHHH, post3d_PPpHHH, post3d_PPPhHH, post3d_PPphHH};
 
             else
                 fprintf('Due to problem size, active triples II space not allocated\n')
+                sys.posv = {post1a, post1b, post2a, post2b, post2c};
             end
         
         case 3
+            
+            % IJK^ABC = IJK^ABC + IJK~^ABC~ + IJ~K~^AB~C~ + I~J~K~^A~B~C~
+            n1_A = Nact_h_alpha^3*Nact_p_alpha^3;
+            n1_B = Nact_h_alpha^2*Nact_h_beta*Nact_p_alpha^2*Nact_p_beta;
+            n1_C = Nact_h_alpha*Nact_h_beta^2*Nact_p_alpha*Nact_p_beta^2;
+            n1_D = Nact_h_beta^3*Nact_p_beta^3;
+
+            num_proj1 = n1_A + n1_B + n1_C + n1_D;
             
             sys.size = {[Nvir_alpha, Nocc_alpha], [Nvir_beta, Nocc_beta], ...
                         [Nvir_alpha, Nvir_alpha, Nocc_alpha, Nocc_alpha],...
@@ -301,16 +371,17 @@ function [sys] = build_system_ucc(e1int,e2int,Vnuc,Nocc_alpha,Nocc_beta,nfzc,nac
                         [Nact_p_alpha, Nact_p_alpha, Nact_p_beta, Nact_h_alpha, Nact_h_alpha, Nact_h_beta],...
                         [Nact_p_alpha, Nact_p_beta, Nact_p_beta, Nact_h_alpha, Nact_h_beta, Nact_h_beta],...
                         [Nact_p_beta, Nact_p_beta, Nact_p_beta, Nact_h_beta, Nact_h_beta, Nact_h_beta]};
-            
+                    
+                                        
+            sys.act_triples_dim = Nocc_alpha*Nvir_alpha + ...
+                                  Nocc_beta*Nvir_beta + ...
+                                  Nocc_alpha^2*Nvir_alpha^2 + ...
+                                  Nocc_alpha*Nocc_beta*Nvir_alpha*Nvir_beta + ...
+                                  Nocc_beta^2*Nvir_beta^2 + ...
+                                  num_proj1;
+
             if Norb < 40 % allocate active triples 3
                 
-                    % IJK^ABC = IJK^ABC + IJK~^ABC~ + IJ~K~^AB~C~ + I~J~K~^A~B~C~
-                    n1_A = Nact_h_alpha^3*Nact_p_alpha^3;
-                    n1_B = Nact_h_alpha^2*Nact_h_beta*Nact_p_alpha^2*Nact_p_beta;
-                    n1_C = Nact_h_alpha*Nact_h_beta^2*Nact_p_alpha*Nact_p_beta^2;
-                    n1_D = Nact_h_beta^3*Nact_p_beta^3;
-                    
-                    num_proj1 = n1_A + n1_B + n1_C + n1_D;
 
                     post3a = [post2c(end)+1:post2c(end)+n1_A];
 
@@ -321,16 +392,10 @@ function [sys] = build_system_ucc(e1int,e2int,Vnuc,Nocc_alpha,Nocc_beta,nfzc,nac
                     post3d = [post3c(end)+1:post3c(end)+n1_D];
 
                     sys.posv = {post1a, post1b, post2a, post2b, post2c, post3a, post3b, post3c, post3d}; 
-                    
-                    sys.act_triples_dim = Nocc_alpha*Nvir_alpha + ...
-                                          Nocc_beta*Nvir_beta + ...
-                                          Nocc_alpha^2*Nvir_alpha^2 + ...
-                                          Nocc_alpha*Nocc_beta*Nvir_alpha*Nvir_beta + ...
-                                          Nocc_beta^2*Nvir_beta^2 + ...
-                                          num_proj1;
 
             else
                 fprintf('Due to problem size, active triples III space not allocated\n')
+                sys.posv = {post1a, post1b, post2a, post2b, post2c};
             end
          
         otherwise
@@ -498,7 +563,7 @@ function [sys] = build_system_ucc(e1int,e2int,Vnuc,Nocc_alpha,Nocc_beta,nfzc,nac
     sys.vC_PPPP = VC(iact_p_beta, iact_p_beta, iact_p_beta, iact_p_beta);
     
     % Goldstone e2int slicing
-    sys.e2int_voov = e2int(ivir_alpha,iocc_alpha,iocc_alpha,ivir_alpha);
-    sys.e2int_vovo = e2int(ivir_alpha,iocc_alpha,ivir_alpha,iocc_alpha);
+%     sys.e2int_voov = e2int(ivir_alpha,iocc_alpha,iocc_alpha,ivir_alpha);
+%     sys.e2int_vovo = e2int(ivir_alpha,iocc_alpha,ivir_alpha,iocc_alpha);
 
 end

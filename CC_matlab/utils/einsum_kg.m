@@ -1,18 +1,39 @@
 function [C] = einsum_kg(A, B, contract_scheme)
 
-A = squeeze(A); B = squeeze(B);
+% we put this to let us perform contractions between sliced tensors where
+% the slicing could result in singleton dimensions, i.e.
+% einsum_kg(v(:,:,2,:)*t(:,:,:,6),'pqr,rqp->') as is used in CR-CC(2,3) codes.
+% but it's dangerous when you e.g. have active orbitals that leave a singleton dimension. 
+% we need to implement some fix that catches both cases e.g.
+% squeeze only if # contraction indices = dim(A) - # singleton dimensions
 
-szA=size(A);
-szB=size(B);
+% s=split(contract_scheme,'->');
+% in=s{1}; out=s{2};
+% 
+% %split input indices
+% in=split(in,',');
+% idxA=in{1}; idxB=in{2};
+% 
+% if length(size(A)) ~= length(idxA)
+%     A = squeeze(A);
+% end
+% if length(size(B)) ~= length(idxB)
+%     B = squeeze(B);
+% end
 
+%A = squeeze(A); B = squeeze(B); 
+
+szA=size(A);  szB=size(B);
 
 [iA_con, iB_con, final_permutation] = parse_contraction(contract_scheme);
-
 
 if size(iA_con)~=size(iB_con)
     error('number of dimensions to contract should be equal')
 end
+
 for i=1:length(iA_con)
+    %fprintf('Contr %d: A(%d) with B(%d) - %d x %d\n', ...
+    %         i,iA_con(i),iB_con(i),size(A,iA_con(i)),size(B,iB_con(i)))
     if size(A,iA_con(i))~=size(B,iB_con(i))
         error(['cannot contract dimension %d of 1st argument (length=%d)'...
             ' with dimension %d of 2nd argument (length=%d)'],...
@@ -53,27 +74,13 @@ end
 
 function [iA_con, iB_con, final_permutation] = parse_contraction(s)
 
-%split input and output indices
-s=split(s,'->');
-
-%split input indices
-in=s{1};
-out=s{2};
-
-in=split(in,',');
-% 
-%     if length(in) == 1 % permutation
-%         for i = 1:length(in)
-%             for j = 1:length(out)
-%                 if out(j) == in(i)
-%                     final_permutation(i) = j;
-%                 end
-%             end
-%          end
-%     else
-
-        idxA=in{1};
-        idxB=in{2};
+        %split input and output indices
+        s=split(s,'->');
+        in=s{1}; out=s{2};
+        
+        %split input indices        
+        in=split(in,',');
+        idxA=in{1}; idxB=in{2};
 
         final_permutation = [];
         iA_con = [];
