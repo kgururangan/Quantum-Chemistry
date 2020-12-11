@@ -1,7 +1,7 @@
-function [onebody, twobody] = slater_eval(z, v, det1p, det2p, sign, excit_rank)
+function [val] = slater_eval(z, v, det1, det2)
 
 
-%     [det1p, det2p, sign, excit_rank] = reorder_max_coincidence(det1, det2);
+    [det1p, det2p, sign, excit_rank] = reorder_max_coincidence(det1, det2);
     
     onebody = 0.0; twobody = 0.0;
 
@@ -28,6 +28,7 @@ function [onebody, twobody] = slater_eval(z, v, det1p, det2p, sign, excit_rank)
     end
     
         
+    val = onebody + twobody;
         
 
 end

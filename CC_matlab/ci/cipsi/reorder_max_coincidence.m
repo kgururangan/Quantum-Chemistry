@@ -17,8 +17,8 @@ function [det1p, det2p, occ, unocc, sign, excit_rank] = reorder_max_coincidence(
     idx3 = setdiff(1:length(det1),idx1,'stable');
     idx4 = setdiff(1:length(det2),idx2,'stable');
     
-    IDX1 = [idx1, idx3];
-    IDX2 = [idx2, idx4];
+    IDX1 = [reshape(idx1,1,length(idx1)), reshape(idx3,1,length(idx3))];
+    IDX2 = [reshape(idx2,1,length(idx2)), reshape(idx4,1,length(idx4))];
     
     det1p = det1(IDX1);
     det2p = det2(IDX2);
