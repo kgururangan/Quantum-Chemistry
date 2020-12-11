@@ -1,4 +1,4 @@
-function [cc_t,Ecorr] = uccsdt3(sys,opts,T_guess)
+function [cc_t,Ecorr] = uccsdt2(sys,opts,T_guess)
 
     diis_size = opts.diis_size;
     maxit = opts.maxit;
