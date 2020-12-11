@@ -74,9 +74,11 @@ function [omega,c1a,c1b] = cis_spinint(nroot,sys,mult)
     [~,idx] = sort(omega,'ascend');
     c1 = c1(:,idx(1:nroot));
     omega = omega(idx(1:nroot));
-
+    
     c1a = c1(1:Nunocc_a*Nocc_a,:);
     c1b = c1(Nunocc_a*Nocc_a+1:end,:);
+     
 
 end
+
 

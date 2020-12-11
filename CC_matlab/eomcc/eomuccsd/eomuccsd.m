@@ -15,7 +15,11 @@ function [R, omega, res, cc_t] = eomuccsd(HBar_t,cc_t,sys,opts,B0)
     if strcmp(opts.init_guess,'cis')
         % use CIS guess as initial basis vectors
         %[omega, C1] = cis_spinadapt(nroot,sys,mult);
-        [cis_energy, C1A, C1B] = cis_spinint(floor(sys.singles_dim/2),sys,mult);
+        if nroot > sys.singles_dim
+            fprintf('ERROR: You cannot asking for more roots than the size of the CIS problem\n')
+            return
+        end
+        [cis_energy, C1A, C1B] = cis_spinint(sys.singles_dim,sys,mult);
 
         B1A = zeros(size(C1A,1),nroot);
         B1B = zeros(size(C1B,1),nroot);
@@ -70,12 +74,35 @@ function [R, omega, res, cc_t] = eomuccsd(HBar_t,cc_t,sys,opts,B0)
         B2C = zeros(length(sys.posv{5}),size(B1A,2));
 
         B0 = cat(1,B1A,B1B,B2A,B2B,B2C);
+        
+        num_amp = 10;
 
-        fprintf('Initial CIS energies (S = %d):\n',0.5*(mult-1))
+        fprintf('Initial CIS guess (S = %d):\n',0.5*(mult-1))
         for i = 1:length(omega_cis)
+            
             fprintf('      E%d = %4.8f\n',i,omega_cis(i))
+            
+            %idx = find(abs(B1A(:,i)) > 1e-2);
+            [~,idxA] = sort(abs(B1A(:,i)),'descend');
+            [~,idxB] = sort(abs(B1B(:,i)),'descend');
+            
+            iidA = find(abs(B1A(:,i)) > 1e-2);
+            iidB = find(abs(B1B(:,i)) > 1e-2);
+            
+            n_print = min(min(iidA,iidB),num_amp);
+
+            for P = 1:n_print
+                [pA,hA] = ind2sub([sys.Nvir_alpha,sys.Nocc_alpha],idxA(P));
+                [pB,hB] = ind2sub([sys.Nvir_beta,sys.Nocc_beta],idxB(P));
+                fprintf('            %dA  ->  %dA  :  %4.6f            %dB  ->  %dB  :  %4.6f\n',...
+                    hA,pA+sys.Nocc_alpha,B1A(idxA(P),i),hB,pB+sys.Nocc_beta,B1B(idxB(P),i));
+            end
+            fprintf('\n')
+            
         end
+        
         fprintf('\n')
+        
     end
 
     if opts.solver == 2
