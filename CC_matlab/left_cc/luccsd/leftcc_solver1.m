@@ -8,10 +8,10 @@ function [Lvec,resid,cc_t] = leftcc_solver1(omega,Rvec,HBar_t,cc_t,sys,opts)
     tol = opts.tol;
     diis_size = opts.diis_size;
     maxit = opts.maxit;
-    shift = opts.shift;
+    shift = opts.excited_shift;
     nroot = opts.nroot;
 
-    Ecorr = ucc_energy(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,sys);
+    %Ecorr = ucc_energy(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,sys);
 
     Lvec = zeros(sys.doubles_dim,nroot);
     resid = zeros(1,nroot); Imat = eye(nroot);
@@ -20,10 +20,10 @@ function [Lvec,resid,cc_t] = leftcc_solver1(omega,Rvec,HBar_t,cc_t,sys,opts)
 
         fprintf('\n-------------------- LCCSD - Root %d --------------------\n',j)
 
-        LAMBDA_list = zeros(sys.doubles_dim,diis_size);
-        LAMBDA_resid_list = zeros(sys.doubles_dim,diis_size);
+        lambda_list = zeros(sys.doubles_dim,diis_size);
+        lambda_resid_list = zeros(sys.doubles_dim,diis_size);
 
-        LAMBDA = Rvec(:,j);
+        lambda = Rvec(:,j);
         %LAMBDA = rand(sys.doubles_dim,1);
 
         it_micro = 0; it_macro = 1;
@@ -37,11 +37,11 @@ function [Lvec,resid,cc_t] = leftcc_solver1(omega,Rvec,HBar_t,cc_t,sys,opts)
             tic
 
             % get current L1 and L2
-            l1a = reshape(LAMBDA(sys.posv{1}),sys.size{1});
-            l1b = reshape(LAMBDA(sys.posv{2}),sys.size{2});
-            l2a = reshape(LAMBDA(sys.posv{3}),sys.size{3});
-            l2b = reshape(LAMBDA(sys.posv{4}),sys.size{4});
-            l2c = reshape(LAMBDA(sys.posv{5}),sys.size{5});
+            l1a = reshape(lambda(sys.posv{1}),sys.size{1});
+            l1b = reshape(lambda(sys.posv{2}),sys.size{2});
+            l2a = reshape(lambda(sys.posv{3}),sys.size{3});
+            l2b = reshape(lambda(sys.posv{4}),sys.size{4});
+            l2c = reshape(lambda(sys.posv{5}),sys.size{5});
 
             % build LH diagrammatically with MP denominator separated out
             flag_jacobi = true;
@@ -53,23 +53,27 @@ function [Lvec,resid,cc_t] = leftcc_solver1(omega,Rvec,HBar_t,cc_t,sys,opts)
 
             % update L1 and L2 by Jacobi
             [l1a, l1b, l2a, l2b, l2c] = update_L(X1A,X1B,X2A,X2B,X2C,HBar_t,sys,omega(j),shift);
-            LAMBDA = cat(1,l1a(:),l1b(:),l2a(:),l2b(:),l2c(:));
+            lambda = cat(1,l1a(:),l1b(:),l2a(:),l2b(:),l2c(:));
 
             % biorthogonalize to R
             iid = 1:nroot;
-            iid(j) = [];            
-            LAMBDA = LAMBDA./(LAMBDA'*Rvec(:,j));
-            LAMBDA = ortho_root_vec(LAMBDA,Rvec(:,iid));
+            iid(j) = [];    
             
-            %LAMBDA = LAMBDA./(LAMBDA'*Rvec(:,j));
+            % REMOVING THIS LINE SEEMED TO HELP RESULTS OF CR-EOMCC(2,3)
+            % MATCH UP WITH JUN'S (ON C1 H2O STRETECHED)...
+            %lambda = lambda./(lambda'*Rvec(:,j));
+            lambda = ortho_root_vec(lambda,Rvec(:,iid));
+
+            
+%             LAMBDA = LAMBDA./(LAMBDA'*Rvec(:,j));
 
 	
             % buid LH - omega*L residual measure (use full LH)
             [LH] = build_ucc_LHBar(l1a,l1b,l2a,l2b,l2c,HBar_t,cc_t,sys,flag_ground);
-            LAMBDA_resid = LH - omega(j)*LAMBDA;
+            LAMBDA_resid = LH - omega(j)*lambda;
 
             % get lcc energy - returns Ecorr + omega
-            E_lcc = sqrt(sum(LH.^2))./sqrt(sum(LAMBDA.^2)); % + Ecorr
+            E_lcc = sqrt(sum(LH.^2))./sqrt(sum(lambda.^2)); % + Ecorr
 
             % calculate residual
             lccsd_resid = norm(LAMBDA_resid);
@@ -83,22 +87,22 @@ function [Lvec,resid,cc_t] = leftcc_solver1(omega,Rvec,HBar_t,cc_t,sys,opts)
             end
                 
             % append trial and residual vectors to diis lists
-            LAMBDA_list(:,mod(it_micro,diis_size)+1) = LAMBDA;
-            LAMBDA_resid_list(:,mod(it_micro,diis_size)+1) = LAMBDA_resid;
+            lambda_list(:,mod(it_micro,diis_size)+1) = lambda;
+            lambda_resid_list(:,mod(it_micro,diis_size)+1) = LAMBDA_resid;
 
             % diis extrapolate
             %if mod(it_micro,diis_size) == 0 && it_micro > 1
             if it_micro > diis_size
                it_macro = it_macro + 1;
                %fprintf('\nDIIS Cycle - %d',it_macro)
-               LAMBDA = diis_xtrap(LAMBDA_list,LAMBDA_resid_list);
+               lambda = diis_xtrap(lambda_list,lambda_resid_list);
             end        
 
             it_micro = it_micro + 1;
 
         end
 
-        Lvec(:,j) = LAMBDA;
+        Lvec(:,j) = lambda;
         resid(j) = lccsd_resid;
 
         biorthvec = Lvec(:,j)'*Rvec(:,1:nroot);
@@ -119,7 +123,10 @@ function [Lvec,resid,cc_t] = leftcc_solver1(omega,Rvec,HBar_t,cc_t,sys,opts)
         fprintf('---------------------------------------------------------\n')
     end
 
-    fprintf('\nLeft-CC completed in %4.4fs\n',toc(tic_Start))
+    LR = einsum_kg(Lvec,Rvec,'pr,ps->rs');
+    
+    fprintf('\nLeft-CC completed in %4.4fs\n|LR| = %4.12f\n',toc(tic_Start),norm(LR))
+    
          
     
 end

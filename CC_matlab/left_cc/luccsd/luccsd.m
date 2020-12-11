@@ -7,7 +7,7 @@ function [cc_t,lccsd_resid] = luccsd(cc_t,HBar_t,sys,opts)
     tol = opts.tol;
     diis_size = opts.diis_size;
     maxit = opts.maxit;
-    shift = opts.shift;
+    shift = opts.ground_shift;
     
     Ecorr = ucc_energy(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,sys);
     
