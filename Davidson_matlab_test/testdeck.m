@@ -5,7 +5,7 @@ close all
 nroot = 2;
 n = 500;
 
-test_no = 4;
+test_no = 1;
 
 switch test_no
     
@@ -26,7 +26,7 @@ switch test_no
     case 2
         
         sparsity = 1e-1;
-        R = rand(n); h = 1;
+        R = rand(n); h = 0.51;
         A = diag([1,1,1,2:n-2])+sparsity*(h*R + (1-h)*R');
         
     case 3
@@ -109,13 +109,18 @@ opts=struct( 'blk', 1,  'polym', 20, 'displ', 2, 'tol', 1e-9, 'vimax', 10, 'voma
 
 %% Vanilla Davidson method
 
-opts.maxit = 50;
+opts.maxit = 500;
 opts.tol = 1e-9;
-opts.nvec = 5;
+opts.nvec = 20;
 opts.thresh_vec = 1e-3;
 
 
-[ V, eigval, resid_norm] = davidson(@(x) A*x, diag(A), nroot, opts);
+%[ V, eigval, resid_norm] = davidson(@(x) A*x, diag(A), nroot, opts);
+[ V, eigval, resid_norm] = davidson_byroot(@(x) A*x, diag(A), nroot, opts);
+
+%%
+[V, E, FLAG, RES] = davidson_download(A,nroot,500,1e-9);
+
 %%
 eR = eigval;
 W = zeros(size(V));
