@@ -17,12 +17,12 @@ function [t2a] = update_t2a_ccsdt3(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift
              +einsum_kg(sys.vA_oovv,t1a,'mnef,fn->me')...
              +einsum_kg(sys.vB_oovv,t1b,'mnef,fn->me'); 
     
-    h1A_vv = sys.fa_vv_masked...
+    h1A_vv = sys.fa_vv...
              -einsum_kg(h1A_ov,t1a,'me,am->ae')...
              +einsum_kg(sys.vA_vovv,t1a,'amef,fm->ae')...
              +einsum_kg(sys.vB_vovv,t1b,'anef,fn->ae');
      
-    h1A_oo = sys.fa_oo_masked...
+    h1A_oo = sys.fa_oo...
              +einsum_kg(h1A_ov,t1a,'me,ei->mi')...
              +einsum_kg(sys.vA_ooov,t1a,'mnif,fn->mi')...
              +einsum_kg(sys.vB_ooov,t1b,'mnif,fn->mi');
@@ -109,7 +109,7 @@ function [t2a] = update_t2a_ccsdt3(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift
         for j = i+1:sys.Nocc_alpha
             for a = 1:sys.Nvir_alpha
                 for b = a+1:sys.Nvir_alpha
-                    t2a(a,b,i,j) = X2A(a,b,i,j)/(sys.fa_oo(i,i)+sys.fa_oo(j,j)-sys.fa_vv(a,a)-sys.fa_vv(b,b)-shift);                
+                    t2a(a,b,i,j) = t2a(a,b,i,j) + X2A(a,b,i,j)/(sys.fa_oo(i,i)+sys.fa_oo(j,j)-sys.fa_vv(a,a)-sys.fa_vv(b,b)-shift);                
                     t2a(b,a,i,j) = -t2a(a,b,i,j);
                     t2a(a,b,j,i) = -t2a(a,b,i,j);
                     t2a(b,a,j,i) = t2a(a,b,i,j);
@@ -141,59 +141,58 @@ function [t2a] = update_t2a_ccsdt3(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift
     D56 = D56 - permute(D56,[2,1,3,4]);
     X2A_IJAB = D1 + D2 + D34 + D56;
     
-    t2a_ABIJ = zeros(sys.Nact_p_alpha,sys.Nact_p_alpha,sys.Nact_h_alpha,sys.Nact_h_alpha);
+    %t2a_ABIJ = zeros(sys.Nact_p_alpha,sys.Nact_p_alpha,sys.Nact_h_alpha,sys.Nact_h_alpha);
     for i = 1:sys.Nact_h_alpha
        for j = i+1:sys.Nact_h_alpha
            for a = 1:sys.Nact_p_alpha
                for b = a+1:sys.Nact_p_alpha
-                    t2a_ABIJ(a,b,i,j) = X2A_IJAB(a,b,i,j)/(sys.fa_HH(i,i)+sys.fa_HH(j,j)-sys.fa_PP(a,a)-sys.fa_PP(b,b)-shift);                
-                    t2a_ABIJ(b,a,i,j) = -t2a_ABIJ(a,b,i,j);
-                    t2a_ABIJ(a,b,j,i) = -t2a_ABIJ(a,b,i,j);
-                    t2a_ABIJ(b,a,j,i) = t2a_ABIJ(a,b,i,j);
+                    t2a(PA(a),PA(b),HA(i),HA(j)) = t2a(PA(a),PA(b),HA(i),HA(j)) + X2A_IJAB(a,b,i,j)/(sys.fa_HH(i,i)+sys.fa_HH(j,j)-sys.fa_PP(a,a)-sys.fa_PP(b,b)-shift);                
+                    t2a(PA(b),PA(a),HA(i),HA(j)) = -t2a(PA(a),PA(b),HA(i),HA(j));
+                    t2a(PA(a),PA(b),HA(j),HA(i)) = -t2a(PA(a),PA(b),HA(i),HA(j));
+                    t2a(PA(b),PA(a),HA(j),HA(i)) = t2a(PA(a),PA(b),HA(i),HA(j));
                end
            end
        end
     end
-    
-    t2a(PA,PA,HA,HA) = t2a(PA,PA,HA,HA) + t2a_ABIJ;
+    %t2a(PA,PA,HA,HA) = t2a(PA,PA,HA,HA) + t2a_ABIJ;
     
     % iJAB
     D1 = -einsum_kg(h2B_ooov(HA,HB,hA,PB),t3b,'mnif,abfmjn->abij');
     D2 = -0.5*einsum_kg(h2A_ooov(HA,HA,hA,PA),t3a,'mnif,abfmjn->abij');
     X2A_iJAB = D1 + D2;
     
-    t2a_ABiJ = zeros(sys.Nact_p_alpha,sys.Nact_p_alpha,sys.Nunact_h_alpha,sys.Nact_h_alpha);
+    %t2a_ABiJ = zeros(sys.Nact_p_alpha,sys.Nact_p_alpha,sys.Nunact_h_alpha,sys.Nact_h_alpha);
     for i = 1:sys.Nunact_h_alpha
         for j = 1:sys.Nact_h_alpha
             for a = 1:sys.Nact_p_alpha
                 for b = a+1:sys.Nact_p_alpha
-                    t2a_ABiJ(a,b,i,j) = X2A_iJAB(a,b,i,j)/(sys.fa_hh(i,i)+sys.fa_HH(j,j)-sys.fa_PP(a,a)-sys.fa_PP(b,b)-shift); 
-                    t2a_ABiJ(b,a,i,j) = -t2a_ABiJ(a,b,i,j);
+                    t2a(PA(a),PA(b),hA(i),HA(j)) = t2a(PA(a),PA(b),hA(i),HA(j)) + X2A_iJAB(a,b,i,j)/(sys.fa_hh(i,i)+sys.fa_HH(j,j)-sys.fa_PP(a,a)-sys.fa_PP(b,b)-shift); 
+                    t2a(PA(b),PA(a),hA(i),HA(j)) = -t2a(PA(a),PA(b),hA(i),HA(j));
                 end
             end
         end
     end
     
-    t2a(PA,PA,hA,HA) = t2a(PA,PA,hA,HA) + t2a_ABiJ;
+    %t2a(PA,PA,hA,HA) = t2a(PA,PA,hA,HA) + t2a_ABiJ;
     
     % IJAb
     D1 = 0.5*einsum_kg(h2A_vovv(pA,HA,PA,PA),t3a,'bnef,aefijn->abij');
     D2 = einsum_kg(h2B_vovv(pA,HB,PA,PB),t3b,'bnef,aefijn->abij');
     X2A_IJAb = D1 + D2;
     
-    t2a_AbIJ = zeros(sys.Nact_p_alpha,sys.Nunact_p_alpha,sys.Nact_h_alpha,sys.Nact_h_alpha);
+    %t2a_AbIJ = zeros(sys.Nact_p_alpha,sys.Nunact_p_alpha,sys.Nact_h_alpha,sys.Nact_h_alpha);
     for i = 1:sys.Nact_h_alpha
         for j = i+1:sys.Nact_h_alpha
             for a = 1:sys.Nact_p_alpha
                 for b = 1:sys.Nunact_p_alpha
-                    t2a_AbIJ(a,b,i,j) = X2A_IJAb(a,b,i,j)/(sys.fa_HH(i,i)+sys.fa_HH(j,j)-sys.fa_PP(a,a)-sys.fa_pp(b,b)-shift); 
-                    t2a_AbIJ(a,b,j,i) = -t2a_AbIJ(a,b,i,j);
+                    t2a(PA(a),pA(b),HA(i),HA(j)) = t2a(PA(a),pA(b),HA(i),HA(j)) + X2A_IJAb(a,b,i,j)/(sys.fa_HH(i,i)+sys.fa_HH(j,j)-sys.fa_PP(a,a)-sys.fa_pp(b,b)-shift); 
+                    t2a(PA(a),pA(b),HA(j),HA(i)) = -t2a(PA(a),pA(b),HA(i),HA(j));
                 end
             end
         end
     end
 
-    t2a(PA,pA,HA,HA) = t2a(PA,pA,HA,HA) + t2a_AbIJ;
+    %t2a(PA,pA,HA,HA) = t2a(PA,pA,HA,HA) + t2a_AbIJ;
 
 
 

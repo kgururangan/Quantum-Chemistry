@@ -1,105 +1,112 @@
-function [X3B,VTA,VTB] = build_t3b(t1a, t1b, t2a, t2b, t2c, t3a, t3b, t3c, t3d, sys, shift)
+function [X3B_PPpHHH] = update_t3b_proj2(t1a,t1b,t2a,t2b,t2c,T3A,T3B,T3C,T3D,sys,shift)
+
+    % store active T3 as structs T3A,B,C,D,...
+    % e.g. T3B.PPPHHH, etc.
     
-    % get CCSD HBar intermediates 
-    [H1A, H1B, H2A, H2B, H2C, VTA, VTB] = get_t3b_intermediates(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys);
+    PA = sys.PA; pA = sys.pA; HA = sys.HA; hA = sys.hA;
+    PB = sys.PB; pB = sys.pB; HB = sys.HB; hB = sys.hB;
+    
+    [H1A,H1B,H2A,H2B,H2C,Vt3A,Vt3B] = get_t3b_intermediates(t1a,t1b,t2a,t2b,t2c,T3A,T3B,T3C,T3D,sys);
     
     % MM23B + (V*T2*T3)_C    
     I2B_ovoo = H2B.ovoo - einsum_kg(H1A.ov,t2b,'me,ecjk->mcjk');
     I2B_vooo = H2B.vooo - einsum_kg(H1B.ov,t2b,'me,aeik->amik');
-    I2A_vooo = H2A.vooo - einsum_kg(H1A.ov,t2a,'me,aeij->amij');    
-%    
-    M23_D1 = einsum_kg(H2B.vvvo + VTB.vvvo,t2a,'bcek,aeij->abcijk');
-    M23_D2 = -einsum_kg(I2B_ovoo + VTB.ovoo,t2a,'mcjk,abim->abcijk');
-    M23_D3 = +einsum_kg(H2B.vvov + VTB.vvov,t2b,'acie,bejk->abcijk');
-    M23_D4 = -einsum_kg(I2B_vooo + VTB.vooo,t2b,'amik,bcjm->abcijk');
-    M23_D5 = +einsum_kg(H2A.vvov + VTA.vvov,t2b,'abie,ecjk->abcijk');
-    M23_D6 = -einsum_kg(I2A_vooo + VTA.vooo,t2b,'amij,bcmk->abcijk');
-
-%     M23_D1 = einsum_kg(H2B.vvvo,t2a,'bcek,aeij->abcijk');
-%     M23_D2 = -einsum_kg(I2B_ovoo,t2a,'mcjk,abim->abcijk');
-%     M23_D3 = +einsum_kg(H2B.vvov,t2b,'acie,bejk->abcijk');
-%     M23_D4 = -einsum_kg(I2B_vooo,t2b,'amik,bcjm->abcijk');
-%     M23_D5 = +einsum_kg(H2A.vvov,t2b,'abie,ecjk->abcijk');
-%     M23_D6 = -einsum_kg(I2A_vooo,t2b,'amij,bcmk->abcijk');
-%     
-    M23_34 = M23_D3 + M23_D4;
-    M23_34 = M23_34 - permute(M23_34,[2,1,3,4,5,6]) - permute(M23_34,[1,2,3,5,4,6]) + permute(M23_34,[2,1,3,5,4,6]);
-    M23_25 = M23_D2 + M23_D5;
-    M23_25 = M23_25 - permute(M23_25,[1,2,3,5,4,6]);
-    M23_16 = M23_D1 + M23_D6;
-    M23_16 = M23_16 - permute(M23_16,[2,1,3,4,5,6]);
-        
-    MM23B = M23_16 + M23_25 + M23_34;
-
-    % (HBar*T3)_C
-    D1 = -einsum_kg(H1A.oo,t3b,'mi,abcmjk->abcijk');
-    D2 = -einsum_kg(H1B.oo,t3b,'mk,abcijm->abcijk');
-    D3 = einsum_kg(H1A.vv,t3b,'ae,ebcijk->abcijk');
-    D4 = einsum_kg(H1B.vv,t3b,'ce,abeijk->abcijk');
-    D5 = 0.5*einsum_kg(H2A.oooo,t3b,'mnij,abcmnk->abcijk');
-    D6 = einsum_kg(H2B.oooo,t3b,'mnjk,abcimn->abcijk');
-    D7 = 0.5*einsum_kg(H2A.vvvv,t3b,'abef,efcijk->abcijk');
-    D8 = einsum_kg(H2B.vvvv,t3b,'bcef,aefijk->abcijk');
-    D9 = einsum_kg(H2A.voov,t3b,'amie,ebcmjk->abcijk');    
-    D10 = einsum_kg(H2B.voov,t3c,'amie,becjmk->abcijk');    
-    D11 = einsum_kg(H2B.ovvo,t3a,'mcek,abeijm->abcijk');
-    D12 = einsum_kg(H2C.voov,t3b,'cmke,abeijm->abcijk');
-    D13 = -einsum_kg(H2B.vovo,t3b,'amek,ebcijm->abcijk');
-    D14 = -einsum_kg(H2B.ovov,t3b,'mcie,abemjk->abcijk');
+    I2A_vooo = H2A.vooo - einsum_kg(H1A.ov,t2a,'me,aeij->amij');   
     
-%     % diagrams that have A(ab)A(ij)
-%     D_9_10 = D9 + D10;
-%     D_9_10 = D_9_10 - permute(D_9_10,[2,1,3,4,5,6]) - permute(D_9_10,[1,2,3,5,4,6]) + permute(D_9_10,[2,1,3,5,4,6]);
-%     % diagrams that have A(ab)
-%     D_3_8_13 = D3 + D8 + D13;
-%     D_3_8_13 = D_3_8_13 - permute(D_3_8_13,[2,1,3,4,5,6]);
-%     % diagrams that have A(ij)
-%     D_1_6_14 = D1 + D6 + D14;
-%     D_1_6_14 = D_1_6_14 - permute(D_1_6_14,[1,2,3,5,4,6]);
-     
-%     X3B = MM23B + D2 + D4 + D5 + D7 + D11 + D12 + D_3_8_13 + D_1_6_14 + D_9_10;
+    M23_D1 = einsum_kg(H2B.vvvo(PA,pB,:,HB) + Vt3B.PpvH,t2a(PA,:,HA,HA),'BceK,AeIJ->ABcIJK');
+    M23_D6 = -einsum_kg(I2A_vooo(PA,:,HA,HA) + Vt3A.PoHH,t2b(PA,pB,:,HB),'AmIJ,BcmK->ABcIJK');
+    M23_D16 = M23_D1 + M23_D6;
+    M23_D16 = M23_D16 - permute(M23_D16,[2,1,3,4,5,6]);
+    
+    M23_D3 = +einsum_kg(H2B.vvov(PA,pB,HA,:) + Vt3B.PpHv,t2b(PA,:,HA,HB),'AcIe,BeJK->ABcIJK');
+    M23_D4 = -einsum_kg(I2B_vooo(PA,:,HA,HB) + Vt3B.PoHH,t2b(PA,pB,HA,:),'AmIK,BcJm->ABcIJK');
+    M23_D34 = M23_D3 + M23_D4;
+    M23_D34 = M23_D34 - permute(M23_D34,[2,1,3,4,5,6]) - permute(M23_D34,[1,2,3,5,4,6]) + permute(M23_D34,[2,1,3,5,4,6]);
 
-% projection 4
-%     D1 = D1 - permute(D1,[1,2,3,5,4,6]);
-%     D3 = D3 - permute(D3,[2,1,3,4,5,6]);
-%     D9 = D9 - permute(D9,[2,1,3,4,5,6]) - permute(D9,[1,2,3,5,4,6]) + permute(D9,[2,1,3,5,4,6]);
-%     D10 = D10 - permute(D10,[2,1,3,4,5,6]) - permute(D10,[1,2,3,5,4,6]) + permute(D10,[2,1,3,5,4,6]);
-%     D13 = D13 - permute(D13,[2,1,3,4,5,6]);
-%     D14 = D14 - permute(D14,[1,2,3,5,4,6]);
-%     D6 = D6 - permute(D6,[1,2,3,5,4,6]);
-%     D8 = D8 - permute(D8,[2,1,3,4,5,6]);
-%     
-%     M23_D6 = M23_D6 - permute(M23_D6,[2,1,3,4,5,6]);
-%     M23_D4 = M23_D4 - permute(M23_D4,[2,1,3,4,5,6]) - permute(M23_D4,[1,2,3,5,4,6]) + permute(M23_D4,[2,1,3,5,4,6]);
-%     M23_D2 = M23_D2 - permute(M23_D2,[1,2,3,5,4,6]);
-%     M23_D5 = M23_D5 - permute(M23_D5,[1,2,3,5,4,6]);
-%     M23_D1 = M23_D1 - permute(M23_D1,[2,1,3,4,5,6]);
-%     M23_D3 = M23_D3 - permute(M23_D3,[2,1,3,4,5,6]) - permute(M23_D3,[1,2,3,5,4,6]) + permute(M23_D3,[2,1,3,5,4,6]);
-%     
-%     X3B = D1+D2+D3+D4+D9+D11+D12+D10+D13+D14+D5+D6+D7+D8...
-%           +M23_D6+M23_D4+M23_D2+M23_D5+M23_D1+M23_D3;
+    M23_D2 = -einsum_kg(I2B_ovoo(:,pB,HA,HB) + Vt3B.opHH,t2a(PA,PA,HA,:),'mcJK,ABIm->ABcIJK');
+    M23_D5 = +einsum_kg(H2A.vvov(PA,PA,HA,:) + Vt3A.PPHv,t2b(:,pB,HA,HB),'ABIe,ecJK->ABcIJK');
+    M23_D25 = M23_D2 + M23_D5;
+    M23_D25 = M23_D25 - permute(M23_D25,[1,2,3,5,4,6]);
+    
+    MM23B = M23_D16 + M23_D34 + M23_D25;
+    
+ 
+    %%%%%
+D1 = -einsum_kg(H1A.oo(hA,HA),T3B.PPphHH,'mI,ABcmJK->ABcIJK')...
+-einsum_kg(H1A.oo(HA,HA),T3B.PPpHHH,'MI,ABcMJK->ABcIJK');
+D1 = D1 - permute(D1,[1,2,3,5,4,6]);
 
+D2 = -einsum_kg(H1B.oo(hB,HB),T3B.PPpHHh,'mK,ABcIJm->ABcIJK')...
+-einsum_kg(H1B.oo(HB,HB),T3B.PPpHHH,'MK,ABcIJM->ABcIJK');
 
-% projection check
-    D1 = D1 - permute(D1,[1,2,3,5,4,6]);
-    D3 = D3 - permute(D3,[2,1,3,4,5,6]);
-    D9 = D9 - permute(D9,[2,1,3,4,5,6]) - permute(D9,[1,2,3,5,4,6]) + permute(D9,[2,1,3,5,4,6]);
-    D10 = D10 - permute(D10,[2,1,3,4,5,6]) - permute(D10,[1,2,3,5,4,6]) + permute(D10,[2,1,3,5,4,6]);
-    D13 = D13 - permute(D13,[2,1,3,4,5,6]);
-    D14 = D14 - permute(D14,[1,2,3,5,4,6]);
-    D6 = D6 - permute(D6,[1,2,3,5,4,6]);
-    D8 = D8 - permute(D8,[2,1,3,4,5,6]);
+D3 = -einsum_kg(H1A.vv(PA,pA),T3B.PppHHH,'Ae,BecIJK->ABcIJK')...
++einsum_kg(H1A.vv(PA,PA),T3B.PPpHHH,'AE,EBcIJK->ABcIJK');
+D3 = D3 - permute(D3,[2,1,3,4,5,6]);
 
-    X3B = MM23B + D1 + D2 + D3 + D4 + D5 + D6 + D7 + D8 + D9 + D10 + D11 + D12 + D13 + D14;
-    %X3B = D1;
+D4 = +einsum_kg(H1B.vv(pB,pB),T3B.PPpHHH,'ce,ABeIJK->ABcIJK')...
++einsum_kg(H1B.vv(pB,PB),T3B.PPPHHH,'cE,ABEIJK->ABcIJK');
 
+D5 = +0.5*einsum_kg(H2A.oooo(hA,hA,HA,HA),T3B.PPphhH,'mnIJ,ABcmnK->ABcIJK')...
+-einsum_kg(H2A.oooo(HA,hA,HA,HA),T3B.PPphHH,'MnIJ,ABcnMK->ABcIJK')...
++0.5*einsum_kg(H2A.oooo(HA,HA,HA,HA),T3B.PPpHHH,'MNIJ,ABcMNK->ABcIJK');
 
+D6 = -einsum_kg(H2B.oooo(hA,hB,HA,HB),T3B.PPphHh,'mnJK,ABcmIn->ABcIJK')...
+-einsum_kg(H2B.oooo(hA,HB,HA,HB),T3B.PPphHH,'mNJK,ABcmIN->ABcIJK')...
++einsum_kg(H2B.oooo(HA,hB,HA,HB),T3B.PPpHHh,'MnJK,ABcIMn->ABcIJK')...
++einsum_kg(H2B.oooo(HA,HB,HA,HB),T3B.PPpHHH,'MNJK,ABcIMN->ABcIJK');
+D6 = D6 - permute(D6,[1,2,3,5,4,6]);
 
+D7 = +0.5*einsum_kg(H2A.vvvv(PA,PA,pA,pA),T3B.pppHHH,'ABef,efcIJK->ABcIJK')...
++einsum_kg(H2A.vvvv(PA,PA,PA,pA),T3B.PppHHH,'ABEf,EfcIJK->ABcIJK')...
++0.5*einsum_kg(H2A.vvvv(PA,PA,PA,PA),T3B.PPpHHH,'ABEF,EFcIJK->ABcIJK');
 
+D8 = +einsum_kg(H2B.vvvv(PA,pB,pA,pB),T3B.PppHHH,'Bcef,AefIJK->ABcIJK')...
++einsum_kg(H2B.vvvv(PA,pB,pA,PB),T3B.PpPHHH,'BceF,AeFIJK->ABcIJK')...
++einsum_kg(H2B.vvvv(PA,pB,PA,pB),T3B.PPpHHH,'BcEf,AEfIJK->ABcIJK')...
++einsum_kg(H2B.vvvv(PA,pB,PA,PB),T3B.PPPHHH,'BcEF,AEFIJK->ABcIJK');
+D8 = D8 - permute(D8,[2,1,3,4,5,6]);
+
+D9 = -einsum_kg(H2A.voov(PA,hA,HA,pA),T3B.PpphHH,'AmIe,BecmJK->ABcIJK')...
++einsum_kg(H2A.voov(PA,hA,HA,PA),T3B.PPphHH,'AmIE,EBcmJK->ABcIJK')...
+-einsum_kg(H2A.voov(PA,HA,HA,pA),T3B.PppHHH,'AMIe,BecMJK->ABcIJK')...
++einsum_kg(H2A.voov(PA,HA,HA,PA),T3B.PPpHHH,'AMIE,EBcMJK->ABcIJK');
+D9 = D9 - permute(D9,[2,1,3,4,5,6]);
+D9 = D9 - permute(D9,[1,2,3,5,4,6]);
+
+D10 = -einsum_kg(H2B.voov(PA,hB,HA,pB),T3C.PppHhH,'AmIe,BceJmK->ABcIJK')...
++einsum_kg(H2B.voov(PA,hB,HA,PB),T3C.PPpHhH,'AmIE,BEcJmK->ABcIJK')...
++einsum_kg(H2B.voov(PA,HB,HA,pB),T3C.PppHHH,'AMIe,BceJKM->ABcIJK')...
+-einsum_kg(H2B.voov(PA,HB,HA,PB),T3C.PPpHHH,'AMIE,BEcJKM->ABcIJK');
+D10 = D10 - permute(D10,[2,1,3,4,5,6]);
+D10 = D10 - permute(D10,[1,2,3,5,4,6]);
+
+D11 = +einsum_kg(H2B.ovvo(hA,pB,pA,HB),T3A.PPphHH,'mceK,ABemIJ->ABcIJK')...
++einsum_kg(H2B.ovvo(hA,pB,PA,HB),T3A.PPPhHH,'mcEK,ABEmIJ->ABcIJK')...
++einsum_kg(H2B.ovvo(HA,pB,pA,HB),T3A.PPpHHH,'MceK,ABeIJM->ABcIJK')...
++einsum_kg(H2B.ovvo(HA,pB,PA,HB),T3A.PPPHHH,'McEK,ABEIJM->ABcIJK');
+
+D12 = +einsum_kg(H2C.voov(pB,hB,HB,pB),T3B.PPpHHh,'cmKe,ABeIJm->ABcIJK')...
++einsum_kg(H2C.voov(pB,hB,HB,PB),T3B.PPPHHh,'cmKE,ABEIJm->ABcIJK')...
++einsum_kg(H2C.voov(pB,HB,HB,pB),T3B.PPpHHH,'cMKe,ABeIJM->ABcIJK')...
++einsum_kg(H2C.voov(pB,HB,HB,PB),T3B.PPPHHH,'cMKE,ABEIJM->ABcIJK');
+
+D13 = +einsum_kg(H2B.vovo(PA,hB,pA,HB),T3B.PppHHh,'AmeK,BecIJm->ABcIJK')...
+-einsum_kg(H2B.vovo(PA,hB,PA,HB),T3B.PPpHHh,'AmEK,EBcIJm->ABcIJK')...
++einsum_kg(H2B.vovo(PA,HB,pA,HB),T3B.PppHHH,'AMeK,BecIJM->ABcIJK')...
+-einsum_kg(H2B.vovo(PA,HB,PA,HB),T3B.PPpHHH,'AMEK,EBcIJM->ABcIJK');
+D13 = D13 - permute(D13,[2,1,3,4,5,6]);
+
+D14 = -einsum_kg(H2B.ovov(hA,pB,HA,pB),T3B.PPphHH,'mcIe,ABemJK->ABcIJK')...
+-einsum_kg(H2B.ovov(hA,pB,HA,PB),T3B.PPPhHH,'mcIE,ABEmJK->ABcIJK')...
+-einsum_kg(H2B.ovov(HA,pB,HA,pB),T3B.PPpHHH,'McIe,ABeMJK->ABcIJK')...
+-einsum_kg(H2B.ovov(HA,pB,HA,PB),T3B.PPPHHH,'McIE,ABEMJK->ABcIJK');
+D14 = D14 - permute(D14,[1,2,3,5,4,6]);
+
+    X3B_PPpHHH = D1 + D2 + D3 + D4 + D5 + D6 + D7 + D8 + D9 + D10 + D11 + D12 + D13 + D14 + MM23B;
 
 end
 
-function [H1A,H1B,H2A,H2B,H2C,VTA,VTB] = get_t3b_intermediates(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys)
+function [H1A,H1B,H2A,H2B,H2C,Vt3A,Vt3B] = get_t3b_intermediates(t1a,t1b,t2a,t2b,t2c,T3A,T3B,T3C,T3D,sys)
 
     % h1A(mi)
     H1A.oo = sys.fa_oo ...
@@ -351,114 +358,119 @@ function [H1A,H1B,H2A,H2B,H2C,VTA,VTB] = get_t3b_intermediates(t1a,t1b,t2a,t2b,t
                 +einsum_kg(sys.vC_oovv,t2c,'mnef,afin->amie')...
                 +einsum_kg(sys.vB_oovv,t2b,'nmfe,fani->amie');
 
-    % (VT3)_C intermediates
-    VTA.vvov = -0.5*einsum_kg(sys.vA_oovv,t3a,'mnef,abfimn->abie')...
-                 -einsum_kg(sys.vB_oovv,t3b,'mnef,abfimn->abie');
-             
-    VTA.vooo = 0.5*einsum_kg(sys.vA_oovv,t3a,'mnef,aefijn->amij')...
-                 +einsum_kg(sys.vB_oovv,t3b,'mnef,aefijn->amij');
-             
-    VTB.vvvo = -0.5*einsum_kg(sys.vA_oovv,t3b,'mnef,afbmnj->abej')...
-                 -einsum_kg(sys.vB_oovv,t3c,'mnef,afbmnj->abej');
-             
-    VTB.ovoo = 0.5*einsum_kg(sys.vA_oovv,t3b,'mnef,efbinj->mbij')...
-                 +einsum_kg(sys.vB_oovv,t3c,'mnef,efbinj->mbij');
-             
-    VTB.vvov = -einsum_kg(sys.vB_oovv,t3b,'nmfe,afbinm->abie')...
-                 -0.5*einsum_kg(sys.vC_oovv,t3c,'nmfe,afbinm->abie');
-             
-    VTB.vooo = einsum_kg(sys.vB_oovv,t3b,'nmfe,afeinj->amij')...
-                 +0.5*einsum_kg(sys.vC_oovv,t3c,'nmfe,afeinj->amij');
-             
-end
+     % (Vt3)_C intermediates
+     PA = sys.PA; pA = sys.pA; HA = sys.HA; hA = sys.hA;
+     PB = sys.PB; pB = sys.pB; HB = sys.HB; hB = sys.hB;
+    
+d1 = +einsum_kg(sys.vB_oovv(hA,hB,:,pB),T3C.PpphhH,'mnef,AfbmnJ->AbeJ')...
++einsum_kg(sys.vB_oovv(hA,hB,:,PB),T3C.PPphhH,'mneF,AFbmnJ->AbeJ')...
++einsum_kg(sys.vB_oovv(hA,HB,:,pB),T3C.PpphHH,'mNef,AfbmNJ->AbeJ')...
++einsum_kg(sys.vB_oovv(hA,HB,:,PB),T3C.PPphHH,'mNeF,AFbmNJ->AbeJ')...
++einsum_kg(sys.vB_oovv(HA,hB,:,pB),T3C.PppHhH,'Mnef,AfbMnJ->AbeJ')...
++einsum_kg(sys.vB_oovv(HA,hB,:,PB),T3C.PPpHhH,'MneF,AFbMnJ->AbeJ')...
++einsum_kg(sys.vB_oovv(HA,HB,:,pB),T3C.PppHHH,'MNef,AfbMNJ->AbeJ')...
++einsum_kg(sys.vB_oovv(HA,HB,:,PB),T3C.PPpHHH,'MNeF,AFbMNJ->AbeJ');
 
-% DEBUG BUILD
-%   %
-%     M23_D1 = einsum_kg(H2B.vvvo,t2a,'bcek,aeij->abcijk');
-% 
-%     M23_D2 = -einsum_kg(I2B_ovoo,t2a,'mcjk,abim->abcijk');
-%     
-%     M23_D3 = +einsum_kg(H2B.vvov,t2b,'acie,bejk->abcijk');
-% 
-%     M23_D4 = -einsum_kg(I2B_vooo,t2b,'amik,bcjm->abcijk');
-% 
-%     M23_D5 = +einsum_kg(H2A.vvov,t2b,'abie,ecjk->abcijk');
-% 
-%     M23_D6 = -einsum_kg(I2A_vooo,t2b,'amij,bcmk->abcijk');
-%
-%     M23_34 = M23_D3 + M23_D4;
-%     M23_34 = M23_34 - permute(M23_34,[2,1,3,4,5,6]) - permute(M23_34,[1,2,3,5,4,6]) + permute(M23_34,[2,1,3,5,4,6]);
-%         
-%     M23_25 = M23_D2 + M23_D5;
-%     M23_25 = M23_25 - permute(M23_25,[1,2,3,5,4,6]);
-% 
-%     M23_16 = M23_D1 + M23_D6;
-%     M23_16 = M23_16 - permute(M23_16,[2,1,3,4,5,6]);
-%         
-%     MM23B = M23_16 + M23_25 + M23_34;
-%    
-%     VTA_vvov = -0.5*einsum_kg(sys.vA_oovv,t3a,'mnef,abfimn->abie') - einsum_kg(sys.vB_oovv,t3b,'mnef,abfimn->abie');                     
-%     VT_1 = einsum_kg(VTA_vvov,t2b,'abie,ecjk->abcijk');
-%     VT_1 = VT_1 - permute(VT_1,[1,2,3,5,4,6]);
-%              
-%     VTB_vvvo = -0.5*einsum_kg(sys.vA_oovv,t3b,'mnef,bfcmnk->bcek') - einsum_kg(sys.vB_oovv,t3c,'mnef,bfcmnk->bcek');
-%     VT_2 = einsum_kg(VTB_vvvo,t2a,'bcek,aeij->abcijk');
-%     VT_2 = VT_2 - permute(VT_2,[2,1,3,4,5,6]);
-%     
-%     tmp = -einsum_kg(sys.vB_oovv,t3b,'nmfe,bfcjnm->bcje') - 0.5*einsum_kg(sys.vC_oovv,t3c,'nmfe,bfcjnm->bcje');
-%     VT_3 = einsum_kg(tmp,t2b,'bcje,aeik->abcijk');
-%     VT_3 = VT_3 - permute(VT_3,[2,1,3,4,5,6]) - permute(VT_3,[1,2,3,5,4,6]) + permute(VT_3,[2,1,3,5,4,6]);
-%         
-%     tmp = 0.5*einsum_kg(sys.vA_oovv,t3a,'mnef,ebfijn->mbij') + einsum_kg(sys.vB_oovv,t3b,'mnef,ebfijn->mbij');
-%     VT_4 = -einsum_kg(tmp,t2b,'mbij,acmk->abcijk');
-%     VT_4 = VT_4 - permute(VT_4,[2,1,3,4,5,6]);
-%     
-%     tmp = 0.5*einsum_kg(sys.vA_oovv,t3b,'mnef,efcink->mcik') + einsum_kg(sys.vB_oovv,t3c,'mnef,efcink->mcik');
-%     VT_5 = -einsum_kg(tmp,t2a,'mcik,abmj->abcijk');
-%     VT_5 = VT_5 - permute(VT_5,[1,2,3,5,4,6]);
-%     
-%     tmp = einsum_kg(sys.vB_oovv,t3b,'nmfe,afeink->amik') + 0.5*einsum_kg(sys.vC_oovv,t3c,'nmfe,afeink->amik');
-%     VT_6 = -einsum_kg(tmp,t2b,'amik,bcjm->abcijk');
-%     VT_6 = VT_6 - permute(VT_6,[2,1,3,4,5,6]) - permute(VT_6,[1,2,3,5,4,6]) + permute(VT_6,[2,1,3,5,4,6]);
-%     
-%     MM23B = MM23B + VT_1 + VT_2 + VT_3 + VT_4 + VT_5 + VT_6;
-%
-%
-%     D1 = -einsum_kg(H1A.oo-diag(diag(sys.fa_oo)),t3b,'mi,abcmjk->abcijk');
-%     D1 = D1 - permute(D1,[1,2,3,5,4,6]);
-%     
-%     D2 = -einsum_kg(H1B.oo-diag(diag(sys.fb_oo)),t3b,'mk,abcijm->abcijk');
-%     
-%     D3 = einsum_kg(H1A.vv-diag(diag(sys.fa_vv)),t3b,'ae,ebcijk->abcijk');
-%     D3 = D3 - permute(D3,[2,1,3,4,5,6]);
-%     
-%     D4 = einsum_kg(H1B.vv-diag(diag(sys.fb_vv)),t3b,'ce,abeijk->abcijk');
-%     
-%     D5 = 0.5*einsum_kg(H2A.oooo,t3b,'mnij,abcmnk->abcijk');
-%     
-%     D6 = einsum_kg(H2B.oooo,t3b,'mnjk,abcimn->abcijk');
-%     D6 = D6 - permute(D6,[1,2,3,5,4,6]);
-%     
-%     D7 = 0.5*einsum_kg(H2A.vvvv,t3b,'abef,efcijk->abcijk');
-%     
-%     D8 = einsum_kg(H2B.vvvv,t3b,'bcef,aefijk->abcijk');
-%     D8 = D8 - permute(D8,[2,1,3,4,5,6]);
-%     
-%     D9 = einsum_kg(H2A.voov,t3b,'amie,ebcmjk->abcijk');
-%     D9 = D9 - permute(D9,[1,2,3,5,4,6]) - permute(D9,[2,1,3,4,5,6]) + permute(D9,[2,1,3,5,4,6]);
-%     
-%     D10 = einsum_kg(H2B.voov,t3c,'amie,becjmk->abcijk');
-%     D10 = D10 - permute(D10,[1,2,3,5,4,6]) - permute(D10,[2,1,3,4,5,6]) + permute(D10,[2,1,3,5,4,6]);
-%     
-%     D11 = einsum_kg(H2B.ovvo,t3a,'mcek,abeijm->abcijk');
-%     
-%     D12 = einsum_kg(H2C.voov,t3b,'cmke,abeijm->abcijk');
-%     
-%     D13 = -einsum_kg(H2B.vovo,t3b,'amek,ebcijm->abcijk');
-%     D13 = D13 - permute(D13,[2,1,3,4,5,6]);
-%     
-%     D14 = -einsum_kg(H2B.ovov,t3b,'mcie,abemjk->abcijk');
-%     D14 = D14 - permute(D14,[1,2,3,5,4,6]);
-%     
-%     X3B_abcijk = MM23B + D1 + D2 + D3 + D4 + D5 + D6 + D7 + D8 + D9 + D10 ...
-%                        + D11 + D12 + D13 + D14;
+d2 = +0.5*einsum_kg(sys.vA_oovv(hA,hA,:,pA),T3B.PpphhH,'mnef,AfbmnJ->AbeJ')...
++0.5*einsum_kg(sys.vA_oovv(hA,hA,:,PA),T3B.PPphhH,'mneF,AFbmnJ->AbeJ')...
+-einsum_kg(sys.vA_oovv(HA,hA,:,pA),T3B.PpphHH,'Mnef,AfbnMJ->AbeJ')...
+-einsum_kg(sys.vA_oovv(HA,hA,:,PA),T3B.PPphHH,'MneF,AFbnMJ->AbeJ')...
++0.5*einsum_kg(sys.vA_oovv(HA,HA,:,pA),T3B.PppHHH,'MNef,AfbMNJ->AbeJ')...
++0.5*einsum_kg(sys.vA_oovv(HA,HA,:,PA),T3B.PPpHHH,'MNeF,AFbMNJ->AbeJ');
+
+Vt3B.PpvH = -d1 - d2;
+      
+
+d1 = +einsum_kg(sys.vB_oovv(:,hB,pA,pB),T3B.PppHHh,'mnef,AefIJn->AmIJ')...
++einsum_kg(sys.vB_oovv(:,hB,PA,pB),T3B.PPpHHh,'mnEf,AEfIJn->AmIJ')...
++einsum_kg(sys.vB_oovv(:,hB,pA,PB),T3B.PpPHHh,'mneF,AeFIJn->AmIJ')...
++einsum_kg(sys.vB_oovv(:,hB,PA,PB),T3B.PPPHHh,'mnEF,AEFIJn->AmIJ')...
++einsum_kg(sys.vB_oovv(:,HB,pA,pB),T3B.PppHHH,'mNef,AefIJN->AmIJ')...
++einsum_kg(sys.vB_oovv(:,HB,PA,pB),T3B.PPpHHH,'mNEf,AEfIJN->AmIJ')...
++einsum_kg(sys.vB_oovv(:,HB,pA,PB),T3B.PpPHHH,'mNeF,AeFIJN->AmIJ')...
++einsum_kg(sys.vB_oovv(:,HB,PA,PB),T3B.PPPHHH,'mNEF,AEFIJN->AmIJ');
+
+d2 = +0.5*einsum_kg(sys.vA_oovv(:,hA,pA,pA),T3A.PpphHH,'mnef,AefnIJ->AmIJ')...
+-einsum_kg(sys.vA_oovv(:,hA,pA,PA),T3A.PPphHH,'mneF,AFenIJ->AmIJ')...
++0.5*einsum_kg(sys.vA_oovv(:,hA,PA,PA),T3A.PPPhHH,'mnEF,AEFnIJ->AmIJ')...
++0.5*einsum_kg(sys.vA_oovv(:,HA,pA,pA),T3A.PppHHH,'mNef,AefIJN->AmIJ')...
+-einsum_kg(sys.vA_oovv(:,HA,pA,PA),T3A.PPpHHH,'mNeF,AFeIJN->AmIJ')...
++0.5*einsum_kg(sys.vA_oovv(:,HA,PA,PA),T3A.PPPHHH,'mNEF,AEFIJN->AmIJ');
+
+Vt3A.PoHH = d1 + d2;
+
+d1 = -einsum_kg(sys.vB_oovv(hA,hB,pA,:),T3B.PpphHh,'nmfe,AfbnIm->AbIe')...
+-einsum_kg(sys.vB_oovv(hA,hB,PA,:),T3B.PPphHh,'nmFe,AFbnIm->AbIe')...
++einsum_kg(sys.vB_oovv(HA,hB,pA,:),T3B.PppHHh,'Nmfe,AfbINm->AbIe')...
++einsum_kg(sys.vB_oovv(HA,hB,PA,:),T3B.PPpHHh,'NmFe,AFbINm->AbIe')...
+-einsum_kg(sys.vB_oovv(hA,HB,pA,:),T3B.PpphHH,'nMfe,AfbnIM->AbIe')...
+-einsum_kg(sys.vB_oovv(hA,HB,PA,:),T3B.PPphHH,'nMFe,AFbnIM->AbIe')...
++einsum_kg(sys.vB_oovv(HA,HB,pA,:),T3B.PppHHH,'NMfe,AfbINM->AbIe')...
++einsum_kg(sys.vB_oovv(HA,HB,PA,:),T3B.PPpHHH,'NMFe,AFbINM->AbIe');
+
+d2 = +0.5*einsum_kg(sys.vC_oovv(hB,hB,pB,:),T3C.PppHhh,'nmfe,AfbInm->AbIe')...
++0.5*einsum_kg(sys.vC_oovv(hB,hB,PB,:),T3C.PPpHhh,'nmFe,AFbInm->AbIe')...
++einsum_kg(sys.vC_oovv(hB,HB,pB,:),T3C.PppHhH,'nMfe,AfbInM->AbIe')...
++einsum_kg(sys.vC_oovv(hB,HB,PB,:),T3C.PPpHhH,'nMFe,AFbInM->AbIe')...
++0.5*einsum_kg(sys.vC_oovv(HB,HB,pB,:),T3C.PppHHH,'NMfe,AfbINM->AbIe')...
++0.5*einsum_kg(sys.vC_oovv(HB,HB,PB,:),T3C.PPpHHH,'NMFe,AFbINM->AbIe');
+
+Vt3B.PpHv = -d1 - d2;
+
+d1 = -einsum_kg(sys.vB_oovv(hA,:,pA,pB),T3B.PpphHH,'nmfe,AfenIJ->AmIJ')...
+-einsum_kg(sys.vB_oovv(hA,:,pA,PB),T3B.PpPhHH,'nmfE,AfEnIJ->AmIJ')...
+-einsum_kg(sys.vB_oovv(hA,:,PA,pB),T3B.PPphHH,'nmFe,AFenIJ->AmIJ')...
+-einsum_kg(sys.vB_oovv(hA,:,PA,PB),T3B.PPPhHH,'nmFE,AFEnIJ->AmIJ')...
++einsum_kg(sys.vB_oovv(HA,:,pA,pB),T3B.PppHHH,'Nmfe,AfeINJ->AmIJ')...
++einsum_kg(sys.vB_oovv(HA,:,pA,PB),T3B.PpPHHH,'NmfE,AfEINJ->AmIJ')...
++einsum_kg(sys.vB_oovv(HA,:,PA,pB),T3B.PPpHHH,'NmFe,AFeINJ->AmIJ')...
++einsum_kg(sys.vB_oovv(HA,:,PA,PB),T3B.PPPHHH,'NmFE,AFEINJ->AmIJ');
+
+d2 = +0.5*einsum_kg(sys.vC_oovv(hB,:,pB,pB),T3C.PppHhH,'nmfe,AfeInJ->AmIJ')...
++einsum_kg(sys.vC_oovv(hB,:,PB,pB),T3C.PPpHhH,'nmFe,AFeInJ->AmIJ')...
++0.5*einsum_kg(sys.vC_oovv(hB,:,PB,PB),T3C.PPPHhH,'nmFE,AFEInJ->AmIJ')...
++0.5*einsum_kg(sys.vC_oovv(HB,:,pB,pB),T3C.PppHHH,'Nmfe,AfeINJ->AmIJ')...
++einsum_kg(sys.vC_oovv(HB,:,PB,pB),T3C.PPpHHH,'NmFe,AFeINJ->AmIJ')...
++0.5*einsum_kg(sys.vC_oovv(HB,:,PB,PB),T3C.PPPHHH,'NmFE,AFEINJ->AmIJ');
+
+Vt3B.PoHH = d1 + d2;
+
+d1 = +einsum_kg(sys.vB_oovv(:,hB,pA,pB),T3C.pppHhH,'mnef,efbInJ->mbIJ')...
++einsum_kg(sys.vB_oovv(:,hB,PA,pB),T3C.PppHhH,'mnEf,EfbInJ->mbIJ')...
++einsum_kg(sys.vB_oovv(:,hB,pA,PB),T3C.pPpHhH,'mneF,eFbInJ->mbIJ')...
++einsum_kg(sys.vB_oovv(:,hB,PA,PB),T3C.PPpHhH,'mnEF,EFbInJ->mbIJ')...
++einsum_kg(sys.vB_oovv(:,HB,pA,pB),T3C.pppHHH,'mNef,efbINJ->mbIJ')...
++einsum_kg(sys.vB_oovv(:,HB,PA,pB),T3C.PppHHH,'mNEf,EfbINJ->mbIJ')...
++einsum_kg(sys.vB_oovv(:,HB,pA,PB),T3C.pPpHHH,'mNeF,eFbINJ->mbIJ')...
++einsum_kg(sys.vB_oovv(:,HB,PA,PB),T3C.PPpHHH,'mNEF,EFbINJ->mbIJ');
+
+d2 = -0.5*einsum_kg(sys.vA_oovv(:,hA,pA,pA),T3B.ppphHH,'mnef,efbnIJ->mbIJ')...
++einsum_kg(sys.vA_oovv(:,hA,pA,PA),T3B.PpphHH,'mneF,FebnIJ->mbIJ')...
+-0.5*einsum_kg(sys.vA_oovv(:,hA,PA,PA),T3B.PPphHH,'mnEF,EFbnIJ->mbIJ')...
++0.5*einsum_kg(sys.vA_oovv(:,HA,pA,pA),T3B.pppHHH,'mNef,efbINJ->mbIJ')...
+-einsum_kg(sys.vA_oovv(:,HA,pA,PA),T3B.PppHHH,'mNeF,FebINJ->mbIJ')...
++0.5*einsum_kg(sys.vA_oovv(:,HA,PA,PA),T3B.PPpHHH,'mNEF,EFbINJ->mbIJ');
+
+Vt3B.opHH = d1 + d2;
+     
+d1 = -einsum_kg(sys.vB_oovv(hA,hB,:,pB),T3B.PPphHh,'mnef,ABfmIn->ABIe')...
+-einsum_kg(sys.vB_oovv(hA,hB,:,PB),T3B.PPPhHh,'mneF,ABFmIn->ABIe')...
+-einsum_kg(sys.vB_oovv(hA,HB,:,pB),T3B.PPphHH,'mNef,ABfmIN->ABIe')...
+-einsum_kg(sys.vB_oovv(hA,HB,:,PB),T3B.PPPhHH,'mNeF,ABFmIN->ABIe')...
++einsum_kg(sys.vB_oovv(HA,hB,:,pB),T3B.PPpHHh,'Mnef,ABfIMn->ABIe')...
++einsum_kg(sys.vB_oovv(HA,hB,:,PB),T3B.PPPHHh,'MneF,ABFIMn->ABIe')...
++einsum_kg(sys.vB_oovv(HA,HB,:,pB),T3B.PPpHHH,'MNef,ABfIMN->ABIe')...
++einsum_kg(sys.vB_oovv(HA,HB,:,PB),T3B.PPPHHH,'MNeF,ABFIMN->ABIe');
+
+d2 = +0.5*einsum_kg(sys.vA_oovv(hA,hA,:,pA),T3A.PPphhH,'mnef,ABfmnI->ABIe')...
++0.5*einsum_kg(sys.vA_oovv(hA,hA,:,PA),T3A.PPPhhH,'mneF,ABFmnI->ABIe')...
++einsum_kg(sys.vA_oovv(HA,hA,:,pA),T3A.PPphHH,'Mnef,ABfnIM->ABIe')...
++einsum_kg(sys.vA_oovv(HA,hA,:,PA),T3A.PPPhHH,'MneF,ABFnIM->ABIe')...
++0.5*einsum_kg(sys.vA_oovv(HA,HA,:,pA),T3A.PPpHHH,'MNef,ABfIMN->ABIe')...
++0.5*einsum_kg(sys.vA_oovv(HA,HA,:,PA),T3A.PPPHHH,'MNeF,ABFIMN->ABIe');
+
+Vt3A.PPHv = -d1 - d2;
+
+
+              
+end

@@ -27,7 +27,7 @@ function [cc_t,Ecorr] = uccsd(sys,opts,T_guess)
     
     % Jacobi/DIIS iterations
     it_micro = 0; flag_conv = 0; it_macro = 0; Ecorr_old = 0.0;
-    %fprintf('DIIS Cycle - %d',it_macro)
+    fprintf('DIIS Cycle - %d',it_macro)
     while it_micro < maxit
         
         tic
@@ -73,16 +73,16 @@ function [cc_t,Ecorr] = uccsd(sys,opts,T_guess)
          
         % diis extrapolate - seems to be better if you just extrapolate
         % every iteration after you get at least diis_size vectors
-        if it_micro > diis_size
-           it_macro = it_macro + 1;
-           T = diis_xtrap(T_list,T_resid_list);
-        end   
-        
-%         if mod(it_micro,diis_size) == 0 && it_micro > 1
+%         if it_micro > diis_size
 %            it_macro = it_macro + 1;
-%            fprintf('\nDIIS Cycle - %d',it_macro)
 %            T = diis_xtrap(T_list,T_resid_list);
-%         end        
+%         end   
+        
+        if mod(it_micro,diis_size) == 0 && it_micro > 1
+           it_macro = it_macro + 1;
+           fprintf('\nDIIS Cycle - %d',it_macro)
+           T = diis_xtrap(T_list,T_resid_list);
+        end        
         
         % extract time per iteration in minutes and seconds
         toc_S = toc; toc_M = floor(toc_S/60); toc_S = toc_S - toc_M*60;
@@ -109,6 +109,7 @@ function [cc_t,Ecorr] = uccsd(sys,opts,T_guess)
         fprintf('\nUCCSD failed to converged in %d iterations\n',maxit)
     end   
        
+    fprintf('\nT1 Diagnostic  = %4.12f (if > 0.02, CCSD results considered unreliable)\n',t1_diagnostic(cc_t,sys))
 
 end
 

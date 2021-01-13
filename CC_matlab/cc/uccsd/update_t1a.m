@@ -1,7 +1,7 @@
 function [t1a] = update_t1a(t1a,t1b,t2a,t2b,t2c,sys,shift)
 
-    chi1A_vv = sys.fa_vv_masked + einsum_kg(sys.vA_vovv,t1a,'anef,fn->ae') + einsum_kg(sys.vB_vovv,t1b,'anef,fn->ae');
-    chi1A_oo = sys.fa_oo_masked + einsum_kg(sys.vA_ooov,t1a,'mnif,fn->mi') + einsum_kg(sys.vB_ooov,t1b,'mnif,fn->mi');
+    chi1A_vv = sys.fa_vv + einsum_kg(sys.vA_vovv,t1a,'anef,fn->ae') + einsum_kg(sys.vB_vovv,t1b,'anef,fn->ae');
+    chi1A_oo = sys.fa_oo + einsum_kg(sys.vA_ooov,t1a,'mnif,fn->mi') + einsum_kg(sys.vB_ooov,t1b,'mnif,fn->mi');
     h1A_ov = sys.fa_ov + einsum_kg(sys.vA_oovv,t1a,'mnef,fn->me') + einsum_kg(sys.vB_oovv,t1b,'mnef,fn->me');
     h1B_ov = sys.fb_ov + einsum_kg(sys.vB_oovv,t1a,'nmfe,fn->me') + einsum_kg(sys.vC_oovv,t1b,'mnef,fn->me');
     h1A_oo = chi1A_oo + einsum_kg(h1A_ov,t1a,'me,ei->mi');
@@ -23,7 +23,7 @@ function [t1a] = update_t1a(t1a,t1b,t2a,t2b,t2c,sys,shift)
     for a = 1:sys.Nvir_alpha
         for i = 1:sys.Nocc_alpha
             denom = sys.fa_oo(i,i) - sys.fa_vv(a,a) - shift;
-            t1a(a,i) = X1A(a,i) / denom;
+            t1a(a,i) = t1a(a,i) + X1A(a,i) / denom;
         end
     end
 

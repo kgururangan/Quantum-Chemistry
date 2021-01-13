@@ -5,12 +5,12 @@ function [t2c] = update_t2c_ccsdt3(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift
              +einsum_kg(sys.vB_oovv,t1a,'nmfe,fn->me')...
              +einsum_kg(sys.vC_oovv,t1b,'mnef,fn->me');
          
-    h1B_oo = sys.fb_oo_masked...
+    h1B_oo = sys.fb_oo...
              +einsum_kg(h1B_ov,t1b,'me,ei->mi')...
              +einsum_kg(sys.vB_oovo,t1a,'nmfi,fn->mi')...
              +einsum_kg(sys.vC_ooov,t1b,'mnif,fn->mi');
          
-    h1B_vv = sys.fb_vv_masked...
+    h1B_vv = sys.fb_vv...
              -einsum_kg(h1B_ov,t1b,'me,am->ae')...
              +einsum_kg(sys.vB_ovvv,t1a,'nafe,fn->ae')...
              +einsum_kg(sys.vC_vovv,t1b,'anef,fn->ae');
@@ -97,7 +97,7 @@ function [t2c] = update_t2c_ccsdt3(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift
         for j = i+1:sys.Nocc_beta
             for a = 1:sys.Nvir_beta
                 for b = a+1:sys.Nvir_beta
-                    t2c(a,b,i,j) = X2C(a,b,i,j)/(sys.fb_oo(i,i)+sys.fb_oo(j,j)-sys.fb_vv(a,a)-sys.fb_vv(b,b)-shift);                
+                    t2c(a,b,i,j) = t2c(a,b,i,j) + X2C(a,b,i,j)/(sys.fb_oo(i,i)+sys.fb_oo(j,j)-sys.fb_vv(a,a)-sys.fb_vv(b,b)-shift);                
                     t2c(b,a,i,j) = -t2c(a,b,i,j);
                     t2c(a,b,j,i) = -t2c(a,b,i,j);
                     t2c(b,a,j,i) = t2c(a,b,i,j);
@@ -131,20 +131,20 @@ function [t2c] = update_t2c_ccsdt3(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift
     
     X2C_ABIJ = D1 + D2 + D34 + D56;
     
-    t2c_ABIJ = zeros(sys.Nact_p_beta,sys.Nact_p_beta,sys.Nact_h_beta,sys.Nact_h_beta);
+    %t2c_ABIJ = zeros(sys.Nact_p_beta,sys.Nact_p_beta,sys.Nact_h_beta,sys.Nact_h_beta);
     for i = 1:sys.Nact_h_beta
         for j = i+1:sys.Nact_h_beta
             for a = 1:sys.Nact_p_beta
                 for b = a+1:sys.Nact_p_beta
-                    t2c_ABIJ(a,b,i,j) = X2C_ABIJ(a,b,i,j)/(sys.fb_HH(i,i)+sys.fb_HH(j,j)-sys.fb_PP(a,a)-sys.fb_PP(b,b)-shift);                
-                    t2c_ABIJ(b,a,i,j) = -t2c_ABIJ(a,b,i,j);
-                    t2c_ABIJ(a,b,j,i) = -t2c_ABIJ(a,b,i,j);
-                    t2c_ABIJ(b,a,j,i) = t2c_ABIJ(a,b,i,j);
+                    t2c(PB(a),PB(b),HB(i),HB(j)) = t2c(PB(a),PB(b),HB(i),HB(j)) + X2C_ABIJ(a,b,i,j)/(sys.fb_HH(i,i)+sys.fb_HH(j,j)-sys.fb_PP(a,a)-sys.fb_PP(b,b)-shift);                
+                    t2c(PB(b),PB(a),HB(i),HB(j)) = -t2c(PB(a),PB(b),HB(i),HB(j));
+                    t2c(PB(a),PB(b),HB(j),HB(i)) = -t2c(PB(a),PB(b),HB(i),HB(j));
+                    t2c(PB(b),PB(a),HB(j),HB(i)) = t2c(PB(a),PB(b),HB(i),HB(j));
                 end
             end
         end
     end
-    t2c(PB,PB,HB,HB) = t2c(PB,PB,HB,HB) + t2c_ABIJ;
+    %t2c(PB,PB,HB,HB) = t2c(PB,PB,HB,HB) + t2c_ABIJ;
     
     % iJAB
     D5 = -0.5*einsum_kg(h2C_ooov(HB,HB,hB,PB),t3d,'mnif,abfmjn->abij');
@@ -152,18 +152,18 @@ function [t2c] = update_t2c_ccsdt3(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift
     
     X2C_ABiJ = D5 + D6;
     
-    t2c_ABiJ = zeros(sys.Nact_p_beta,sys.Nact_p_beta,sys.Nunact_h_beta,sys.Nact_h_beta);
+    %t2c_ABiJ = zeros(sys.Nact_p_beta,sys.Nact_p_beta,sys.Nunact_h_beta,sys.Nact_h_beta);
     for i = 1:sys.Nunact_h_beta
         for j = 1:sys.Nact_h_beta
             for a = 1:sys.Nact_p_beta
                 for b = a+1:sys.Nact_p_beta
-                    t2c_ABiJ(a,b,i,j) = X2C_ABiJ(a,b,i,j)/(sys.fb_hh(i,i)+sys.fb_HH(j,j)-sys.fb_PP(a,a)-sys.fb_PP(b,b)-shift);                
-                    t2c_ABiJ(b,a,i,j) = -t2c_ABiJ(a,b,i,j);
+                    t2c(PB(a),PB(b),hB(i),HB(j)) = t2c(PB(a),PB(b),hB(i),HB(j)) + X2C_ABiJ(a,b,i,j)/(sys.fb_hh(i,i)+sys.fb_HH(j,j)-sys.fb_PP(a,a)-sys.fb_PP(b,b)-shift);                
+                    t2c(PB(b),PB(a),hB(i),HB(j)) = -t2c(PB(a),PB(b),hB(i),HB(j));
                 end
             end
         end
     end
-    t2c(PB,PB,hB,HB) = t2c(PB,PB,hB,HB) + t2c_ABiJ;
+    %t2c(PB,PB,hB,HB) = t2c(PB,PB,hB,HB) + t2c_ABiJ;
     
     % IJAb
     D3 = 0.5*einsum_kg(h2C_vovv(pB,HB,PB,PB),t3d,'bnef,aefijn->abij');
@@ -171,18 +171,18 @@ function [t2c] = update_t2c_ccsdt3(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift
     
     X2C_AbIJ = D3 + D4;
     
-    t2c_AbIJ = zeros(sys.Nact_p_beta,sys.Nunact_p_beta,sys.Nact_h_beta,sys.Nact_h_beta);
+    %t2c_AbIJ = zeros(sys.Nact_p_beta,sys.Nunact_p_beta,sys.Nact_h_beta,sys.Nact_h_beta);
     for i = 1:sys.Nact_h_beta
         for j = i+1:sys.Nact_h_beta
             for a = 1:sys.Nact_p_beta
                 for b = 1:sys.Nunact_p_beta
-                    t2c_AbIJ(a,b,i,j) = X2C_AbIJ(a,b,i,j)/(sys.fb_HH(i,i)+sys.fb_HH(j,j)-sys.fb_PP(a,a)-sys.fb_pp(b,b)-shift);                
-                    t2c_AbIJ(a,b,j,i) = -t2c_AbIJ(a,b,i,j);
+                    t2c(PB(a),pB(b),HB(i),HB(j)) = t2c(PB(a),pB(b),HB(i),HB(j)) + X2C_AbIJ(a,b,i,j)/(sys.fb_HH(i,i)+sys.fb_HH(j,j)-sys.fb_PP(a,a)-sys.fb_pp(b,b)-shift);                
+                    t2c(PB(a),pB(b),HB(j),HB(i)) = -t2c(PB(a),pB(b),HB(i),HB(j));
                 end
             end
         end
     end
-    t2c(PB,pB,HB,HB) = t2c(PB,pB,HB,HB) + t2c_AbIJ;
+    %t2c(PB,pB,HB,HB) = t2c(PB,pB,HB,HB) + t2c_AbIJ;
 
 
 end

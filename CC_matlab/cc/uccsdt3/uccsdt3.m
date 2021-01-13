@@ -25,7 +25,7 @@ function [cc_t,Ecorr] = uccsdt3(sys,opts,T_guess)
     
     % Jacobi/DIIS iterations
     it_micro = 0; flag_conv = 0; it_macro = 0; Ecorr_old = 0.0;
-    %fprintf('\nDIIS Cycle - %d',it_macro)
+    fprintf('\nDIIS Cycle - %d',it_macro)
     while it_micro < maxit
         
         tic
@@ -91,10 +91,11 @@ function [cc_t,Ecorr] = uccsdt3(sys,opts,T_guess)
         T_resid_list(:,mod(it_micro,diis_size)+1) = T_resid;
          
         % diis extrapolate
-        if it_micro > diis_size
+        if mod(it_micro,diis_size) == 0 && it_micro > 1
            it_macro = it_macro + 1;
+           fprintf('\nDIIS Cycle - %d',it_macro)
            T = diis_xtrap(T_list,T_resid_list);
-        end        
+        end      
 
         % extract time per iteration in minutes and seconds
         toc_S = toc; toc_M = floor(toc_S/60); toc_S = toc_S - toc_M*60;

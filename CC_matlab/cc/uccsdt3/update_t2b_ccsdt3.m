@@ -44,22 +44,22 @@ function [t2b] = update_t2b_ccsdt3(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift
              +einsum_kg(sys.vB_oovv,t1a,'nmfe,fn->me')...
              +einsum_kg(sys.vC_oovv,t1b,'mnef,fn->me');
 
-    h1A_oo = sys.fa_oo_masked...
+    h1A_oo = sys.fa_oo...
              +einsum_kg(h1A_ov,t1a,'me,ei->mi')...
              +einsum_kg(sys.vA_ooov,t1a,'mnif,fn->mi')...
              +einsum_kg(sys.vB_ooov,t1b,'mnif,fn->mi');
          
-    h1B_oo = sys.fb_oo_masked...
+    h1B_oo = sys.fb_oo...
              +einsum_kg(h1B_ov,t1b,'me,ei->mi')...
              +einsum_kg(sys.vB_oovo,t1a,'nmfi,fn->mi')...
              +einsum_kg(sys.vC_ooov,t1b,'mnif,fn->mi');
          
-    h1A_vv = sys.fa_vv_masked...
+    h1A_vv = sys.fa_vv...
              -einsum_kg(h1A_ov,t1a,'me,am->ae')...
              +einsum_kg(sys.vA_vovv,t1a,'amef,fm->ae')...
              +einsum_kg(sys.vB_vovv,t1b,'anef,fn->ae');
          
-    h1B_vv = sys.fb_vv_masked...
+    h1B_vv = sys.fb_vv...
              -einsum_kg(h1B_ov,t1b,'me,am->ae')...
              +einsum_kg(sys.vB_ovvv,t1a,'nafe,fn->ae')...
              +einsum_kg(sys.vC_vovv,t1b,'anef,fn->ae');
@@ -143,13 +143,13 @@ function [t2b] = update_t2b_ccsdt3(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift
     
     X2B = MM12B + CCS_T2;
     
-    t2b = zeros(sys.Nvir_alpha,sys.Nvir_beta,sys.Nocc_alpha,sys.Nocc_beta);
+    %t2b = zeros(sys.Nvir_alpha,sys.Nvir_beta,sys.Nocc_alpha,sys.Nocc_beta);
     for i = 1:sys.Nocc_alpha
         for j = 1:sys.Nocc_beta
             for a = 1:sys.Nvir_alpha
                 for b = 1:sys.Nvir_beta
                     denom = (sys.fa_oo(i,i)+sys.fb_oo(j,j)-sys.fa_vv(a,a)-sys.fb_vv(b,b)-shift); 
-                    t2b(a,b,i,j) = X2B(a,b,i,j) / denom;
+                    t2b(a,b,i,j) = t2b(a,b,i,j) + X2B(a,b,i,j) / denom;
                 end
             end
         end
@@ -183,18 +183,18 @@ function [t2b] = update_t2b_ccsdt3(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift
     
     X2B_IJAB = D1 + D2 + D3 + D4 + D5 + D6 + D7 + D8 + D9 + D10;
     
-    t2b_ABIJ = zeros(sys.Nact_p_alpha,sys.Nact_p_beta,sys.Nact_h_alpha,sys.Nact_h_beta);
+    %t2b_ABIJ = zeros(sys.Nact_p_alpha,sys.Nact_p_beta,sys.Nact_h_alpha,sys.Nact_h_beta);
     for i = 1:sys.Nact_h_alpha
         for j = 1:sys.Nact_h_beta
             for a = 1:sys.Nact_p_alpha
                 for b = 1:sys.Nact_p_beta
                     denom = (sys.fa_HH(i,i)+sys.fb_HH(j,j)-sys.fa_PP(a,a)-sys.fb_PP(b,b)-shift); 
-                    t2b_ABIJ(a,b,i,j) = X2B_IJAB(a,b,i,j) / denom;
+                    t2b(PA(a),PB(b),HA(i),HB(j)) = t2b(PA(a),PB(b),HA(i),HB(j)) + X2B_IJAB(a,b,i,j) / denom;
                 end
             end
         end
     end
-    t2b(PA,PB,HA,HB) = t2b(PA,PB,HA,HB) + t2b_ABIJ;
+    %t2b(PA,PB,HA,HB) = t2b(PA,PB,HA,HB) + t2b_ABIJ;
     
     % iJAB
     D1 = -0.5*einsum_kg(h2A_ooov(HA,HA,hA,PA),t3b,'mnif,afbmnj->abij');
@@ -202,18 +202,18 @@ function [t2b] = update_t2b_ccsdt3(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift
     
     X2B_iJAB = D1 + D4;
     
-    t2b_ABiJ = zeros(sys.Nact_p_alpha,sys.Nact_p_beta,sys.Nunact_h_alpha,sys.Nact_h_beta);
+    %t2b_ABiJ = zeros(sys.Nact_p_alpha,sys.Nact_p_beta,sys.Nunact_h_alpha,sys.Nact_h_beta);
     for i = 1:sys.Nunact_h_alpha
         for j = 1:sys.Nact_h_beta
             for a = 1:sys.Nact_p_alpha
                 for b = 1:sys.Nact_p_beta
                     denom = (sys.fa_hh(i,i)+sys.fb_HH(j,j)-sys.fa_PP(a,a)-sys.fb_PP(b,b)-shift); 
-                    t2b_ABiJ(a,b,i,j) = X2B_iJAB(a,b,i,j) / denom;
+                    t2b(PA(a),PB(b),hA(i),HB(j)) = t2b(PA(a),PB(b),hA(i),HB(j)) + X2B_iJAB(a,b,i,j) / denom;
                 end
             end
         end
     end
-    t2b(PA,PB,hA,HB) = t2b(PA,PB,hA,HB) + t2b_ABiJ;
+    %t2b(PA,PB,hA,HB) = t2b(PA,PB,hA,HB) + t2b_ABiJ;
     
     % IjAB
     D2 = -einsum_kg(h2B_oovo(HA,HB,PA,hB),t3b,'nmfj,afbinm->abij');
@@ -221,18 +221,18 @@ function [t2b] = update_t2b_ccsdt3(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift
     
     X2B_IjAB = D2 + D3;
     
-    t2b_ABIj = zeros(sys.Nact_p_alpha,sys.Nact_p_beta,sys.Nact_h_alpha,sys.Nunact_h_beta);
+    %t2b_ABIj = zeros(sys.Nact_p_alpha,sys.Nact_p_beta,sys.Nact_h_alpha,sys.Nunact_h_beta);
     for i = 1:sys.Nact_h_alpha
         for j = 1:sys.Nunact_h_beta
             for a = 1:sys.Nact_p_alpha
                 for b = 1:sys.Nact_p_beta
                     denom = (sys.fa_HH(i,i)+sys.fb_hh(j,j)-sys.fa_PP(a,a)-sys.fb_PP(b,b)-shift); 
-                    t2b_ABIj(a,b,i,j) = X2B_IjAB(a,b,i,j) / denom;
+                    t2b(PA(a),PB(b),HA(i),hB(j)) = t2b(PA(a),PB(b),HA(i),hB(j)) + X2B_IjAB(a,b,i,j) / denom;
                 end
             end
         end
     end
-    t2b(PA,PB,HA,hB) = t2b(PA,PB,HA,hB) + t2b_ABIj;
+    %t2b(PA,PB,HA,hB) = t2b(PA,PB,HA,hB) + t2b_ABIj;
     
     % IJaB
     D5 = +0.5*einsum_kg(h2A_vovv(pA,HA,PA,PA),t3b,'anef,efbinj->abij');
@@ -240,18 +240,18 @@ function [t2b] = update_t2b_ccsdt3(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift
     
     X2B_IJaB = D5 + D6;
     
-    t2b_aBIJ = zeros(sys.Nunact_p_alpha,sys.Nact_p_beta,sys.Nact_h_alpha,sys.Nact_h_beta);
+    %t2b_aBIJ = zeros(sys.Nunact_p_alpha,sys.Nact_p_beta,sys.Nact_h_alpha,sys.Nact_h_beta);
     for i = 1:sys.Nact_h_alpha
         for j = 1:sys.Nact_h_beta
             for a = 1:sys.Nunact_p_alpha
                 for b = 1:sys.Nact_p_beta
                     denom = (sys.fa_HH(i,i)+sys.fb_HH(j,j)-sys.fa_pp(a,a)-sys.fb_PP(b,b)-shift); 
-                    t2b_aBIJ(a,b,i,j) = X2B_IJaB(a,b,i,j) / denom;
+                    t2b(pA(a),PB(b),HA(i),HB(j)) = t2b(pA(a),PB(b),HA(i),HB(j)) + X2B_IJaB(a,b,i,j) / denom;
                 end
             end
         end
     end
-    t2b(pA,PB,HA,HB) = t2b(pA,PB,HA,HB) + t2b_aBIJ;
+    %t2b(pA,PB,HA,HB) = t2b(pA,PB,HA,HB) + t2b_aBIJ;
     
     % IJAb
     D7 = +einsum_kg(h2B_ovvv(HA,pB,PA,PB),t3b,'nbfe,afeinj->abij');
@@ -259,18 +259,18 @@ function [t2b] = update_t2b_ccsdt3(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift
     
     X2B_IJAb = D7 + D8;
     
-    t2b_AbIJ = zeros(sys.Nact_p_alpha,sys.Nunact_p_beta,sys.Nact_h_alpha,sys.Nact_h_beta);
+    %t2b_AbIJ = zeros(sys.Nact_p_alpha,sys.Nunact_p_beta,sys.Nact_h_alpha,sys.Nact_h_beta);
     for i = 1:sys.Nact_h_alpha
         for j = 1:sys.Nact_h_beta
             for a = 1:sys.Nact_p_alpha
                 for b = 1:sys.Nunact_p_beta
                     denom = (sys.fa_HH(i,i)+sys.fb_HH(j,j)-sys.fa_PP(a,a)-sys.fb_pp(b,b)-shift); 
-                    t2b_AbIJ(a,b,i,j) = X2B_IJAb(a,b,i,j) / denom;
+                    t2b(PA(a),pB(b),HA(i),HB(j)) = t2b(PA(a),pB(b),HA(i),HB(j)) + X2B_IJAb(a,b,i,j) / denom;
                 end
             end
         end
     end
-    t2b(PA,pB,HA,HB) = t2b(PA,pB,HA,HB) + t2b_AbIJ;
+    %t2b(PA,pB,HA,HB) = t2b(PA,pB,HA,HB) + t2b_AbIJ;
     
 end
 
