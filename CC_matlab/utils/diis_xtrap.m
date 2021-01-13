@@ -20,15 +20,16 @@ function [X_xtrap] = diis_xtrap(X_list, diis_resid_list)
         rhs = zeros(B_dim,1);
         rhs(end) = -1;
         
-        if rcond(B) > eps
-            coeff = B\rhs;
+        %if rcond(B) > eps % THIS RUINS THINGS! SKIPPING DIIS IS BAD!
+            %coeff = B\rhs;
+            coeff = solveGauss(B,rhs);
             X_xtrap = zeros(vec_dim,1);
             for k = 1:diis_dim
                 X_xtrap = X_xtrap + coeff(k)*X_list(:,k);
             end
-        else
-            X_xtrap = X_list(:,end);
-        end
+        %else
+        %    X_xtrap = X_list(:,end);
+        %end
         
 end
             

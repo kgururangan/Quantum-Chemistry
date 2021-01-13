@@ -1,0 +1,386 @@
+function [DD] = ccsdt_act_HBarT3_simple(string_arr)
+
+       D = cell(1,length(string_arr));
+
+       for KK = 1:length(string_arr)
+           
+                string = string_arr{KK};
+        
+                flag = false;
+
+                sign = string(1);
+                if sign ~= '+' && sign ~= '-'
+                    sign = '+';
+                    flag = true;
+                end
+
+                for jj = 1:length(string)
+                    if string(jj) == 'h' || string(jj) == 'v' || string(jj) == 'f'
+                        break
+                    end
+                end
+
+                if jj == 1 && sign ~= '-'
+                    coef = '';
+                elseif jj == 2 && sign == '-'
+                    coef = '';
+                else
+                    if ~flag % positive without +
+                        coef = string(2:jj-1);
+                    else % sign included
+                        coef = string(1:jj-1);
+                    end
+                end
+
+                s = split(string(jj:end),',');
+
+                num_terms = length(s);
+
+                term1  = s{1}; term2 = s{2};
+                s1 = split(term1,'('); q1 = s1{1}; c1 = s1{2}(1:end-1);
+                s2 = split(term2,'('); q2 = s2{1}; c2 = s2{2}(1:end-1);
+
+                C1 = {}; c1pr = '';
+                ct = 1;
+                for jjj = 1:length(c1)
+                    if isletter(c1(jjj))
+                        C1{ct} = c1(jjj);
+                        c1pr = [c1pr,c1(jjj)];
+                        ct = ct + 1;
+                    else
+                        C1{ct-1} = [C1{ct-1},c1(jjj)];
+                    end
+                end
+
+                C2 = {}; c2pr = '';
+                ct = 1;
+                for jjj = 1:length(c2)
+                    if isletter(c2(jjj))
+                        C2{ct} = c2(jjj);
+                        c2pr = [c2pr,c2(jjj)];
+                        ct = ct + 1;
+                    else
+                        C2{ct-1} = [C2{ct-1},c2(jjj)];
+                    end
+                end
+
+                [contr_idx,idx1,idx2] = intersect(C1,C2,'stable');
+                num_contr = length(contr_idx);
+                spin_contr = cell(1,num_contr);
+
+                coef_orig = coef;
+                sign_orig = sign;
+                
+                % get spin case of the contraction indices
+                sp1 = q1(end); % can just use term 1 since all contraction 
+                               % indices have to occur here
+                for j = 1:num_contr
+                    if sp1 == 'a' || sp1 == 'A'
+                        spin_contr{j} = 'alpha';
+                    elseif sp1 == 'b' || sp1 == 'B'
+                        if mod(idx1(j),2) == 1 % alpha
+                            spin_contr{j} = 'alpha';
+                        else
+                            spin_contr{j} = 'beta';
+                        end
+                    elseif sp1 == 'c' || sp1 == 'C'
+                        spin_contr{j} = 'beta';
+                    end
+                end
+
+
+                switch num_contr
+
+                    case 1
+
+                        d1 = {};
+                        ct = 1;
+                        for ctr = [lower(contr_idx{1}),upper(contr_idx{1})]
+                            coef = '';
+
+                            arr1 = C1; arr1{idx1(1)} = ctr;
+                            arr2 = C2; arr2{idx2(1)} = ctr;
+                            [new_arr,sign2] = fix_t3_indices(cell2mat(arr2),q2(end));
+                            if isempty(sign2) || sign2 == '+'
+                                sign = sign_orig;
+                            else
+                                if sign_orig == '+' || isempty(sign_orig)
+                                    sign = '-';
+                                else
+                                    sign = '';
+                                end
+                            end
+                            term1 = [sign,coef,q1,'(',cell2mat(arr1),')'];
+                            term2 = [q2,'(',new_arr,')'];
+                            d1{ct} = [term1,',',term2];
+                            ct = ct + 1;
+                        end
+
+                    case 2
+
+                        CTR1 = [lower(contr_idx{1}),upper(contr_idx{1})];
+                        CTR2 = [lower(contr_idx{2}),upper(contr_idx{2})];
+
+                        d1 = {};
+                        ct = 1;
+                        val1 = get_character(contr_idx{1}); val2 = get_character(contr_idx{2});
+                        spin1 = spin_contr{1}; 
+                        spin2 = spin_contr{2};
+                        if val1 == val2 && strcmp(spin1,spin2)
+                            flag = true;
+                        else
+                            flag = false;
+                        end
+                        for p = 1:length(CTR1)
+                            ctr1 = CTR1(p);
+                            for q = 1:length(CTR2)
+                                ctr2 = CTR2(q);
+
+                                coef = '';
+
+                                if flag % skip redundant case - spin and p/h same
+                                    if p < q
+                                        continue
+                                    end
+                                end
+
+
+                                val1 = get_character(ctr1); val2 = get_character(ctr2);
+                                if val1 == val2 && strcmp(spin1,spin2)
+                                    coef = '0.5';
+                                end
+
+                                arr1 = C1; arr1{idx1(1)} = ctr1; arr1{idx1(2)} = ctr2;
+                                arr2 = C2; arr2{idx2(1)} = ctr1; arr2{idx2(2)} = ctr2;
+                                [new_arr,sign2] = fix_t3_indices(cell2mat(arr2),q2(end));
+                                if isempty(sign2) || sign2 == '+'
+                                    sign = sign_orig;
+                                else
+                                    if sign_orig == '+' || isempty(sign_orig)
+                                        sign = '-';
+                                    else
+                                        sign = '';
+                                    end
+                                end
+                                term1 = [sign,coef,q1,'(',cell2mat(arr1),')'];
+                                term2 = [q2,'(',new_arr,')'];
+                                d1{ct} = [term1,',',term2];
+                                ct = ct + 1;
+                            end
+                        end
+
+                end
+                
+                D{KK} = d1;
+    
+       end
+       
+       ct = 1;
+       for q = 1:length(D)
+           for qq = 1:length(D{q})
+               DD{ct} = D{q}{qq};
+               ct = ct + 1;
+           end
+       end
+
+
+end
+
+    
+
+function [new_arr,sign_char] = fix_t3_indices(arr,spin)
+
+    sign = 1;
+
+    switch spin
+        
+        case {'A','a'}
+            part = arr(1:3); hole = arr(4:6);
+            [perm_part] = fix_particle_idx(part);
+            [perm_hole] = fix_hole_idx(hole);
+            new_arr = arr([perm_part,perm_hole]);
+            sign = sign * permutationParity(perm_part) * permutationParity(perm_hole);
+            
+        case {'B','b'}
+            part = arr(1:2); hole = arr(4:5);
+            [perm_part] = fix_particle_idx(part);
+            [perm_hole] = fix_hole_idx(hole);
+            new_arr = arr([perm_part,3,perm_hole,6]);
+            sign = sign * permutationParity(perm_part) * permutationParity(perm_hole); 
+            
+        case {'c','C'}
+            part = arr(2:3); hole = arr(5:6);
+            [perm_part] = fix_particle_idx(part);
+            [perm_hole] = fix_hole_idx(hole);
+            new_arr = arr([1,perm_part+1,4,perm_hole+1]); % !!!
+            sign = sign * permutationParity(perm_part) * permutationParity(perm_hole);
+
+        case {'D','d'}
+            part = arr(1:3); hole = arr(4:6);
+            [perm_part] = fix_particle_idx(part);
+            [perm_hole] = fix_hole_idx(hole);
+            new_arr = arr([perm_part,perm_hole]);
+            sign = sign * permutationParity(perm_part) * permutationParity(perm_hole);
+            
+        otherwise 
+            disp('Spin type not allowed for T3!')
+            
+    end
+    
+    if sign == 1
+        sign_char = '';
+    else
+        sign_char = '-';
+    end
+            
+
+end
+
+function [perm] = fix_particle_idx(idx)
+
+    act_idx = zeros(1,length(idx));
+    for i = 1:length(idx)
+        val = get_act_idx(idx(i));
+        act_idx(i) = val;
+    end
+    
+    [~,perm] = sort(act_idx,'descend');
+
+end
+
+function [perm] = fix_hole_idx(idx)
+
+    act_idx = zeros(1,length(idx));
+    for i = 1:length(idx)
+        val = get_act_idx(idx(i));
+        act_idx(i) = val;
+    end
+    
+    [~,perm] = sort(act_idx,'ascend');
+    perm = perm + 3; %!!!
+ 
+end
+
+function [val] = get_character(char)
+
+    val_act = get_act_idx(char);
+    val_ph = get_ph_idx(char);
+    
+    if contains(char,'~') && val_ph == 1 % all occupied
+        val = 5;
+    elseif contains(char,'~') && val_ph == 0 % all unoccupied
+        val = 6;
+    else
+    
+        if val_act == 1 && val_ph == 1 % active particle
+            val = 1;
+        end
+
+        if val_act == 1 && val_ph == 0 % active hole
+            val = 2;
+        end
+
+        if val_act == 0 && val_ph == 1 % virtual
+            val = 3;
+        end
+
+        if val_act == 0 && val_ph == 0 % core
+            val = 4;
+        end
+    end
+        
+end
+
+function [val] = get_act_idx(char)
+
+    if length(char) > 1
+        char1 = char(1);
+    else
+        char1 = char;
+    end
+    
+    if isstrprop(char1,'upper')
+        val = 1;
+    else
+        val = 0;
+    end
+       
+end
+
+function [val] = get_ph_idx(char)
+
+
+    if length(char) > 1
+        char1 = char(1);
+    else
+        char1 = char;
+    end
+
+    switch char1
+        
+        case {'m','n','i','j','k','M','N','I','J','K'}
+            val = 0;
+            
+        case {'e','f','a','b','c','E','F','A','B','C'}
+            val = 1;
+            
+    end
+              
+end
+
+function [name] = get_subname(idx_cell)
+
+    name = '';
+    slices = cell(1,length(idx_cell));
+    for i = 1:length(idx_cell)
+        
+        val = get_character(idx_cell{i});
+        %ph = get_ph_idx(idx_cell{i});
+        switch val
+            case 1
+                add_char = 'P';
+                %name = [name,'P'];
+            case 2
+                add_char = 'H';
+                %name = [name,'H'];
+            case 3
+                add_char = 'p';
+                %name = [name,'p'];
+            case 4
+                add_char = 'h';
+                %name = [name,'h'];
+            case 5
+                add_char = 'v';
+                %name = [name,'v'];
+            case 6
+                add_char = 'o';
+                %name = [name,'o'];
+            otherwise
+                fprintf('index character %s not recognized!\n',idx_cell{i})
+        end
+        
+        name = [name,add_char];
+        
+%         switch spincase
+%             
+%             case {'a','A'}
+%                 slices{i} = [add_char,'A'];
+%             case {'b','B'}
+%                 if mod(i,2) == 1
+%                     slices{i} = [add_char,'A'];
+%                 else
+%                     slices{i} = [add_char,'B'];
+%                 end
+%             case {'c','C'}
+%                 if mod(i,2) == 1
+%                     slices{i} = [add_char,'B'];
+%                 else
+%                     slices{i} = [add_char,'A'];
+%                 end
+%             case {'d','D'}
+%                 slices{i} = [add_char,'B'];
+%         end
+
+    end
+
+end
