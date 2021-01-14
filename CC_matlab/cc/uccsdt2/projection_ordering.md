@@ -4,13 +4,13 @@ to refer to projections in the way that they are listed in the build_system_ucc 
 For UCCSDT(II) active-space partitioning:
 
 t1A:
-Projection 1 - PH
-Projection 2 - pH
-Projection 3 - Ph
-Projection 4 - ph
+Projection 1 - PH [DONE]
+Projection 2 - pH [DONE]
+Projection 3 - Ph [DONE]
+Projection 4 - ph [DONE]
 
 t1B:
-Projection 1 - PH
+Projection 1 - PH [DONE]
 Projection 2 - pH
 Projection 3 - Ph
 Projection 4 - ph
