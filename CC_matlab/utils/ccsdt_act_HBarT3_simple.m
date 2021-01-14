@@ -169,6 +169,104 @@ function [DD] = ccsdt_act_HBarT3_simple(string_arr)
                             end
                         end
 
+
+                    case 3
+
+                        CTR1 = [lower(contr_idx{1}),upper(contr_idx{1})];
+                        CTR2 = [lower(contr_idx{2}),upper(contr_idx{2})];
+                        CTR3 = [lower(contr_idx{3}),upper(contr_idx{3})];
+
+                        d1 = {};
+                        ct = 1;
+                        val1 = get_character(contr_idx{1}); 
+                        val2 = get_character(contr_idx{2});
+                        val3 = get_character(contr_idx{3});
+                        spin1 = spin_contr{1}; 
+                        if strcmp(spin1,'alpha')
+                            ss1 = 1;
+                        else
+                            ss1 = 0;
+                        end
+                        spin2 = spin_contr{2};
+                        if strcmp(spin2,'alpha')
+                            ss2 = 1;
+                        else
+                            ss2 = 0;
+                        end
+                        spin3 = spin_contr{3};
+                        if strcmp(spin3,'alpha')
+                            ss3 = 1;
+                        else
+                            ss3 = 0;
+                        end
+
+                        X1 = [val1,ss1]; X2 = [val2,ss2]; X3 = [val3,ss3];
+                        flag = false;
+                        if all(X1 == X2)
+                            flag = true;
+                            equivs = '12';
+                        end
+                        if all(X1 == X3)
+                            flag = true;
+                            equivs = '13';
+                        end
+                        if all(X2 == X3)
+                            flag = true;
+                            equivs = '23';
+                        end
+
+                        for p = 1:length(CTR1)
+                            ctr1 = CTR1(p);
+                            for q = 1:length(CTR2)
+                                ctr2 = CTR2(q);
+                                    for r = 1:length(CTR3)
+                                        ctr3 = CTR3(r);
+
+                                        coef = '';
+
+                                        if flag % skip redundant case - spin and p/h same
+                                            switch equivs
+                                                case '12'
+                                                    if p < q
+                                                        continue
+                                                    end
+                                                case '13'
+                                                    if p < r
+                                                        continue
+                                                    end
+                                                case '23'
+                                                    if q < r
+                                                        continue
+                                                    end
+                                            end
+                                        end
+
+                                        val1 = get_character(ctr1); val2 = get_character(ctr2); val3 = get_character(ctr3);
+                                        X1 = [val1, ss1]; X2 = [val2, ss2]; X3 = [val3,ss3];
+                                        if all(X1 == X2) || all (X1 == X3) || all(X2 == X3)
+                                            coef = '0.5';
+                                        end
+
+                                        arr1 = C1; arr1{idx1(1)} = ctr1; arr1{idx1(2)} = ctr2; arr1{idx1(3)} = ctr3;
+                                        arr2 = C2; arr2{idx2(1)} = ctr1; arr2{idx2(2)} = ctr2; arr2{idx2(3)} = ctr3;
+                                        [new_arr,sign2] = fix_t3_indices(cell2mat(arr2),q2(end));
+                                        if isempty(sign2) || sign2 == '+'
+                                            sign = sign_orig;
+                                        else
+                                            if sign_orig == '+' || isempty(sign_orig)
+                                                sign = '-';
+                                            else
+                                                sign = '';
+                                            end
+                                        end
+                                        term1 = [sign,coef,q1,'(',cell2mat(arr1),')'];
+                                        term2 = [q2,'(',new_arr,')'];
+                                        d1{ct} = [term1,',',term2];
+                                        ct = ct + 1;
+                                end
+                            end
+                        end
+
                 end
                 
                 D{KK} = d1;

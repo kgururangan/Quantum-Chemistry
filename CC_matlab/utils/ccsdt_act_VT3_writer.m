@@ -140,6 +140,88 @@ function [] = ccsdt_act_VT3_writer(subsect,spincase)
                     disp('VT3B intermediate not supported yet')
             end
             
+         case {'c', 'C'}
+
+            switch subsect
+
+                case 'ovoo'
+                    %  (maji)
+                    m = 'm~';
+                    for a = ['a','A']
+                        for i = ['i','I']
+                            for j  = ['j','J']
+                                fprintf('\n%++++++++++++Vt3C(%s%s%s%s)++++++++++++\n',m,a,j,i)
+                                out_proj = {m,a,j,i}; 
+                                out_proj2 = out_proj; out_proj2{1} = 'm';
+                                [d1,d2] = write_Vt3C(out_proj,'ovoo');
+                                write_term = @(x,y) write_einsum(x,cell2mat(out_proj2),y);
+                                write_term(d1,'d1')
+                                write_term(d2,'d2')
+                                fprintf('\nVt3C.%s = d1 + d2;\n',get_subname(out_proj))
+                            end
+                        end
+                    end
+                    
+                 case 'vooo'
+                    %  (amij)
+                    m = 'm~';
+                    for a = ['a','A']
+                        for i = ['i','I']
+                            for j  = ['j','J']
+                                fprintf('\n%++++++++++++Vt3C(%s%s%s%s)++++++++++++\n',a,m,i,j)
+                                out_proj = {a,m,i,j}; 
+                                out_proj2 = out_proj; out_proj2{2} = 'm';
+                                [d1,d2] = write_Vt3C(out_proj,'vooo');
+                                write_term = @(x,y) write_einsum(x,cell2mat(out_proj2),y);
+                                write_term(d1,'d1')
+                                write_term(d2,'d2')
+                                fprintf('\nVt3C.%s = d1 + d2;\n',get_subname(out_proj))
+                            end
+                        end
+                    end
+                    
+                case 'vvvo'
+                    
+                    % (baei)
+                    e = 'e~';
+                    for a = ['a','A']
+                        for b = ['b','B']
+                            for i  = ['i','I']
+                                fprintf('\n%++++++++++++Vt3C(%s%s%s%s)++++++++++++\n',b,a,e,i)
+                                out_proj = {b,a,e,i}; 
+                                out_proj2 = out_proj; out_proj2{3} = 'e';
+                                [d1,d2] = write_Vt3C(out_proj,'vvvo');
+                                write_term = @(x,y) write_einsum(x,cell2mat(out_proj2),y);
+                                write_term(d1,'d1')
+                                write_term(d2,'d2')
+                                fprintf('\nVt3C.%s = -d1 - d2;\n',get_subname(out_proj))
+                            end
+                        end
+                    end
+                    
+                case 'vvov'
+                    
+                    % (abie)
+                    e = 'e~';
+                    for a = ['a','A']
+                        for b = ['b','B']
+                            for i  = ['i','I']
+                                fprintf('\n%++++++++++++Vt3C(%s%s%s%s)++++++++++++\n',a,b,i,e)
+                                out_proj = {a,b,i,e}; 
+                                out_proj2 = out_proj; out_proj2{4} = 'e';
+                                [d1,d2] = write_Vt3C(out_proj,'vvov');
+                                write_term = @(x,y) write_einsum(x,cell2mat(out_proj2),y);
+                                write_term(d1,'d1')
+                                write_term(d2,'d2')
+                                fprintf('\nVt3C.%s = -d1 - d2;\n',get_subname(out_proj))
+                            end
+                        end
+                    end
+                    
+                otherwise
+                    disp('VT3C intermediate not supported yet')
+            end
+            
     end
 
 end
@@ -512,6 +594,265 @@ function [d1,d2] = write_Vt3A(out_proj,type)
 
                             q1 = 'v2A';
                             q2 = 't3a';
+                            arr1 = {m,n,e,f};
+                            arr2 = [a,b,f,i,m,n];
+                            [new_arr,sign] = fix_t3_indices(arr2,q2(end));
+                            term1 = [sign,coef,q1,'(',cell2mat(arr1),')'];
+                            term2 = [q2,'(',new_arr,')'];
+                            d2{ct} = [term1,',',term2];
+                            ct = ct + 1;
+
+                        end
+                    end
+                end
+        
+            
+        otherwise
+            fprintf('intermediate %s not supported yet\n',type)
+    end
+
+end
+
+function [d1,d2] = write_Vt3C(out_proj,type)
+
+    d1 = {};
+    d2 = {};
+    
+    switch type
+        
+%     VTC.vvov = -0.5*einsum_kg(sys.vC_oovv,t3d,'mnef,abfimn->abie')...
+%                  -einsum_kg(sys.vB_oovv,t3c,'nmfe,fabnim->abie');
+%     VTC.vvvo = -permute(VTC.vvov,[1,2,4,3]);
+%              
+%     VTC.vooo = einsum_kg(sys.vB_oovv,t3c,'nmfe,faenij->amij')...
+%                  +0.5*einsum_kg(sys.vC_oovv,t3d,'mnef,aefijn->amij');
+%     VTC.ovoo = -permute(VTC.vooo,[2,1,3,4]);      
+        
+        case 'ovoo'
+
+                % ovoo (maji)
+                % spin-integrated:
+                %     VTC.ovoo = einsum_kg(sys.vB_oovv,t3c,'nmfe,faenij->maji')...
+                %                  +0.5*einsum_kg(sys.vC_oovv,t3d,'mnef,aefijn->maji');
+                % n,f,e = act/unact, m = all occupied
+                m = out_proj{1}; a = out_proj{2}; j = out_proj{3}; i = out_proj{4};
+
+                % v2B * t3c
+                ct = 1;
+                for n = ['n','N']
+                    for f = ['f','F']
+                        for e = ['e','E']
+                            coef = '';
+                            q1 = 'v2B';
+                            q2 = 't3c';
+                            arr1 = {n,m,f,e};
+                            arr2 = [f,a,e,n,i,j];
+                            [new_arr,sign] = fix_t3_indices(arr2,q2(end));
+                            term1 = [sign,coef,q1,'(',cell2mat(arr1),')'];
+                            term2 = [q2,'(',new_arr,')'];
+                            d1{ct} = [term1,',',term2];
+                            ct = ct + 1;
+                        end
+                    end
+                end
+
+                % v2C * t3d
+                ct = 1; 
+                for n = ['n','N']
+                    for f = ['f','F']
+                        for e = ['e','E']
+
+                            if f == 'f' && e == 'E' % skip redundant case
+                                continue
+                            end
+
+                            val1 = get_act_idx(e); val2 = get_act_idx(f);
+                            if val1 == val2
+                                coef = '0.5';
+                            else
+                                coef = '';
+                            end
+
+                            q1 = 'v2C';
+                            q2 = 't3d';
+                            arr1 = {m,n,e,f};
+                            arr2 = [a,e,f,i,j,n];
+                            [new_arr,sign] = fix_t3_indices(arr2,q2(end));
+                            term1 = [sign,coef,q1,'(',cell2mat(arr1),')'];
+                            term2 = [q2,'(',new_arr,')'];
+                            d2{ct} = [term1,',',term2];
+                            ct = ct + 1;
+
+                        end
+                    end
+                end
+                        
+        case 'vooo'
+
+                % vooo (amij)
+                % spin-integrated:
+                %     VTC.ovoo = einsum_kg(sys.vB_oovv,t3c,'nmfe,faenij->maji')...
+                %                  +0.5*einsum_kg(sys.vC_oovv,t3d,'mnef,aefijn->maji');
+                % n,f,e = act/unact, m = all occupied
+                a = out_proj{1}; m = out_proj{2}; i = out_proj{3}; j = out_proj{4};
+
+                % v2B * t3c
+                ct = 1;
+                for n = ['n','N']
+                    for f = ['f','F']
+                        for e = ['e','E']
+                            coef = '';
+                            q1 = 'v2B';
+                            q2 = 't3c';
+                            arr1 = {n,m,f,e};
+                            arr2 = [f,a,e,n,i,j];
+                            [new_arr,sign] = fix_t3_indices(arr2,q2(end));
+                            term1 = [sign,coef,q1,'(',cell2mat(arr1),')'];
+                            term2 = [q2,'(',new_arr,')'];
+                            d1{ct} = [term1,',',term2];
+                            ct = ct + 1;
+                        end
+                    end
+                end
+
+                % v2C * t3d
+                ct = 1; 
+                for n = ['n','N']
+                    for f = ['f','F']
+                        for e = ['e','E']
+
+                            if f == 'f' && e == 'E' % skip redundant case
+                                continue
+                            end
+
+                            val1 = get_act_idx(e); val2 = get_act_idx(f);
+                            if val1 == val2
+                                coef = '0.5';
+                            else
+                                coef = '';
+                            end
+
+                            q1 = 'v2C';
+                            q2 = 't3d';
+                            arr1 = {m,n,e,f};
+                            arr2 = [a,e,f,i,j,n];
+                            [new_arr,sign] = fix_t3_indices(arr2,q2(end));
+                            term1 = [sign,coef,q1,'(',cell2mat(arr1),')'];
+                            term2 = [q2,'(',new_arr,')'];
+                            d2{ct} = [term1,',',term2];
+                            ct = ct + 1;
+
+                        end
+                    end
+                end
+                
+        case 'vvvo'
+            
+                % vvvo (baei)
+                % spin-integrated:
+                %             VTC.vvvo = -0.5*einsum_kg(sys.vC_oovv,t3d,'mnef,abfimn->baei')...
+                %                  -einsum_kg(sys.vB_oovv,t3c,'nmfe,fabnim->baei');
+                % m,n,f = act/unact, e = all unoccupied
+                b = out_proj{1}; a = out_proj{2}; e = out_proj{3}; i = out_proj{4};
+
+                % v2B * t3c
+                ct = 1;
+                for m = ['m','M']
+                    for n = ['n','N']
+                        for f = ['f','F']
+                            coef = '';
+                            q1 = 'v2B';
+                            q2 = 't3c';
+                            arr1 = {n,m,f,e};
+                            arr2 = [f,a,b,n,i,m];
+                            [new_arr,sign] = fix_t3_indices(arr2,q2(end));
+                            term1 = [sign,coef,q1,'(',cell2mat(arr1),')'];
+                            term2 = [q2,'(',new_arr,')'];
+                            d1{ct} = [term1,',',term2];
+                            ct = ct + 1;
+                        end
+                    end
+                end
+
+                % v2C * t3d
+                ct = 1; 
+                for m = ['m','M']
+                    for n = ['n','N']
+                        for f = ['f','F']
+
+                            if m == 'm' && n == 'N' % skip redundant case
+                                continue
+                            end
+
+                            val1 = get_act_idx(m); val2 = get_act_idx(n);
+                            if val1 == val2
+                                coef = '0.5';
+                            else
+                                coef = '';
+                            end
+
+                            q1 = 'v2C';
+                            q2 = 't3d';
+                            arr1 = {m,n,e,f};
+                            arr2 = [a,b,f,i,m,n];
+                            [new_arr,sign] = fix_t3_indices(arr2,q2(end));
+                            term1 = [sign,coef,q1,'(',cell2mat(arr1),')'];
+                            term2 = [q2,'(',new_arr,')'];
+                            d2{ct} = [term1,',',term2];
+                            ct = ct + 1;
+
+                        end
+                    end
+                end
+        
+                            
+        case 'vvov'
+            
+                % vvov (abie)
+                % spin-integrated:
+                %             VTC.vvvo = -0.5*einsum_kg(sys.vC_oovv,t3d,'mnef,abfimn->baei')...
+                %                  -einsum_kg(sys.vB_oovv,t3c,'nmfe,fabnim->baei');
+                % m,n,f = act/unact, e = all unoccupied
+                a = out_proj{1}; b = out_proj{2}; i = out_proj{3}; e = out_proj{4};
+
+                % v2B * t3c
+                ct = 1;
+                for m = ['m','M']
+                    for n = ['n','N']
+                        for f = ['f','F']
+                            coef = '';
+                            q1 = 'v2B';
+                            q2 = 't3c';
+                            arr1 = {n,m,f,e};
+                            arr2 = [f,a,b,n,i,m];
+                            [new_arr,sign] = fix_t3_indices(arr2,q2(end));
+                            term1 = [sign,coef,q1,'(',cell2mat(arr1),')'];
+                            term2 = [q2,'(',new_arr,')'];
+                            d1{ct} = [term1,',',term2];
+                            ct = ct + 1;
+                        end
+                    end
+                end
+
+                % v2C * t3d
+                ct = 1; 
+                for m = ['m','M']
+                    for n = ['n','N']
+                        for f = ['f','F']
+
+                            if m == 'm' && n == 'N' % skip redundant case
+                                continue
+                            end
+
+                            val1 = get_act_idx(m); val2 = get_act_idx(n);
+                            if val1 == val2
+                                coef = '0.5';
+                            else
+                                coef = '';
+                            end
+
+                            q1 = 'v2C';
+                            q2 = 't3d';
                             arr1 = {m,n,e,f};
                             arr2 = [a,b,f,i,m,n];
                             [new_arr,sign] = fix_t3_indices(arr2,q2(end));
