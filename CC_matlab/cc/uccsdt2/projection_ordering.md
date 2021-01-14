@@ -3,6 +3,58 @@ to refer to projections in the way that they are listed in the build_system_ucc 
 
 For UCCSDT(II) active-space partitioning:
 
+t1A:
+Projection 1 - PH
+Projection 2 - pH
+Projection 3 - Ph
+Projection 4 - ph
+
+t1B:
+Projection 1 - PH
+Projection 2 - pH
+Projection 3 - Ph
+Projection 4 - ph
+
+t2A:
+Projection 1 - PPHH [DONE]
+Projection 2 - PpHH [DONE]
+Projection 3 - PPhH [DONE]
+Projection 4 - PphH [DONE]
+Projection 5 - PPhh [DONE]
+Projection 6 - ppHH [DONE]
+Projection 7 - Pphh [DONE]
+Projection 8 - pphH [DONE]
+Projection 9 - pphh [DONE]
+
+t2B:
+Projection 1 - PPHH [DONE]
+Projection 2 - PpHH [DONE]
+Projection 3 - pPHH [DONE]
+Projection 4 - PPhH [DONE]
+Projection 5 - PPHh [DONE]
+Projection 6 - PphH [DONE]
+Projection 7 - pPhH [DONE]
+Projection 8 - PpHh [DONE]
+Projection 9 - pPHh [DONE]
+Projection 10 - PPhh [DONE]
+Projection 11 - ppHH [DONE]
+Projection 12 - Pphh [DONE]
+Projection 13 - pPhh [DONE]
+Projection 14 - pphH [DONE]
+Projection 15 - ppHh [DONE]
+Projection 16 - pphh [DONE]
+
+t2C:
+Projection 1 - PPHH
+Projection 2 - PpHH
+Projection 3 - PPhH
+Projection 4 - PphH
+Projection 5 - PPhh
+Projection 6 - ppHH
+Projection 7 - Pphh
+Projection 8 - pphH
+Projection 9 - pphh
+
 t3A:
 Projection 1 - PPPHHH [DONE]
 Projection 2 - PPpHHH [DONE]
