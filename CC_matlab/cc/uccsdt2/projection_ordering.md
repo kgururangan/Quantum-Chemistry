@@ -45,15 +45,15 @@ Projection 15 - ppHh [DONE]
 Projection 16 - pphh [DONE]
 
 t2C:
-Projection 1 - PPHH
-Projection 2 - PpHH
-Projection 3 - PPhH
-Projection 4 - PphH
-Projection 5 - PPhh
-Projection 6 - ppHH
-Projection 7 - Pphh
-Projection 8 - pphH
-Projection 9 - pphh
+Projection 1 - PPHH [DONE]
+Projection 2 - PpHH [DONE]
+Projection 3 - PPhH [DONE]
+Projection 4 - PphH [DONE]
+Projection 5 - PPhh [DONE]
+Projection 6 - ppHH [DONE]
+Projection 7 - Pphh [DONE]
+Projection 8 - pphH [DONE]
+Projection 9 - pphh [DONE]
 
 t3A:
 Projection 1 - PPPHHH [DONE]
