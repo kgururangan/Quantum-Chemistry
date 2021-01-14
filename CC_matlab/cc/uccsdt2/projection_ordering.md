@@ -32,8 +32,8 @@ Projection 8 - pPPHhH [DONE]
 Projection 9 - pPPhHH [DONE]
 
 t3D:
-Projection 1 - PPPHHH
-Projection 2 - PPpHHH
-Projection 3 - PPPhHH
-Projection 4 - PPphHH
+Projection 1 - PPPHHH [DONE]
+Projection 2 - PPpHHH [DONE]
+Projection 3 - PPPhHH [DONE]
+Projection 4 - PPphHH [DONE]
 
