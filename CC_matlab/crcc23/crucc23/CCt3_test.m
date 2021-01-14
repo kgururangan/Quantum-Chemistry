@@ -2,9 +2,6 @@ clear all
 clc
 close all
 
-% ERROR IN CR-CC(2,3)D ON ORDER OF 1E-7 Eh!!! 
-% DUE TO H3 TRIPLES DIAGONAL, DEBUG WITH CLOSED SHELL CASE ON...
-
 addpath(genpath('/Users/karthik/Dropbox/Hartree Fock/hartree_fock/v4/CC_matlab'));
 addpath(genpath('/Users/karthik/Desktop/CC_matlab_tests/h2o-pvdz-CAD/cct3_tests/act-2-2'));
 

@@ -1,8 +1,9 @@
 function [EOMMM23D] = build_EOMMM23D(cc_t,HBar_t,iroot)
 
+    H2A = HBar_t.H2A; H2B = HBar_t.H2B; H2C = HBar_t.H2B;
     H3D = HBar_t.H3D; H2C = HBar_t.H2C; H3C = HBar_t.H3C;
     VC = HBar_t.H2C.oovv; VB = HBar_t.H2B.oovv;
-    t2c = cc_t.t2c;
+    t2a = cc_t.t2a; t2b = cc_t.t2b;  t2c = cc_t.t2c;
 
     r1a = cc_t.r1a{iroot}; r1b = cc_t.r1b{iroot};
     r2a = cc_t.r2a{iroot}; r2b = cc_t.r2b{iroot}; r2c = cc_t.r2c{iroot};
@@ -13,6 +14,15 @@ function [EOMMM23D] = build_EOMMM23D(cc_t,HBar_t,iroot)
     
     D1 = -einsum_kg(H3D.vvoooo,r1b,'acmikj,bm->abcijk');
     D1 = D1 - permute(D1,[2,1,3,4,5,6]) - permute(D1,[1,3,2,4,5,6]);
+%     I1 = einsum_kg(H2C.voov,r1b,'amje,bm->abej'); I1 = I1 - permute(I1,[2,1,3,4]);
+%     A1 = einsum_kg(I1,t2c,'abej,ecik->abcijk');
+%     A1 = A1 - permute(A1,[3,2,1,4,5,6]) - permute(A1,[1,3,2,4,5,6]);
+%     A1 = A1 - permute(A1,[1,2,3,5,4,6]) - permute(A1,[1,2,3,4,6,5]);
+%     I2 = -einsum_kg(H2C.oooo,r1b,'mnij,bm->nbij'); 
+%     A2 = -einsum_kg(I2,t2c,'nbij,acnk->abcijk');
+%     A2 = A2 - permute(A2,[2,1,3,4,5,6]) - permute(A2,[1,3,2,4,5,6]);
+%     A2 = A2 - permute(A2,[1,2,3,6,5,4]) - permute(A2,[1,2,3,4,6,5]);
+%     D1 = A1 + A2;
     
     D2 = +einsum_kg(H3D.vvvoov,r1b,'acbike,ej->abcijk');
     D2 = D2 - permute(D2,[1,2,3,4,6,5]) - permute(D2,[1,2,3,5,4,6]);
