@@ -321,15 +321,15 @@ function [DD] = ccsdt_act_HBarT3_simple(string_arr)
                         end
                         if all(X1 == X4)
                             flag = true;
-                            equivs = '14';
+                            equiv = '14';
                         end
                         if all(X2 == X4)
                             flag = true;
-                            equivs = '24';
+                            equiv = '24';
                         end
                         if all(X3 == X4)
                             flag = true;
-                            equivs = '34';
+                            equiv = '34';
                         end
 
                         for p = 1:length(CTR1)
@@ -361,47 +361,18 @@ function [DD] = ccsdt_act_HBarT3_simple(string_arr)
                                                         if p < s
                                                             continue
                                                         end
-                                                    case '24'
-                                                        if q < s
-                                                            continue
-                                                        end
-                                                    case '34'
-                                                        if r < s
-                                                            continue
-                                                        end
+        
                                                 end
                                             end
 
-                                            val1 = get_character(ctr1); val2 = get_character(ctr2); 
-                                            val3 = get_character(ctr3); val4 = get_character(ctr4);
-                                            X1 = [val1, ss1]; X2 = [val2, ss2]; X3 = [val3,ss3]; X4 = [val4,ss4];
-                                            coefnum = 1;
-                                            if all(X1 == X2) 
-                                                coefnum = coefnum * 0.5;
+                                            val1 = get_character(ctr1); val2 = get_character(ctr2); val3 = get_character(ctr3);
+                                            X1 = [val1, ss1]; X2 = [val2, ss2]; X3 = [val3,ss3];
+                                            if all(X1 == X2) || all (X1 == X3) || all(X2 == X3)
+                                                coef = '0.5';
                                             end
-                                            if all(X1 == X3) 
-                                                coefnum = coefnum * 0.5;
-                                            end
-                                            if all(X2 == X3) 
-                                                coefnum = coefnum * 0.5;
-                                            end
-                                            if all(X1 == X4) 
-                                                coefnum = coefnum * 0.5;
-                                            end
-                                            if all(X2 == X4) 
-                                                coefnum = coefnum * 0.5;
-                                            end
-                                            if all(X3 == X4) 
-                                                coefnum = coefnum * 0.5;
-                                            end
-                                            coef = num2str(coefnum);
 
-                                            arr1 = C1; 
-                                            arr1{idx1(1)} = ctr1; arr1{idx1(2)} = ctr2; 
-                                            arr1{idx1(3)} = ctr3; arr1{idx1(4)} = ctr4;
-                                            arr2 = C2; 
-                                            arr2{idx2(1)} = ctr1; arr2{idx2(2)} = ctr2; 
-                                            arr2{idx2(3)} = ctr3; arr2{idx2(4)} = ctr4;
+                                            arr1 = C1; arr1{idx1(1)} = ctr1; arr1{idx1(2)} = ctr2; arr1{idx1(3)} = ctr3;
+                                            arr2 = C2; arr2{idx2(1)} = ctr1; arr2{idx2(2)} = ctr2; arr2{idx2(3)} = ctr3;
                                             [new_arr,sign2] = fix_t3_indices(cell2mat(arr2),q2(end));
                                             if isempty(sign2) || sign2 == '+'
                                                 sign = sign_orig;
