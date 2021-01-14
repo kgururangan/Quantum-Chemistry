@@ -18,18 +18,18 @@ Projection 5 - PPPhHH [DONE]
 Projection 6 - PPphHH [DONE]
 Projection 7 - PPpHHh [DONE]
 Projection 8 - PpPhHH [DONE]
-Projection 9 - PpPHHh [PROGRESS]
+Projection 9 - PpPHHh [DONE]
 
 t3C:
-Projection 1 - PPPHHH
-Projection 2 - PPpHHH
-Projection 3 - pPPHHH
-Projection 4 - PPPHhH
-Projection 5 - PPPhHH
-Projection 6 - PPpHhH
-Projection 7 - PPphHH
-Projection 8 - pPPHhH
-Projection 9 - pPPhHH
+Projection 1 - PPPHHH [DONE]
+Projection 2 - PPpHHH [DONE]
+Projection 3 - pPPHHH [DONE]
+Projection 4 - PPPHhH [DONE]
+Projection 5 - PPPhHH [DONE]
+Projection 6 - PPpHhH [DONE]
+Projection 7 - PPphHH [DONE]
+Projection 8 - pPPHhH [DONE]
+Projection 9 - pPPhHH [DONE]
 
 t3D:
 Projection 1 - PPPHHH
