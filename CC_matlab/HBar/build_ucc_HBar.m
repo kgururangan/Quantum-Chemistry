@@ -472,15 +472,12 @@ function [HBar_t] = build_ucc_HBar( cc_t, sys, flag_build_3body)
                             -einsum_kg(H2A.vvvv,t2a,'abfe,fcij->abcije');   %(bc)
                   
         % h3A(vvoooo)          
-        H3A.vvoooo =   einsum_kg(H2A.voov,t2a,'amie,bejk->abmijk')...
-                              -einsum_kg(H2A.voov,t2a,'bmie,aejk->abmijk')... %(ab)
-                              -einsum_kg(H2A.voov,t2a,'amje,beik->abmijk')... %(ij)
-                              -einsum_kg(H2A.voov,t2a,'amke,beji->abmijk')... %(ik)
-                              +einsum_kg(H2A.voov,t2a,'bmje,aeik->abmijk')... %(ab)(ij)
-                              +einsum_kg(H2A.voov,t2a,'bmke,aeji->abmijk')... %(ab)(ik)
-                      -einsum_kg(H2A.oooo,t2a,'mnki,abnj->abmijk')... 
-                              +einsum_kg(H2A.oooo,t2a,'mnkj,abni->abmijk')... %(ij)
-                              +einsum_kg(H2A.oooo,t2a,'mnji,abnk->abmijk');   %(jk)
+        D1 = einsum_kg(H2A.voov,t2a,'amie,bejk->abmijk');
+        D1 = D1 - permute(D1,[1,2,3,6,5,4]) - permute(D1,[1,2,3,5,4,6]);
+        D1 = D1 - permute(D1,[2,1,3,4,5,6]);
+        D2 = -einsum_kg(H2A.oooo,t2a,'nmjk,abin->abmijk');
+        D2 = D2 - permute(D2,[1,2,3,6,5,4]) - permute(D2,[1,2,3,5,4,6]);
+        H3A.vvoooo = D1 + D2;
                                     
 
         fprintf('done in %4.8f s\n',toc)
