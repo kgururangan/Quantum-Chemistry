@@ -1,11 +1,5 @@
 function [cc_t,Ecorr] = uccsdt2(sys,opts,T_guess,flag_test)
 
-    % I HAVE NO IDEA WHAT THE FUCK HAPPENED BUT NOW IT SEEMS TO WORK...
-    % I RECALL FIXING SOME SMALL THINGS IN THE T3A, T3B, AND T3D UPDATES...
-    % THE ORDER OF T3D AND T3B WAS ALSO SWITCHED
-
-    % STILL SMALL ERRORS IN T3B_PROJ4 and T3B_PROJ5..?
-
     diis_size = opts.diis_size;
     maxit = opts.maxit;
     tol = opts.tol;
@@ -53,7 +47,7 @@ function [cc_t,Ecorr] = uccsdt2(sys,opts,T_guess,flag_test)
     
     % Jacobi/DIIS iterations
     it_micro = 0; flag_conv = 0; it_macro = 0; Ecorr_old = 0.0;
-    %fprintf('\nDIIS Cycle - %d',it_macro)
+    fprintf('\nDIIS Cycle - %d',it_macro)
     while it_micro < maxit
         
         tic
@@ -91,35 +85,37 @@ function [cc_t,Ecorr] = uccsdt2(sys,opts,T_guess,flag_test)
 
         if ~flag_test
 
-            T3A.PPPHHH = update_t3a_proj1_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            T3A.PPpHHH = update_t3a_proj2_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            T3A.PPPhHH = update_t3a_proj3_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            T3A.PPphHH = update_t3a_proj4_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
+            [HBar_t] = build_ccsd_HBar_intermediates(t1a,t1b,t2a,t2b,t2c,sys);
 
-            T3B.PPPHHH = update_t3b_proj1_ccsdt2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            T3B.PPpHHH = update_t3b_proj2_ccsdt2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            T3B.PpPHHH = update_t3b_proj3_ccsdt2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            T3B.PPPHHh = update_t3b_proj4_ccsdt2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            T3B.PPPhHH = update_t3b_proj5_ccsdt2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            T3B.PPphHH = update_t3b_proj6_ccsdt2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            T3B.PPpHHh = update_t3b_proj7_ccsdt2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            T3B.PpPhHH = update_t3b_proj8_ccsdt2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            T3B.PpPHHh = update_t3b_proj9_ccsdt2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
+            T3A.PPPHHH = update_t3a_proj1_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            T3A.PPpHHH = update_t3a_proj2_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            T3A.PPPhHH = update_t3a_proj3_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            T3A.PPphHH = update_t3a_proj4_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
 
-            T3C.PPPHHH = update_t3c_proj1_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            T3C.PPpHHH = update_t3c_proj2_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            T3C.pPPHHH = update_t3c_proj3_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            T3C.PPPHhH = update_t3c_proj4_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            T3C.PPPhHH = update_t3c_proj5_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            T3C.PPpHhH = update_t3c_proj6_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            T3C.PPphHH = update_t3c_proj7_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            T3C.pPPHhH = update_t3c_proj8_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            T3C.pPPhHH = update_t3c_proj9_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
+            T3B.PPPHHH = update_t3b_proj1_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            T3B.PPpHHH = update_t3b_proj2_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            T3B.PpPHHH = update_t3b_proj3_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            T3B.PPPHHh = update_t3b_proj4_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            T3B.PPPhHH = update_t3b_proj5_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            T3B.PPphHH = update_t3b_proj6_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            T3B.PPpHHh = update_t3b_proj7_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            T3B.PpPhHH = update_t3b_proj8_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            T3B.PpPHHh = update_t3b_proj9_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
 
-            T3D.PPPHHH = update_t3d_proj1_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            T3D.PPpHHH = update_t3d_proj2_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            T3D.PPPhHH = update_t3d_proj3_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            T3D.PPphHH = update_t3d_proj4_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
+            T3C.PPPHHH = update_t3c_proj1_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            T3C.PPpHHH = update_t3c_proj2_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            T3C.pPPHHH = update_t3c_proj3_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            T3C.PPPHhH = update_t3c_proj4_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            T3C.PPPhHH = update_t3c_proj5_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            T3C.PPpHhH = update_t3c_proj6_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            T3C.PPphHH = update_t3c_proj7_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            T3C.pPPHhH = update_t3c_proj8_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            T3C.pPPhHH = update_t3c_proj9_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+
+            T3D.PPPHHH = update_t3d_proj1_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            T3D.PPpHHH = update_t3d_proj2_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            T3D.PPPhHH = update_t3d_proj3_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            T3D.PPphHH = update_t3d_proj4_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
 
             [t3a] = make_act_struct_into_t3(T3A,'A',sys);
             [t3b] = make_act_struct_into_t3(T3B,'B',sys);
@@ -128,34 +124,54 @@ function [cc_t,Ecorr] = uccsdt2(sys,opts,T_guess,flag_test)
 
         else
 
+            [HBar_t] = build_ccsd_HBar_intermediates(t1a,t1b,t2a,t2b,t2c,sys);
+
             cc_t = make_cct_struct(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d);
             [T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
             t3a = update_t3a(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift);
             t3a = zero_t3_outside_act(t3a,2,'A',sys);
 
-            t3a_proj1 = update_t3a_proj1_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            t3a_proj2 = update_t3a_proj2_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            t3a_proj3 = update_t3a_proj3_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            t3a_proj4 = update_t3a_proj4_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
+            t3a_proj1 = update_t3a_proj1_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            t3a_proj2 = update_t3a_proj2_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            t3a_proj3 = update_t3a_proj3_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            t3a_proj4 = update_t3a_proj4_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
             fprintf('\nError in t3a_proj1 = %4.15f\n',get_error(t3a_proj1,t3a(PA,PA,PA,HA,HA,HA)))
             fprintf('Error in t3a_proj2 = %4.15f\n',get_error(t3a_proj2,t3a(PA,PA,pA,HA,HA,HA)))
             fprintf('Error in t3a_proj3 = %4.15f\n',get_error(t3a_proj3,t3a(PA,PA,PA,hA,HA,HA)))
-            fprintf('Error in t3a_proj4 = %4.15f\n',get_error(t3a_proj4,t3a(PA,PA,pA,hA,HA,HA)))     
+            fprintf('Error in t3a_proj4 = %4.15f\n',get_error(t3a_proj4,t3a(PA,PA,pA,hA,HA,HA))) 
+  
+            % adding these zero statements perfore populating with projections returns us to our original
+            % CCSDt(II) energy
+%            t3a_temp = t3a;
+%            t3a = zeros(szt3a);
+            t3a(PA,PA,PA,HA,HA,HA) = t3a_proj1;
+            t3a(PA,PA,pA,HA,HA,HA) = t3a_proj2;
+            t3a(PA,PA,PA,hA,HA,HA) = t3a_proj3;
+            t3a(PA,PA,pA,hA,HA,HA) = t3a_proj4; 
+%             t3a(PA,PA,PA,HA,HA,HA) = t3a_temp(PA,PA,PA,HA,HA,HA);
+%             t3a(PA,PA,pA,HA,HA,HA) = t3a_temp(PA,PA,pA,HA,HA,HA);
+%             t3a(PA,PA,PA,hA,HA,HA) = t3a_temp(PA,PA,PA,hA,HA,HA);
+%             t3a(PA,PA,pA,hA,HA,HA) = t3a_temp(PA,PA,pA,hA,HA,HA);
+%             get_error(t3a,t3a_temp)
+
+            T3A.PPPHHH = t3a_proj1; T3A.PPpHHH = t3a_proj2; T3A.PPPhHH = t3a_proj3; T3A.PPphHH = t3a_proj4;
+            [t3a_act] = make_act_struct_into_t3(T3A,'A',sys);
+            get_error(t3a,t3a_act)
 
             cc_t = make_cct_struct(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d);
             [T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
             t3b = update_t3b(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift);
             t3b = zero_t3_outside_act(t3b,2,'B',sys);
 
-            t3b_proj1 = update_t3b_proj1_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            t3b_proj2 = update_t3b_proj2_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            t3b_proj3 = update_t3b_proj3_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            t3b_proj4 = update_t3b_proj4_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            t3b_proj5 = update_t3b_proj5_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            t3b_proj6 = update_t3b_proj6_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            t3b_proj7 = update_t3b_proj7_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            t3b_proj8 = update_t3b_proj8_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            t3b_proj9 = update_t3b_proj9_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
+            t3b_proj1 = update_t3b_proj1_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            t3b_proj2 = update_t3b_proj2_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            t3b_proj3 = update_t3b_proj3_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            t3b_proj4 = update_t3b_proj4_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            t3b_proj5 = update_t3b_proj5_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            t3b_proj6 = update_t3b_proj6_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            t3b_proj7 = update_t3b_proj7_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            t3b_proj8 = update_t3b_proj8_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            t3b_proj9 = update_t3b_proj9_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
             fprintf('\nError in t3b_proj1 = %4.15f\n',get_error(t3b_proj1,t3b(PA,PA,PB,HA,HA,HB)))
             fprintf('Error in t3b_proj2 = %4.15f\n',get_error(t3b_proj2,t3b(PA,PA,pB,HA,HA,HB)))
             fprintf('Error in t3b_proj3 = %4.15f\n',get_error(t3b_proj3,t3b(PA,pA,PB,HA,HA,HB)))
@@ -166,20 +182,48 @@ function [cc_t,Ecorr] = uccsdt2(sys,opts,T_guess,flag_test)
             fprintf('Error in t3b_proj8 = %4.15f\n',get_error(t3b_proj8,t3b(PA,pA,PB,hA,HA,HB)))
             fprintf('Error in t3b_proj9 = %4.15f\n',get_error(t3b_proj9,t3b(PA,pA,PB,HA,HA,hB)))
 
+%            t3b_temp = t3b;
+%            t3b = zeros(szt3b);
+            t3b(PA,PA,PB,HA,HA,HB) = t3b_proj1; 
+            t3b(PA,PA,pB,HA,HA,HB) = t3b_proj2; 
+            t3b(PA,pA,PB,HA,HA,HB) = t3b_proj3;
+            t3b(PA,PA,PB,HA,HA,hB) = t3b_proj4; 
+            t3b(PA,PA,PB,hA,HA,HB) = t3b_proj5; 
+            t3b(PA,PA,pB,hA,HA,HB) = t3b_proj6;
+            t3b(PA,PA,pB,HA,HA,hB) = t3b_proj7; 
+            t3b(PA,pA,PB,hA,HA,HB) = t3b_proj8; 
+            t3b(PA,pA,PB,HA,HA,hB) = t3b_proj9;
+%             t3b(PA,PA,PB,HA,HA,HB) = t3b_temp(PA,PA,PB,HA,HA,HB); 
+%             t3b(PA,PA,pB,HA,HA,HB) = t3b_temp(PA,PA,pB,HA,HA,HB); 
+%             t3b(PA,pA,PB,HA,HA,HB) = t3b_temp(PA,pA,PB,HA,HA,HB);
+%             t3b(PA,PA,PB,HA,HA,hB) = t3b_temp(PA,PA,PB,HA,HA,hB); 
+%             t3b(PA,PA,PB,hA,HA,HB) = t3b_temp(PA,PA,PB,hA,HA,HB); 
+%             t3b(PA,PA,pB,hA,HA,HB) = t3b_temp(PA,PA,pB,hA,HA,HB);
+%             t3b(PA,PA,pB,HA,HA,hB) = t3b_temp(PA,PA,pB,HA,HA,hB); 
+%             t3b(PA,pA,PB,hA,HA,HB) = t3b_temp(PA,pA,PB,hA,HA,HB); 
+%             t3b(PA,pA,PB,HA,HA,hB) = t3b_temp(PA,pA,PB,HA,HA,hB);
+%             get_error(t3b,t3b_temp)
+
+            T3B.PPPHHH = t3b_proj1; T3B.PPpHHH = t3b_proj2; T3B.PpPHHH = t3b_proj3;
+            T3B.PPPHHh = t3b_proj4; T3B.PPPhHH = t3b_proj5; T3B.PPphHH = t3b_proj6;
+            T3B.PPpHHh = t3b_proj7; T3B.PpPhHH = t3b_proj8; T3B.PpPHHh = t3b_proj9;
+            [t3b_act] = make_act_struct_into_t3(T3B,'B',sys);
+            get_error(t3b,t3b_act)
+
             cc_t = make_cct_struct(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d);
             [T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
             t3c = update_t3c(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift);
             t3c = zero_t3_outside_act(t3c,2,'C',sys);
 
-            t3c_proj1 = update_t3c_proj1_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            t3c_proj2 = update_t3c_proj2_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            t3c_proj3 = update_t3c_proj3_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            t3c_proj4 = update_t3c_proj4_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            t3c_proj5 = update_t3c_proj5_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            t3c_proj6 = update_t3c_proj6_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            t3c_proj7 = update_t3c_proj7_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            t3c_proj8 = update_t3c_proj8_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            t3c_proj9 = update_t3c_proj9_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
+            t3c_proj1 = update_t3c_proj1_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            t3c_proj2 = update_t3c_proj2_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            t3c_proj3 = update_t3c_proj3_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            t3c_proj4 = update_t3c_proj4_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            t3c_proj5 = update_t3c_proj5_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            t3c_proj6 = update_t3c_proj6_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            t3c_proj7 = update_t3c_proj7_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            t3c_proj8 = update_t3c_proj8_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            t3c_proj9 = update_t3c_proj9_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
             fprintf('\nError in t3c_proj1 = %4.15f\n',get_error(t3c_proj1,t3c(PA,PB,PB,HA,HB,HB)))
             fprintf('Error in t3c_proj2 = %4.15f\n',get_error(t3c_proj2,t3c(PA,PB,pB,HA,HB,HB)))
             fprintf('Error in t3c_proj3 = %4.15f\n',get_error(t3c_proj3,t3c(pA,PB,PB,HA,HB,HB)))
@@ -190,20 +234,73 @@ function [cc_t,Ecorr] = uccsdt2(sys,opts,T_guess,flag_test)
             fprintf('Error in t3c_proj8 = %4.15f\n',get_error(t3c_proj8,t3c(pA,PB,PB,HA,hB,HB)))
             fprintf('Error in t3c_proj9 = %4.15f\n',get_error(t3c_proj9,t3c(pA,PB,PB,hA,HB,HB)))
 
+%            t3c_temp = t3c;
+%            t3c = zeros(szt3c);
+            t3c(PA,PB,PB,HA,HB,HB) = t3c_proj1; 
+            t3c(PA,PB,pB,HA,HB,HB) = t3c_proj2; 
+            t3c(pA,PB,PB,HA,HB,HB) = t3c_proj3;
+            t3c(PA,PB,PB,HA,hB,HB) = t3c_proj4; 
+            t3c(PA,PB,PB,hA,HB,HB) = t3c_proj5; 
+            t3c(PA,PB,pB,HA,hB,HB) = t3c_proj6;
+            t3c(PA,PB,pB,hA,HB,HB) = t3c_proj7; 
+            t3c(pA,PB,PB,HA,hB,HB) = t3c_proj8; 
+            t3c(pA,PB,PB,hA,HB,HB) = t3c_proj9;
+%             t3c(PA,PB,PB,HA,HB,HB) = t3c_temp(PA,PB,PB,HA,HB,HB); 
+%             t3c(PA,PB,pB,HA,HB,HB) = t3c_temp(PA,PB,pB,HA,HB,HB); 
+%             t3c(pA,PB,PB,HA,HB,HB) = t3c_temp(pA,PB,PB,HA,HB,HB);
+%             t3c(PA,PB,PB,HA,hB,HB) = t3c_temp(PA,PB,PB,HA,hB,HB); 
+%             t3c(PA,PB,PB,hA,HB,HB) = t3c_temp(PA,PB,PB,hA,HB,HB); 
+%             t3c(PA,PB,pB,HA,hB,HB) = t3c_temp(PA,PB,pB,HA,hB,HB);
+%             t3c(PA,PB,pB,hA,HB,HB) = t3c_temp(PA,PB,pB,hA,HB,HB); 
+%             t3c(pA,PB,PB,HA,hB,HB) = t3c_temp(pA,PB,PB,HA,hB,HB); 
+%             t3c(pA,PB,PB,hA,HB,HB) = t3c_temp(pA,PB,PB,hA,HB,HB);
+%             get_error(t3c,t3c_temp)
+
+            T3C.PPPHHH = t3c_proj1; T3C.PPpHHH = t3c_proj2; T3C.pPPHHH = t3c_proj3; 
+            T3C.PPPHhH = t3c_proj4; T3C.PPPhHH = t3c_proj5; T3C.PPpHhH = t3c_proj6;
+            T3C.PPphHH = t3c_proj7; T3C.pPPHhH = t3c_proj8; T3C.pPPhHH = t3c_proj9;
+            [t3c_act] = make_act_struct_into_t3(T3C,'C',sys);
+            get_error(t3c,t3c_act)
+
             cc_t = make_cct_struct(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d);
             [T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
             t3d = update_t3d(t1a,t1b,t2a,t2b,t2c,t3a,t3b,t3c,t3d,sys,shift);
             t3d = zero_t3_outside_act(t3d,2,'D',sys);
 
-            t3d_proj1 = update_t3d_proj1_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            t3d_proj2 = update_t3d_proj2_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            t3d_proj3 = update_t3d_proj3_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
-            t3d_proj4 = update_t3d_proj4_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, sys, shift);
+            t3d_proj1 = update_t3d_proj1_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            t3d_proj2 = update_t3d_proj2_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            t3d_proj3 = update_t3d_proj3_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
+            t3d_proj4 = update_t3d_proj4_ccsdt2_v2(t1a, t1b, t2a, t2b, t2c, T3A, T3B, T3C, T3D, HBar_t, sys, shift);
             fprintf('\nError in t3d_proj1 = %4.15f\n',get_error(t3d_proj1,t3d(PB,PB,PB,HB,HB,HB)))
             fprintf('Error in t3d_proj2 = %4.15f\n',get_error(t3d_proj2,t3d(PB,PB,pB,HB,HB,HB)))
             fprintf('Error in t3d_proj3 = %4.15f\n',get_error(t3d_proj3,t3d(PB,PB,PB,hB,HB,HB)))
-            fprintf('Error in t3d_proj4 = %4.15f\n',get_error(t3d_proj4,t3d(PB,PB,pB,hB,HB,HB)))  
+            fprintf('Error in t3d_proj4 = %4.15f\n',get_error(t3d_proj4,t3d(PB,PB,pB,hB,HB,HB))) 
 
+%            t3d_temp = t3d;
+%            t3d = zeros(szt3d);
+            t3d(PB,PB,PB,HB,HB,HB) = t3d_proj1;
+            t3d(PB,PB,pB,HB,HB,HB) = t3d_proj2;
+            t3d(PB,PB,PB,hB,HB,HB) = t3d_proj3;
+            t3d(PB,PB,pB,hB,HB,HB) = t3d_proj4; 
+%             t3d(PB,PB,PB,HB,HB,HB) = t3d_temp(PB,PB,PB,HB,HB,HB);
+%             t3d(PB,PB,pB,HB,HB,HB) = t3d_temp(PB,PB,pB,HB,HB,HB);
+%             t3d(PB,PB,PB,hB,HB,HB) = t3d_temp(PB,PB,PB,hB,HB,HB);
+%             t3d(PB,PB,pB,hB,HB,HB) = t3d_temp(PB,PB,pB,hB,HB,HB); 
+%             get_error(t3d,t3d_temp)
+
+             T3D.PPPHHH = t3d_proj1; T3D.PPpHHH = t3d_proj2; T3D.PPPhHH = t3d_proj3; T3D.PPphHH = t3d_proj4;
+             [t3d_act] = make_act_struct_into_t3(T3D,'D',sys);
+             get_error(t3d,t3d_act)
+ 
+%             [t3a_act] = make_act_struct_into_t3(T3A,'A',sys);
+%             [t3b_act] = make_act_struct_into_t3(T3B,'B',sys);
+%             [t3c_act] = make_act_struct_into_t3(T3C,'C',sys);
+%             [t3d_act] = make_act_struct_into_t3(T3D,'D',sys);
+% 
+%             fprintf('\nError in t3d_proj1 = %4.15f\n',get_error(t3d_proj1,t3d(PB,PB,PB,HB,HB,HB)))
+%             fprintf('Error in t3d_proj2 = %4.15f\n',get_error(t3d_proj2,t3d(PB,PB,pB,HB,HB,HB)))
+%             fprintf('Error in t3d_proj3 = %4.15f\n',get_error(t3d_proj3,t3d(PB,PB,PB,hB,HB,HB)))
+%             fprintf('Error in t3d_proj4 = %4.15f\n',get_error(t3d_proj4,t3d(PB,PB,pB,hB,HB,HB)))          
         end
      
         % store vectorized results

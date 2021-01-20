@@ -11,9 +11,9 @@ Projection 4 - ph [DONE]
 
 t1B:
 Projection 1 - PH [DONE]
-Projection 2 - pH
-Projection 3 - Ph
-Projection 4 - ph
+Projection 2 - pH [DONE]
+Projection 3 - Ph [DONE]
+Projection 4 - ph [DONE]
 
 t2A:
 Projection 1 - PPHH [DONE]
