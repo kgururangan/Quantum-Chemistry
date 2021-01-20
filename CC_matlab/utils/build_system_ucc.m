@@ -307,7 +307,7 @@ function [sys] = build_system_ucc(e1int,e2int,Vnuc,Nocc_alpha,Nocc_beta,nfzc,nac
                                       Nocc_beta^2*Nvir_beta^2 + ...
                                       num_proj1 + num_proj2 + num_proj3 + num_proj4;
                      
-            if Norb < 30 % allocate active triples 2
+            if Norb < 40 % allocate active triples 2
                 
 
     

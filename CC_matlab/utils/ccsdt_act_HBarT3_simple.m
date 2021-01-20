@@ -305,6 +305,10 @@ function [DD] = ccsdt_act_HBarT3_simple(string_arr)
                             ss4 = 0;
                         end
 
+                        % need to check for double equivalences in 4
+                        % contractions, e.g. X1 == X2 && X3 == X4
+                        % (note: X1 == X2 == X3 would never happen, or any
+                        % other 3-fold equivalence)
                         X1 = [val1,ss1]; X2 = [val2,ss2]; X3 = [val3,ss3]; X4 = [val4,ss4];
                         flag = false;
                         if all(X1 == X2)
@@ -330,6 +334,18 @@ function [DD] = ccsdt_act_HBarT3_simple(string_arr)
                         if all(X3 == X4)
                             flag = true;
                             equivs = '34';
+                        end
+                        if all(X1 == X2) && all(X3 == X4)
+                           flag = true;
+                           equivs = '1234';
+                        end
+                        if all(X1 == X3) && all(X2 == X4)
+                            flag = true;
+                            equivs = '1324';
+                        end
+                        if all(X1 == X4) && all(X2 == X3)
+                            flag = true;
+                            equivs = '1423';
                         end
 
                         for p = 1:length(CTR1)
@@ -367,6 +383,18 @@ function [DD] = ccsdt_act_HBarT3_simple(string_arr)
                                                         end
                                                     case '34'
                                                         if r < s
+                                                            continue
+                                                        end
+                                                    case '1234'
+                                                        if p < q || r < s
+                                                            continue
+                                                        end
+                                                    case '1324'
+                                                        if p < r || q < s
+                                                            continue
+                                                        end
+                                                    case '1423'
+                                                        if p < s || q < r
                                                             continue
                                                         end
                                                 end
@@ -416,8 +444,8 @@ function [DD] = ccsdt_act_HBarT3_simple(string_arr)
                                             term2 = [q2,'(',new_arr,')'];
                                             d1{ct} = [term1,',',term2];
                                             ct = ct + 1;
+                                        end
                                     end
-                                end
                             end
                         end
 
