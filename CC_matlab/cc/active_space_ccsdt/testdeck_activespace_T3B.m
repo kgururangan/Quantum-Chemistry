@@ -13,7 +13,7 @@ load h2o-631g-stretched
 %% Set up problem
 
 nfzc = 0; nfzv = 0; 
-nact_h = 2; nact_p = 4; % BE CAREFUL ABOUT SINGLETON DIMENSIONS!
+nact_h = 2; nact_p = 6; % BE CAREFUL ABOUT SINGLETON DIMENSIONS!
 nact_h_alpha = nact_h; nact_h_beta = nact_h; nact_p_alpha = nact_p; nact_p_beta = nact_p;
 flag_act_scheme = 0;
 
@@ -29,228 +29,32 @@ PB = sys.PB; pB = sys.pB; HB = sys.HB; hB = sys.hB;
 
 ccopts.diis_size = 5;
 ccopts.maxit = 100;
-ccopts.tol = 1e-10;
+ccopts.tol = 1e-11;
 ccopts.shift = 0;
+flag_full = false;
 
 [cc_t,Ecorr_uccsdt] = uccsdt(sys,ccopts);
 
-t1a = 100*cc_t.t1a; t1b = 100*cc_t.t1b;
-t2a = 1000*cc_t.t2a; t2b = 1000*cc_t.t2b; t2c = 1000*cc_t.t2c;
-t3a = 10000*cc_t.t3a; t3b = 10000*cc_t.t3b; t3c = 10000*cc_t.t3c; t3d = 10000*cc_t.t3d;
+% This is important! You need to zero the T3 amps outside of the active
+% space before testing them with active space builds. This is because the
+% active space builds are coded assuming that all T3 amps outside of the
+% space are 0. If they are not 0, the results of diagrams contributing to
+% amplitudes within the active space, as computed by complete CCSDT
+% updates, can differ!
+t3a = zero_t3_outside_act(cc_t.t3a,2,'A',sys); cc_t.t3a = t3a;
+t3b = zero_t3_outside_act(cc_t.t3b,2,'B',sys); cc_t.t3b = t3b;
+t3c = zero_t3_outside_act(cc_t.t3c,2,'C',sys); cc_t.t3c = t3c;
+t3d = zero_t3_outside_act(cc_t.t3d,2,'D',sys); cc_t.t3d = t3d;
 
-cc_t.t1a = t1a; cc_t.t1b = t1b;
-cc_t.t2a = t2a; cc_t.t2b = t2b; cc_t.t2c = t2c;
-cc_t.t3a = t3a; cc_t.t3b = t3b; cc_t.t3c = t3c; cc_t.t3d = t3d;
+t1a = cc_t.t1a; t1b = cc_t.t1b;
+t2a = cc_t.t2a; t2b = cc_t.t2b; t2c = cc_t.t2c;
+t3a = cc_t.t3a; t3b = cc_t.t3b; t3c = cc_t.t3c; t3d = cc_t.t3d;
 
 [HBar_t] = build_ucc_HBar(cc_t,sys,false);
-
 H1A = HBar_t.H1A; H1B = HBar_t.H1B;
 H2A = HBar_t.H2A; H2B = HBar_t.H2B; H2C = HBar_t.H2C;
 
-%% Ficticious T vectors
-
-Noa  = sys.Nocc_alpha; Nua = sys.Nvir_alpha;
-Nob = sys.Nocc_beta; Nub = sys.Nvir_beta;
-
-t1a = rand(Nua,Noa);
-t1b = rand(Nub,Nob);
-t2a = rand(Nua,Nua,Noa,Noa);
-t2b = rand(Nua,Nub,Noa,Nob);
-t2c = rand(Nub,Nub,Nob,Nob);
-t3a = rand(Nua,Nua,Nua,Noa,Noa,Noa);
-t3b = rand(Nua,Nua,Nub,Noa,Noa,Nob);
-t3c = rand(Nua,Nub,Nub,Noa,Nob,Nob);
-t3d = rand(Nub,Nub,Nub,Nob,Nob,Nob);
-
-for a = 1:Nua
-    for b = a+1:Nua
-        for i = 1:Noa
-            for j = i+1:Noa
-                t2a(b,a,i,j) = -t2a(a,b,i,j);
-                t2a(a,b,j,i) = -t2a(a,b,i,j);
-                t2a(b,a,j,i) = t2a(a,b,i,j);
-            end
-        end
-    end
-end
-
-for a = 1:Nub
-    for b = a+1:Nub
-        for i = 1:Nob
-            for j = i+1:Nob
-                t2c(b,a,i,j) = -t2c(a,b,i,j);
-                t2c(a,b,j,i) = -t2c(a,b,i,j);
-                t2c(b,a,j,i) = t2c(a,b,i,j);
-            end
-        end
-    end
-end
-
-for a = 1:Nua
-    for b = a+1:Nua
-        for c = b+1:Nub
-            for i = 1:Noa
-                for j = i+1:Noa
-                    for k = j+1:Noa
-                            t3a(a,b,c,k,i,j) = t3a(a,b,c,i,j,k);
-                            t3a(a,b,c,j,k,i) = t3a(a,b,c,i,j,k);
-                            t3a(a,b,c,i,k,j) = -t3a(a,b,c,i,j,k);
-                            t3a(a,b,c,j,i,k) = -t3a(a,b,c,i,j,k);
-                            t3a(a,b,c,k,j,i) = -t3a(a,b,c,i,j,k);
-                            
-                            % (ab)/[(1),(ki)(ij),(ki)(kj),(kj),(ij),(ki)]
-                            t3a(b,a,c,i,j,k) = -t3a(a,b,c,i,j,k);
-                            t3a(b,a,c,k,i,j) = -t3a(a,b,c,i,j,k);
-                            t3a(b,a,c,j,k,i) = -t3a(a,b,c,i,j,k);
-                            t3a(b,a,c,i,k,j) = t3a(a,b,c,i,j,k);
-                            t3a(b,a,c,j,i,k) = t3a(a,b,c,i,j,k);
-                            t3a(b,a,c,k,j,i) = t3a(a,b,c,i,j,k);
-                            
-                            % (bc)/[(1),(ki)(ij),(ki)(kj),(kj),(ij),(ki)]
-                            t3a(a,c,b,i,j,k) = -t3a(a,b,c,i,j,k);
-                            t3a(a,c,b,k,i,j) = -t3a(a,b,c,i,j,k);
-                            t3a(a,c,b,j,k,i) = -t3a(a,b,c,i,j,k);
-                            t3a(a,c,b,i,k,j) = t3a(a,b,c,i,j,k);
-                            t3a(a,c,b,j,i,k) = t3a(a,b,c,i,j,k);
-                            t3a(a,c,b,k,j,i) = t3a(a,b,c,i,j,k);
-                            
-                            % (ac)/[(1),(ki)(ij),(ki)(kj),(kj),(ij),(ki)]
-                            t3a(c,b,a,i,j,k) = -t3a(a,b,c,i,j,k);
-                            t3a(c,b,a,k,i,j) = -t3a(a,b,c,i,j,k);
-                            t3a(c,b,a,j,k,i) = -t3a(a,b,c,i,j,k);
-                            t3a(c,b,a,i,k,j) = t3a(a,b,c,i,j,k);
-                            t3a(c,b,a,j,i,k) = t3a(a,b,c,i,j,k);
-                            t3a(c,b,a,k,j,i) = t3a(a,b,c,i,j,k);
-                            
-                            % (ac)(bc)/[(1),(ki)(ij),(ki)(kj),(kj),(ij),(ki)]
-                            t3a(b,c,a,i,j,k) = t3a(a,b,c,i,j,k);
-                            t3a(b,c,a,k,i,j) = t3a(a,b,c,i,j,k);
-                            t3a(b,c,a,j,k,i) = t3a(a,b,c,i,j,k);
-                            t3a(b,c,a,i,k,j) = -t3a(a,b,c,i,j,k);
-                            t3a(b,c,a,j,i,k) = -t3a(a,b,c,i,j,k);
-                            t3a(b,c,a,k,j,i) = -t3a(a,b,c,i,j,k);
-                            
-                            % (ac)(ab)/[(1),(ki)(ij),(ki)(kj),(kj),(ij),(ki)]
-                            t3a(c,a,b,i,j,k) = t3a(a,b,c,i,j,k);
-                            t3a(c,a,b,k,i,j) = t3a(a,b,c,i,j,k);
-                            t3a(c,a,b,j,k,i) = t3a(a,b,c,i,j,k);
-                            t3a(c,a,b,i,k,j) = -t3a(a,b,c,i,j,k);
-                            t3a(c,a,b,j,i,k) = -t3a(a,b,c,i,j,k);
-                            t3a(c,a,b,k,j,i) = -t3a(a,b,c,i,j,k);
-                    end
-                end
-            end
-        end
-	end
-end
-
-for a = 1:Nua
-    for b = a+1:Nua
-        for c = b+1:Nub
-            for i = 1:Noa
-                for j = i+1:Noa
-                    for k = j+1:Noa
-                            t3b(a,b,c,j,i,k) = -t3b(a,b,c,i,j,k);
-                            t3b(b,a,c,i,j,k) = t3b(a,b,c,i,j,k);
-                            t3b(b,a,c,j,i,k) = t3b(a,b,c,i,j,k);
-                    end
-                end
-            end
-        end
-	end
-end
-
-for a = 1:Nua
-    for b = 1:Nub
-        for c = b+1:Nub
-            for i = 1:Noa
-                for j = 1:Nob
-                    for k = j+1:Nob
-                            t3c(a,b,c,i,k,j) = -t3c(a,b,c,i,j,k);
-                            t3c(a,c,b,i,j,k) = -t3c(a,b,c,i,j,k);
-                            t3c(a,c,b,i,k,j) = t3c(a,b,c,i,j,k);
-                    end
-                end
-            end
-        end
-	end
-end
-
-for a = 1:Nub
-    for b = a+1:Nub
-        for c = b+1:Nub
-            for i = 1:Nob
-                for j = i+1:Nob
-                    for k = j+1:Nob
-                            t3d(a,b,c,k,i,j) = t3d(a,b,c,i,j,k);
-                            t3d(a,b,c,j,k,i) = t3d(a,b,c,i,j,k);
-                            t3d(a,b,c,i,k,j) = -t3d(a,b,c,i,j,k);
-                            t3d(a,b,c,j,i,k) = -t3d(a,b,c,i,j,k);
-                            t3d(a,b,c,k,j,i) = -t3d(a,b,c,i,j,k);
-                            
-                            % (ab)/[(1),(ki)(ij),(ki)(kj),(kj),(ij),(ki)]
-                            t3d(b,a,c,i,j,k) = -t3d(a,b,c,i,j,k);
-                            t3d(b,a,c,k,i,j) = -t3d(a,b,c,i,j,k);
-                            t3d(b,a,c,j,k,i) = -t3d(a,b,c,i,j,k);
-                            t3d(b,a,c,i,k,j) = t3d(a,b,c,i,j,k);
-                            t3d(b,a,c,j,i,k) = t3d(a,b,c,i,j,k);
-                            t3d(b,a,c,k,j,i) = t3d(a,b,c,i,j,k);
-                            
-                            % (bc)/[(1),(ki)(ij),(ki)(kj),(kj),(ij),(ki)]
-                            t3d(a,c,b,i,j,k) = -t3d(a,b,c,i,j,k);
-                            t3d(a,c,b,k,i,j) = -t3d(a,b,c,i,j,k);
-                            t3d(a,c,b,j,k,i) = -t3d(a,b,c,i,j,k);
-                            t3d(a,c,b,i,k,j) = t3d(a,b,c,i,j,k);
-                            t3d(a,c,b,j,i,k) = t3d(a,b,c,i,j,k);
-                            t3d(a,c,b,k,j,i) = t3d(a,b,c,i,j,k);
-                            
-                            % (ac)/[(1),(ki)(ij),(ki)(kj),(kj),(ij),(ki)]
-                            t3d(c,b,a,i,j,k) = -t3d(a,b,c,i,j,k);
-                            t3d(c,b,a,k,i,j) = -t3d(a,b,c,i,j,k);
-                            t3d(c,b,a,j,k,i) = -t3d(a,b,c,i,j,k);
-                            t3d(c,b,a,i,k,j) = t3d(a,b,c,i,j,k);
-                            t3d(c,b,a,j,i,k) = t3d(a,b,c,i,j,k);
-                            t3d(c,b,a,k,j,i) = t3d(a,b,c,i,j,k);
-                            
-                            % (ac)(bc)/[(1),(ki)(ij),(ki)(kj),(kj),(ij),(ki)]
-                            t3d(b,c,a,i,j,k) = t3d(a,b,c,i,j,k);
-                            t3d(b,c,a,k,i,j) = t3d(a,b,c,i,j,k);
-                            t3d(b,c,a,j,k,i) = t3d(a,b,c,i,j,k);
-                            t3d(b,c,a,i,k,j) = -t3d(a,b,c,i,j,k);
-                            t3d(b,c,a,j,i,k) = -t3d(a,b,c,i,j,k);
-                            t3d(b,c,a,k,j,i) = -t3d(a,b,c,i,j,k);
-                            
-                            % (ac)(ab)/[(1),(ki)(ij),(ki)(kj),(kj),(ij),(ki)]
-                            t3d(c,a,b,i,j,k) = t3d(a,b,c,i,j,k);
-                            t3d(c,a,b,k,i,j) = t3d(a,b,c,i,j,k);
-                            t3d(c,a,b,j,k,i) = t3d(a,b,c,i,j,k);
-                            t3d(c,a,b,i,k,j) = -t3d(a,b,c,i,j,k);
-                            t3d(c,a,b,j,i,k) = -t3d(a,b,c,i,j,k);
-                            t3d(c,a,b,k,j,i) = -t3d(a,b,c,i,j,k);
-                    end
-                end
-            end
-        end
-	end
-end
-
-cc_t.t1a = t1a; cc_t.t1b = t1b;
-cc_t.t2a = t2a; cc_t.t2b = t2b; cc_t.t2c = t2c;
-cc_t.t3a = t3a; cc_t.t3b = t3b; cc_t.t3c = t3c; cc_t.t3d = t3d; 
-
-%%
-
 [T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
-
-D3 = -einsum_kg(H1A.vv(PA,pA),T3B.PpPHHH,'Ae,BeCIJK->ABCIJK')...
-+einsum_kg(H1A.vv(PA,PA),T3B.PPPHHH,'AE,EBCIJK->ABCIJK');
-D3 = D3 - permute(D3,[2,1,3,4,5,6]);
-
-D3_full = einsum_kg(H1A.vv,t3b,'ae,ebcijk->abcijk');
-D3_full = D3_full - permute(D3_full,[2,1,3,4,5,6]);
-
-get_error(D3,D3_full(PA,PA,PB,HA,HA,HB))
-
 
 %% t3B - projection 1 (PPPHHH) [DONE]
 
@@ -316,14 +120,16 @@ d14 = {'-h2B(mCIe),t3b(ABemJK)'};
 fun(d14,'D14')
 
 % check active build
-[T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
-% <ijkabc | (He^T)_C | 0>
-[X3B,VT3A,VT3B] = build_t3b(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
- % <IJKABC | (He^T)_C | 0>
-[X3B_1] = update_t3b_proj1(cc_t.t1a, cc_t.t1b, cc_t.t2a, cc_t.t2b, cc_t.t2c, T3A, T3B, T3C, T3D, sys, 0.0);
+% [T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
+% % <ijkabc | (He^T)_C | 0>
+% [X3B,VT3A,VT3B] = build_t3b(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+%  % <IJKABC | (He^T)_C | 0>
+% [X3B_1] = update_t3b_proj1(cc_t.t1a, cc_t.t1b, cc_t.t2a, cc_t.t2b, cc_t.t2c, T3A, T3B, T3C, T3D, sys, 0.0);
+% fprintf('\nError in X3B_PPPHHH = %4.15f\n',get_error(X3B(PA,PA,PB,HA,HA,HB),X3B_1))
 
-fprintf('\nError in X3B_PPPHHH = %4.15f\n',get_error(X3B(PA,PA,PB,HA,HA,HB),X3B_1))
-
+[t3b_ex] = update_t3b(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+[t3b_1] = update_t3b_proj1_ccsdt2_v2(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,HBar_t,sys,0.0);
+fprintf('\nError in t3b_PPPHHH = %4.15f\n',get_error(t3b_ex(PA,PA,PB,HA,HA,HB),t3b_1))
 %% t3B - projection 2 (PPpHHH) [DONE]
 
 clc
@@ -389,11 +195,14 @@ fun(d14,'D14')
 
 
 % check active build
-[T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
-[X3B,VT3A,VT3B] = build_t3b(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
-[X3B_2] = update_t3b_proj2(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% [T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
+% [X3B,VT3A,VT3B] = build_t3b(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+% [X3B_2] = update_t3b_proj2(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% fprintf('\nError in X3B_PPpHHH = %4.15f\n',get_error(X3B(PA,PA,pB,HA,HA,HB),X3B_2))
 
-fprintf('\nError in X3B_PPpHHH = %4.15f\n',get_error(X3B(PA,PA,pB,HA,HA,HB),X3B_2))
+[t3b_ex] = update_t3b(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+[t3b_2] = update_t3b_proj2_ccsdt2_v2(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,HBar_t,sys,0.0);
+fprintf('\nError in t3b_PPpHHH = %4.15f\n',get_error(t3b_ex(PA,PA,pB,HA,HA,HB),t3b_2))
 
 %% t3B - projection 3 (PpPHHH) [DONE]
 
@@ -460,12 +269,14 @@ fun(d14,'D14')
 
 
 % check active build
-[T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
-[X3B,VT3A,VT3B] = build_t3b(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
-[X3B_3] = update_t3b_proj3(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% [T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
+% [X3B,VT3A,VT3B] = build_t3b(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+% [X3B_3] = update_t3b_proj3(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% fprintf('\nError in X3B_PpPHHH = %4.15f\n',get_error(X3B(PA,pA,PB,HA,HA,HB),X3B_3))
 
-fprintf('\nError in X3B_PpPHHH = %4.15f\n',get_error(X3B(PA,pA,PB,HA,HA,HB),X3B_3))
-
+[t3b_ex] = update_t3b(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+[t3b_3] = update_t3b_proj3_ccsdt2_v2(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,HBar_t,sys,0.0);
+fprintf('\nError in t3b_PpPHHH = %4.15f\n',get_error(t3b_ex(PA,pA,PB,HA,HA,HB),t3b_3))
 
 %% t3B - projection 4 (PPPHHh) [DONE]
 clc
@@ -529,12 +340,14 @@ fun(d13,'D13')
 d14 = {'-h2B(mCIe),t3b(ABemJk)'};
 fun(d14,'D14')
 
-[T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
+% [T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
+% [X3B,VT3A,VT3B] = build_t3b(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+% [X3B_4] = update_t3b_proj4(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% fprintf('Error in X3B_PPPHHh = %4.15f\n',get_error(X3B(PA,PA,PB,HA,HA,hB),X3B_4))
 
-[X3B,VT3A,VT3B] = build_t3b(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
-[X3B_4] = update_t3b_proj4(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
-
-fprintf('Error in X3B_PPPHHh = %4.15f\n',get_error(X3B(PA,PA,PB,HA,HA,hB),X3B_4))
+[t3b_ex] = update_t3b(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+[t3b_4] = update_t3b_proj4_ccsdt2_v2(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,HBar_t,sys,0.0);
+fprintf('\nError in t3b_PPPHHh = %4.15f\n',get_error(t3b_ex(PA,PA,PB,HA,HA,hB),t3b_4))
 
 %% t3B - projection 5 (PPPhHH) [DONE]
 clc
@@ -600,12 +413,14 @@ fun(d14,'D14')
 
 %
 % check active build
-[T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
-[X3B,VT3A,VT3B] = build_t3b(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
-[X3B_5] = update_t3b_proj5(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% [T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
+% [X3B,VT3A,VT3B] = build_t3b(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+% [X3B_5] = update_t3b_proj5(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% fprintf('\nError in X3B_PPPhHH = %4.15f\n',get_error(X3B(PA,PA,PB,hA,HA,HB),X3B_5))
 
-fprintf('\nError in X3B_PPPhHH = %4.15f\n',get_error(X3B(PA,PA,PB,hA,HA,HB),X3B_5))
-
+[t3b_ex] = update_t3b(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+[t3b_5] = update_t3b_proj5_ccsdt2_v2(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,HBar_t,sys,0.0);
+fprintf('\nError in t3b_PPPhHH = %4.15f\n',get_error(t3b_ex(PA,PA,PB,hA,HA,HB),t3b_5))
 
 %% t3B - projection 6 (PPphHH) [DONE]
 
@@ -676,12 +491,14 @@ d14 = {'-h2B(mcie),t3b(ABemJK)','h2B(mcJe),t3b(ABemiK)'};
 fun(d14,'D14')
 
 % check active build
-[T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
-[X3B,VT3A,VT3B] = build_t3b(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
-[X3B_6] = update_t3b_proj6(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% [T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
+% [X3B,VT3A,VT3B] = build_t3b(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+% [X3B_6] = update_t3b_proj6(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% fprintf('\nError in X3B_PPphHH = %4.15f\n',get_error(X3B(PA,PA,pB,hA,HA,HB),X3B_6))
 
-fprintf('\nError in X3B_PPphHH = %4.15f\n',get_error(X3B(PA,PA,pB,hA,HA,HB),X3B_6))
-
+[t3b_ex] = update_t3b(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+[t3b_6] = update_t3b_proj6_ccsdt2_v2(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,HBar_t,sys,0.0);
+fprintf('\nError in t3b_PPphHH = %4.15f\n',get_error(t3b_ex(PA,PA,pB,hA,HA,HB),t3b_6))
 %% t3B - projection 7 (PPpHHh) [DONE]
 clc
 
@@ -746,11 +563,14 @@ fun(d14,'D14')
 
 %
 % check active build
-[T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
-[X3B,VT3A,VT3B] = build_t3b(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
-[X3B_7] = update_t3b_proj7(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% [T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
+% [X3B,VT3A,VT3B] = build_t3b(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+% [X3B_7] = update_t3b_proj7(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% fprintf('\nError in X3B_PPpHHh = %4.15f\n',get_error(X3B(PA,PA,pB,HA,HA,hB),X3B_7))
 
-fprintf('\nError in X3B_PPpHHh = %4.15f\n',get_error(X3B(PA,PA,pB,HA,HA,hB),X3B_7))
+[t3b_ex] = update_t3b(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+[t3b_7] = update_t3b_proj7_ccsdt2_v2(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,HBar_t,sys,0.0);
+fprintf('\nError in t3b_PPpHHh = %4.15f\n',get_error(t3b_ex(PA,PA,pB,HA,HA,hB),t3b_7))
 
 %% t3B - projection 8 (PpPhHH) [DONE]
 clc
@@ -816,12 +636,14 @@ fun(d14,'D14')
 
 %
 % check active build
-[T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
-[X3B,VT3A,VT3B] = build_t3b(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
-[X3B_8] = update_t3b_proj8(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% [T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
+% [X3B,VT3A,VT3B] = build_t3b(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+% [X3B_8] = update_t3b_proj8(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% fprintf('\nError in X3B_PpPhHH = %4.15f\n',get_error(X3B(PA,pA,PB,hA,HA,HB),X3B_8))
 
-fprintf('\nError in X3B_PpPhHH = %4.15f\n',get_error(X3B(PA,pA,PB,hA,HA,HB),X3B_8))
-
+[t3b_ex] = update_t3b(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+[t3b_8] = update_t3b_proj8_ccsdt2_v2(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,HBar_t,sys,0.0);
+fprintf('\nError in t3b_PpPhHH = %4.15f\n',get_error(t3b_ex(PA,pA,PB,hA,HA,HB),t3b_8))
 
 %% t3B - projection 9 (PpPHHh) [DONE]
 clc
@@ -830,98 +652,101 @@ out_proj = 'AbCIJk';
 
 write_term = @(x,y) write_einsum(x,out_proj,y);
 
-% % diagram 1
-% d1 = '-h1a(MI),t3b(AbCMJk)';
-% s = ccsdt_act_HBarT3_simple(d1);
-% %s = {'-h1a(MI),t3b(AbCMJk)','-h1a(mI),t3b(AbCmJk)'};
-% write_term(s,'D1')
-% 
-% % diagram 2
-% d2 = '-h1b(Mk),t3B(AbCIJM)';
-% s = ccsdt_act_HBarT3_simple(d2);
-% %s = {'-h1b(Mk),t3B(AbCIJM)','-h1b(mk),t3b(AbCIJm)'};
-% write_term(s,'D2')
-% 
-% % diagram 3
-% d3 = 'h1a(AE),t3b(EbCIJk)';
-% s = ccsdt_act_HBarT3_simple(d3);
-% %s = {'h1a(AE),t3b(EbCIJk)','h1a(Ae),t3b(ebCIJk)'};
-% write_term(s,'D3')
-% 
-% % diagram 4
-% s = {'h1a(bE),t3b(AECIJk)','h1a(be),t3b(AeCIJk)'};
-% write_term(s,'D4')
-% 
-% % diagram 5
-% s = {'h1b(CE),t3b(AbEIJk)','h1B(Ce),t3b(AbeIJk)'};
-% write_term(s,'D5')
-% 
-% % diagram 6
-% s = {'h2A(AMIE),t3b(EbCMJk)','h2A(AmIE),t3b(EbCmJk)','h2A(AMIe),t3b(ebCMJk)','h2A(AmIe),t3b(ebCmJk)'};
-% write_term(s,'D6')
-% 
-% % diagram 7
-% d7 = 'h2A(bMJE),t3B(AECIMk)';
-% s = ccsdt_act_HBarT3_simple(d7);
-% %s = {'h2A(bMJE),t3B(AECIMk)','h2a(bmJE),t3b(EACmIk)','h2a(bMJe),t3b(AeCIMk)','-h2a(bmJe),t3b(AeCmIk)'};
-% write_term(s,'D7')
-% 
-% % diagram 8
-% s = {'h2b(MCEk),t3a(AEbIMJ)','-h2b(mCEk),t3a(AEbmIJ)','h2b(MCek),t3a(AbeIJM)','-h2b(mCek),t3a(AbemJI)'};
-% write_term(s,'D8')
-% 
-% % diagram 9
-% s = {'h2B(AMIE),t3c(bCEJkM)','h2b(AmIE),t3C(bCEJkm)','h2B(AMIe),t3C(bCeJkM)','h2B(AmIe),t3c(bCeJkm)'};
-% write_term(s,'D9')
-% 
-% % diagram 10
-% s = {'h2b(bMJE),t3c(ACEIkM)','h2b(bmJE),t3c(ACEIkm)','h2b(bMJe),t3c(ACeIkM)','h2b(bmJe),t3c(ACeIkm)'};
-% write_term(s,'D10')
-% 
-% % diagarm 11
-% s = {'h2c(CMkE),t3b(AbEIJM)','h2c(CmkE),t3b(AbEIJm)','h2c(CMke),t3b(AbeIJM)','h2c(Cmke),t3b(AbeIJm)'};
-% write_term(s,'D11')
-% 
-% % diagram 12
-% s = {'-h2b(AMEk),t3b(EbCIJM)','-h2B(AmEk),t3b(EbCIJm)','-h2b(AMek),t3b(ebCIJM)','-h2b(Amek),t3b(ebCIJm)'};
-% write_term(s,'D12')
-% 
-% % diagram 13
-% s = {'-h2b(bMEk),t3b(AECIJM)','-h2b(bmEk),t3b(AECIJm)','-h2b(bMek),t3b(AeCIJM)','-h2b(bmek),t3b(AeCIJm)'};
-% write_term(s,'D13')
-% 
-% % diagram 14
-% s = {'-h2b(MCIE),t3b(AbEMJk)','-h2b(mCIE),t3b(AbEmJk)','-h2b(MCIe),t3b(AbeMJk)','-h2b(mCIe),t3b(AbemJk)'};
-% write_term(s,'D14')
-% 
-% % diagram 15
-% s = {'0.5h2a(MNIJ),t3b(AbCMNk)','h2a(mNIJ),t3b(AbCmNk)','0.5h2a(mnIJ),t3b(AbCmnk)'};
-% write_term(s,'D15')
-% 
-% % diagram 16
-% s = {'h2b(MNIk),t3b(AbCMJN)','h2b(mNIk),t3b(AbCmJN)','h2b(MnIk),t3b(AbCMJn)','h2b(mnIk),t3b(AbCmJn)'};
-% write_term(s,'D16')
-% 
-% % diagram 17
-% s = {'0.5h2a(AbEF),t3b(EFCIJk)','h2a(AbEf),t3b(EfCIJk)','0.5h2a(Abef),t3b(efCIJk)'};
-% write_term(s,'D17')
-% 
-% % diagram 18
-% s = {'h2b(ACEF),t3b(EbFIJk)','h2b(ACEf),t3b(EbfIJk)','h2b(ACeF),t3b(ebFIJk)','h2b(ACef),t3b(ebfIJk)'};
-% write_term(s,'D18')
-% 
-% % diagram 19
-% s = {'h2b(bCEF),t3b(AEFIJk)','h2b(bCEf),t3b(AEfIJk)','h2b(bCeF),t3b(AeFIJk)','h2b(bCef),t3b(AefIJk)'};
-% write_term(s,'D19')
+% diagram 1
+d1 = '-h1a(MI),t3b(AbCMJk)';
+%s = ccsdt_act_HBarT3_simple(d1);
+s = {'-h1a(MI),t3b(AbCMJk)','-h1a(mI),t3b(AbCmJk)'};
+write_term(s,'D1')
+
+% diagram 2
+d2 = '-h1b(Mk),t3B(AbCIJM)';
+%s = ccsdt_act_HBarT3_simple(d2);
+s = {'-h1b(Mk),t3B(AbCIJM)','-h1b(mk),t3b(AbCIJm)'};
+write_term(s,'D2')
+
+% diagram 3
+d3 = 'h1a(AE),t3b(EbCIJk)';
+%s = ccsdt_act_HBarT3_simple(d3);
+s = {'h1a(AE),t3b(EbCIJk)','h1a(Ae),t3b(ebCIJk)'};
+write_term(s,'D3')
+
+% diagram 4
+s = {'h1a(bE),t3b(AECIJk)','h1a(be),t3b(AeCIJk)'};
+write_term(s,'D4')
+
+% diagram 5
+s = {'h1b(CE),t3b(AbEIJk)','h1B(Ce),t3b(AbeIJk)'};
+write_term(s,'D5')
+
+% diagram 6
+s = {'h2A(AMIE),t3b(EbCMJk)','h2A(AmIE),t3b(EbCmJk)','h2A(AMIe),t3b(ebCMJk)','h2A(AmIe),t3b(ebCmJk)'};
+write_term(s,'D6')
+
+% diagram 7
+d7 = 'h2A(bMJE),t3B(AECIMk)';
+%s = ccsdt_act_HBarT3_simple(d7);
+s = {'h2A(bMJE),t3B(AECIMk)','h2a(bmJE),t3b(EACmIk)','h2a(bMJe),t3b(AeCIMk)','-h2a(bmJe),t3b(AeCmIk)'};
+write_term(s,'D7')
+
+% diagram 8
+s = {'h2b(MCEk),t3a(AEbIMJ)','-h2b(mCEk),t3a(AEbmIJ)','h2b(MCek),t3a(AbeIJM)','-h2b(mCek),t3a(AbemJI)'};
+write_term(s,'D8')
+
+% diagram 9
+s = {'h2B(AMIE),t3c(bCEJkM)','h2b(AmIE),t3C(bCEJkm)','h2B(AMIe),t3C(bCeJkM)','h2B(AmIe),t3c(bCeJkm)'};
+write_term(s,'D9')
+
+% diagram 10
+s = {'h2b(bMJE),t3c(ACEIkM)','h2b(bmJE),t3c(ACEIkm)','h2b(bMJe),t3c(ACeIkM)','h2b(bmJe),t3c(ACeIkm)'};
+write_term(s,'D10')
+
+% diagarm 11
+s = {'h2c(CMkE),t3b(AbEIJM)','h2c(CmkE),t3b(AbEIJm)','h2c(CMke),t3b(AbeIJM)','h2c(Cmke),t3b(AbeIJm)'};
+write_term(s,'D11')
+
+% diagram 12
+s = {'-h2b(AMEk),t3b(EbCIJM)','-h2B(AmEk),t3b(EbCIJm)','-h2b(AMek),t3b(ebCIJM)','-h2b(Amek),t3b(ebCIJm)'};
+write_term(s,'D12')
+
+% diagram 13
+s = {'-h2b(bMEk),t3b(AECIJM)','-h2b(bmEk),t3b(AECIJm)','-h2b(bMek),t3b(AeCIJM)','-h2b(bmek),t3b(AeCIJm)'};
+write_term(s,'D13')
+
+% diagram 14
+s = {'-h2b(MCIE),t3b(AbEMJk)','-h2b(mCIE),t3b(AbEmJk)','-h2b(MCIe),t3b(AbeMJk)','-h2b(mCIe),t3b(AbemJk)'};
+write_term(s,'D14')
+
+% diagram 15
+s = {'0.5h2a(MNIJ),t3b(AbCMNk)','h2a(mNIJ),t3b(AbCmNk)','0.5h2a(mnIJ),t3b(AbCmnk)'};
+write_term(s,'D15')
+
+% diagram 16
+s = {'h2b(MNIk),t3b(AbCMJN)','h2b(mNIk),t3b(AbCmJN)','h2b(MnIk),t3b(AbCMJn)','h2b(mnIk),t3b(AbCmJn)'};
+write_term(s,'D16')
+
+% diagram 17
+s = {'0.5h2a(AbEF),t3b(EFCIJk)','h2a(AbEf),t3b(EfCIJk)','0.5h2a(Abef),t3b(efCIJk)'};
+write_term(s,'D17')
+
+% diagram 18
+s = {'h2b(ACEF),t3b(EbFIJk)','h2b(ACEf),t3b(EbfIJk)','h2b(ACeF),t3b(ebFIJk)','h2b(ACef),t3b(ebfIJk)'};
+write_term(s,'D18')
+
+% diagram 19
+s = {'h2b(bCEF),t3b(AEFIJk)','h2b(bCEf),t3b(AEfIJk)','h2b(bCeF),t3b(AeFIJk)','h2b(bCef),t3b(AefIJk)'};
+write_term(s,'D19')
 
 % Vt3B intermediates (vooo)
 
 % check active build
-[T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
-[X3B,VT3A,VT3B] = build_t3b(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
-[X3B_9] = update_t3b_proj9(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% [T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
+% [X3B,VT3A,VT3B] = build_t3b(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+% [X3B_9] = update_t3b_proj9(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% fprintf('\nError in X3B_PpPHHh = %4.15f\n',get_error(X3B(PA,pA,PB,HA,HA,hB),X3B_9))
 
-fprintf('\nError in X3B_PpPHHh = %4.15f\n',get_error(X3B(PA,pA,PB,HA,HA,hB),X3B_9))
+[t3b_ex] = update_t3b(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+[t3b_9] = update_t3b_proj9_ccsdt2_v2(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,HBar_t,sys,0.0);
+fprintf('\nError in t3b_PpPHHh = %4.15f\n',get_error(t3b_ex(PA,pA,PB,HA,HA,hB),t3b_9))
 
 %%
 function [] = hbar_term_wrap(arr,out_proj,label)

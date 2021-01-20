@@ -22,17 +22,37 @@ sys = build_system_ucc(e1int,e2int,Vnuc,Nocc_a,Nocc_b,nfzc,...
                        
 PA = sys.PA; pA = sys.pA; HA = sys.HA; hA = sys.hA;
 PB = sys.PB; pB = sys.pB; HB = sys.HB; hB = sys.hB;
-
-
-                       
+                
 %% Full CCSDT
 
 ccopts.diis_size = 5;
 ccopts.maxit = 100;
-ccopts.tol = 1e-10;
+ccopts.tol = 1e-11;
 ccopts.shift = 0;
+flag_full = false;
 
 [cc_t,Ecorr_uccsdt] = uccsdt(sys,ccopts);
+
+% This is important! You need to zero the T3 amps outside of the active
+% space before testing them with active space builds. This is because the
+% active space builds are coded assuming that all T3 amps outside of the
+% space are 0. If they are not 0, the results of diagrams contributing to
+% amplitudes within the active space, as computed by complete CCSDT
+% updates, can differ!
+t3a = zero_t3_outside_act(cc_t.t3a,2,'A',sys); cc_t.t3a = t3a;
+t3b = zero_t3_outside_act(cc_t.t3b,2,'B',sys); cc_t.t3b = t3b;
+t3c = zero_t3_outside_act(cc_t.t3c,2,'C',sys); cc_t.t3c = t3c;
+t3d = zero_t3_outside_act(cc_t.t3d,2,'D',sys); cc_t.t3d = t3d;
+
+t1a = cc_t.t1a; t1b = cc_t.t1b;
+t2a = cc_t.t2a; t2b = cc_t.t2b; t2c = cc_t.t2c;
+t3a = cc_t.t3a; t3b = cc_t.t3b; t3c = cc_t.t3c; t3d = cc_t.t3d;
+
+[HBar_t] = build_ucc_HBar(cc_t,sys,false);
+H1A = HBar_t.H1A; H1B = HBar_t.H1B;
+H2A = HBar_t.H2A; H2B = HBar_t.H2B; H2C = HBar_t.H2C;
+
+[T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
 
 %% t3C - projection 1 (PPPHHH) [DONE]
 clc
@@ -96,11 +116,14 @@ fun(d13,'D13')
 d14 = {'-h2B(AmeJ),t3c(eBCImK)'};
 fun(d14,'D14')
 
-[T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
-[X3C,VT3B,VT3C] = build_t3c(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
-[X3C_1] = update_t3c_proj1(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% [T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
+% [X3C,VT3B,VT3C] = build_t3c(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+% [X3C_1] = update_t3c_proj1(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% fprintf('\nError in X3C_PPPHHH = %4.15f\n',get_error(X3C(PA,PB,PB,HA,HB,HB),X3C_1))
 
-fprintf('\nError in X3C_PPPHHH = %4.15f\n',get_error(X3C(PA,PB,PB,HA,HB,HB),X3C_1))
+[t3c_ex] = update_t3c(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+[t3c_1] = update_t3c_proj1_ccsdt2_v2(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,HBar_t,sys,0.0);
+fprintf('\nError in t3c_PPPHHH = %4.15f\n',get_error(t3c_ex(PA,PB,PB,HA,HB,HB),t3c_1))
 
 %% t3C - projection 2 (PPpHHH) [DONE]
 clc
@@ -164,11 +187,14 @@ fun(d13,'D13')
 d14 = {'-h2B(AmeJ),t3c(eBcImK)'};
 fun(d14,'D14')
 
-[T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
-[X3C,VT3B,VT3C] = build_t3c(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
-[X3C_2] = update_t3c_proj2(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% [T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
+% [X3C,VT3B,VT3C] = build_t3c(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+% [X3C_2] = update_t3c_proj2(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% fprintf('\nError in X3C_PPpHHH = %4.15f\n',get_error(X3C(PA,PB,pB,HA,HB,HB),X3C_2))
 
-fprintf('\nError in X3C_PPpHHH = %4.15f\n',get_error(X3C(PA,PB,pB,HA,HB,HB),X3C_2))
+[t3c_ex] = update_t3c(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+[t3c_2] = update_t3c_proj2_ccsdt2_v2(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,HBar_t,sys,0.0);
+fprintf('\nError in t3c_PPpHHH = %4.15f\n',get_error(t3c_ex(PA,PB,pB,HA,HB,HB),t3c_2))
 
 %% t3C - projection 3 (pPPHHH) [DONE]
 clc
@@ -233,12 +259,14 @@ d14 = {'-h2B(ameJ),t3c(eBCImK)'};
 fun(d14,'D14')
 
 
-[T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
-[X3C,VT3B,VT3C] = build_t3c(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
-%
-[X3C_3] = update_t3c_proj3(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% [T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
+% [X3C,VT3B,VT3C] = build_t3c(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+% [X3C_3] = update_t3c_proj3(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% fprintf('\nError in X3C_pPPHHH = %4.15f\n',get_error(X3C(pA,PB,PB,HA,HB,HB),X3C_3))
 
-fprintf('\nError in X3C_pPPHHH = %4.15f\n',get_error(X3C(pA,PB,PB,HA,HB,HB),X3C_3))
+[t3c_ex] = update_t3c(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+[t3c_3] = update_t3c_proj3_ccsdt2_v2(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,HBar_t,sys,0.0);
+fprintf('\nError in t3c_pPPHHH = %4.15f\n',get_error(t3c_ex(pA,PB,PB,HA,HB,HB),t3c_3))
 
 %% t3C - projection 4 (PPPHhH) [DONE]
 clc
@@ -302,12 +330,14 @@ fun(d13,'D13')
 d14 = {'-h2B(Amej),t3c(eBCImK)','h2B(AmeK),t3c(eBCImj)'};
 fun(d14,'D14')
 %
-[T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
-[X3C,VT3B,VT3C] = build_t3c(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
-[X3C_4] = update_t3c_proj4(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% [T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
+% [X3C,VT3B,VT3C] = build_t3c(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+% [X3C_4] = update_t3c_proj4(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% fprintf('\nError in X3C_PPPHhH = %4.15f\n',get_error(X3C(PA,PB,PB,HA,hB,HB),X3C_4))
 
-fprintf('\nError in X3C_PPPHhH = %4.15f\n',get_error(X3C(PA,PB,PB,HA,hB,HB),X3C_4))
-
+[t3c_ex] = update_t3c(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+[t3c_4] = update_t3c_proj4_ccsdt2_v2(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,HBar_t,sys,0.0);
+fprintf('\nError in t3c_PPPHhH = %4.15f\n',get_error(t3c_ex(PA,PB,PB,HA,hB,HB),t3c_4))
 
 %% t3C - projection 5 (PPPhHH) [DONE]
 clc
@@ -371,11 +401,14 @@ fun(d13,'D13')
 d14 = {'-h2B(AmeJ),t3c(eBCimK)'};
 fun(d14,'D14')
 %
-[T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
-[X3C,VT3B,VT3C] = build_t3c(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
-[X3C_5] = update_t3c_proj5(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% [T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
+% [X3C,VT3B,VT3C] = build_t3c(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+% [X3C_5] = update_t3c_proj5(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% fprintf('\nError in X3C_PPPhHH = %4.15f\n',get_error(X3C(PA,PB,PB,hA,HB,HB),X3C_5))
 
-fprintf('\nError in X3C_PPPhHH = %4.15f\n',get_error(X3C(PA,PB,PB,hA,HB,HB),X3C_5))
+[t3c_ex] = update_t3c(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+[t3c_5] = update_t3c_proj5_ccsdt2_v2(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,HBar_t,sys,0.0);
+fprintf('\nError in t3c_PPPhHH = %4.15f\n',get_error(t3c_ex(PA,PB,PB,hA,HB,HB),t3c_5))
 
 %% t3C - projection 6 (PPpHhH) [DONE]
 clc
@@ -440,11 +473,14 @@ d14 = {'-h2B(Amej),t3c(eBcImK)','h2B(AmeK),t3c(eBcImj)'};
 fun(d14,'D14')
 
 %
-[T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
-[X3C,VT3B,VT3C] = build_t3c(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
-[X3C_6] = update_t3c_proj6(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% [T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
+% [X3C,VT3B,VT3C] = build_t3c(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+% [X3C_6] = update_t3c_proj6(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% fprintf('\nError in X3C_PPpHhH = %4.15f\n',get_error(X3C(PA,PB,pB,HA,hB,HB),X3C_6))
 
-fprintf('\nError in X3C_PPpHhH = %4.15f\n',get_error(X3C(PA,PB,pB,HA,hB,HB),X3C_6))
+[t3c_ex] = update_t3c(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+[t3c_6] = update_t3c_proj6_ccsdt2_v2(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,HBar_t,sys,0.0);
+fprintf('\nError in t3c_PPpHhH = %4.15f\n',get_error(t3c_ex(PA,PB,pB,HA,hB,HB),t3c_6))
 
 %% t3C - projection 7 (PPphHH) [DONE]
 clc
@@ -508,11 +544,14 @@ fun(d13,'D13')
 d14 = {'-h2B(AmeJ),t3c(eBcimK)'};
 fun(d14,'D14')
 
-[T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
-[X3C,VT3B,VT3C] = build_t3c(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
-[X3C_7] = update_t3c_proj7(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% [T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
+% [X3C,VT3B,VT3C] = build_t3c(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+% [X3C_7] = update_t3c_proj7(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% fprintf('\nError in X3C_PPphHH = %4.15f\n',get_error(X3C(PA,PB,pB,hA,HB,HB),X3C_7))
 
-fprintf('\nError in X3C_PPphHH = %4.15f\n',get_error(X3C(PA,PB,pB,hA,HB,HB),X3C_7))
+[t3c_ex] = update_t3c(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+[t3c_7] = update_t3c_proj7_ccsdt2_v2(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,HBar_t,sys,0.0);
+fprintf('\nError in t3c_PPphHH = %4.15f\n',get_error(t3c_ex(PA,PB,pB,hA,HB,HB),t3c_7))
 
 %% t3C - projection 8 (pPPHhH) [DONE]
 clc
@@ -576,11 +615,14 @@ fun(d13,'D13')
 d14 = {'-h2B(amej),t3c(eBCImK)','h2B(ameK),t3c(eBCImj)'};
 fun(d14,'D14')
 
-[T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
-[X3C,VT3B,VT3C] = build_t3c(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
-[X3C_8] = update_t3c_proj8(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% [T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
+% [X3C,VT3B,VT3C] = build_t3c(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+% [X3C_8] = update_t3c_proj8(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% fprintf('\nError in X3C_pPPHhH = %4.15f\n',get_error(X3C(pA,PB,PB,HA,hB,HB),X3C_8))
 
-fprintf('\nError in X3C_pPPHhH = %4.15f\n',get_error(X3C(pA,PB,PB,HA,hB,HB),X3C_8))
+[t3c_ex] = update_t3c(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+[t3c_8] = update_t3c_proj8_ccsdt2_v2(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,HBar_t,sys,0.0);
+fprintf('\nError in t3c_pPPHhH = %4.15f\n',get_error(t3c_ex(pA,PB,PB,HA,hB,HB),t3c_8))
 
 %% t3C - projection 9 (pPPhHH) [DONE]
 clc
@@ -644,11 +686,14 @@ fun(d13,'D13')
 d14 = {'-h2B(ameJ),t3c(eBCimK)'};
 fun(d14,'D14')
 
-[T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
-[X3C,VT3B,VT3C] = build_t3c(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
-[X3C_9] = update_t3c_proj9(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% [T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
+% [X3C,VT3B,VT3C] = build_t3c(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+% [X3C_9] = update_t3c_proj9(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% fprintf('\nError in X3C_pPPhHH = %4.15f\n',get_error(X3C(pA,PB,PB,hA,HB,HB),X3C_9))
 
-fprintf('\nError in X3C_pPPhHH = %4.15f\n',get_error(X3C(pA,PB,PB,hA,HB,HB),X3C_9))
+[t3c_ex] = update_t3c(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+[t3c_9] = update_t3c_proj9_ccsdt2_v2(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,HBar_t,sys,0.0);
+fprintf('\nError in t3c_pPPhHH = %4.15f\n',get_error(t3c_ex(pA,PB,PB,hA,HB,HB),t3c_9))
 
 %%
 function [] = hbar_term_wrap(arr,out_proj,label)

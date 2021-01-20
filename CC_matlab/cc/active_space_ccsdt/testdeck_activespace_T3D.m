@@ -29,10 +29,32 @@ PB = sys.PB; pB = sys.pB; HB = sys.HB; hB = sys.hB;
 
 ccopts.diis_size = 5;
 ccopts.maxit = 100;
-ccopts.tol = 1e-10;
+ccopts.tol = 1e-11;
 ccopts.shift = 0;
+flag_full = false;
 
 [cc_t,Ecorr_uccsdt] = uccsdt(sys,ccopts);
+
+% This is important! You need to zero the T3 amps outside of the active
+% space before testing them with active space builds. This is because the
+% active space builds are coded assuming that all T3 amps outside of the
+% space are 0. If they are not 0, the results of diagrams contributing to
+% amplitudes within the active space, as computed by complete CCSDT
+% updates, can differ!
+t3a = zero_t3_outside_act(cc_t.t3a,2,'A',sys); cc_t.t3a = t3a;
+t3b = zero_t3_outside_act(cc_t.t3b,2,'B',sys); cc_t.t3b = t3b;
+t3c = zero_t3_outside_act(cc_t.t3c,2,'C',sys); cc_t.t3c = t3c;
+t3d = zero_t3_outside_act(cc_t.t3d,2,'D',sys); cc_t.t3d = t3d;
+
+t1a = cc_t.t1a; t1b = cc_t.t1b;
+t2a = cc_t.t2a; t2b = cc_t.t2b; t2c = cc_t.t2c;
+t3a = cc_t.t3a; t3b = cc_t.t3b; t3c = cc_t.t3c; t3d = cc_t.t3d;
+
+[HBar_t] = build_ucc_HBar(cc_t,sys,false);
+H1A = HBar_t.H1A; H1B = HBar_t.H1B;
+H2A = HBar_t.H2A; H2B = HBar_t.H2B; H2C = HBar_t.H2C;
+
+[T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
 
 %% t3D - projection 1 (PPPHHH) [DONE]
 clc
@@ -65,11 +87,14 @@ d6 = {'h2C(AmIe),t3d(eBCmJK)'};
 fun(d6,'D6')
 
 % check active build
-[T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
-[X3D,VT3D] = build_t3d(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
-[X3D_1] = update_t3d_proj1(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% [T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
+% [X3D,VT3D] = build_t3d(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+% [X3D_1] = update_t3d_proj1(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% fprintf('\nError in X3D_PPPHHH = %4.15f\n',get_error(X3D(PB,PB,PB,HB,HB,HB),X3D_1))
 
-fprintf('\nError in X3D_PPPHHH = %4.15f\n',get_error(X3D(PB,PB,PB,HB,HB,HB),X3D_1))
+[t3d_ex] = update_t3d(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+[t3d_1] = update_t3d_proj1_ccsdt2_v2(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,HBar_t,sys,0.0);
+fprintf('\nError in t3d_PPPHHH = %4.15f\n',get_error(t3d_ex(PB,PB,PB,HB,HB,HB),t3d_1))
 
 %% t3D - projection 2 (PPpHHH) [DONE]
 clc
@@ -110,11 +135,14 @@ d10 = {'-h2C(cmIe),t3d(eBAmJK)'};
 fun(d10,'D10')
 
 % check active build
-[T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
-[X3D,VT3D] = build_t3d(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
-[X3D_2] = update_t3d_proj2(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% [T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
+% [X3D,VT3D] = build_t3d(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+% [X3D_2] = update_t3d_proj2(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% fprintf('\nError in X3D_PPpHHH = %4.15f\n',get_error(X3D(PB,PB,pB,HB,HB,HB),X3D_2))
 
-fprintf('\nError in X3D_PPpHHH = %4.15f\n',get_error(X3D(PB,PB,pB,HB,HB,HB),X3D_2))
+[t3d_ex] = update_t3d(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+[t3d_2] = update_t3d_proj2_ccsdt2_v2(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,HBar_t,sys,0.0);
+fprintf('\nError in t3d_PPpHHH = %4.15f\n',get_error(t3d_ex(PB,PB,pB,HB,HB,HB),t3d_2))
 
 %% t3D - projection 3 (PPPhHH) [DONE]
 clc
@@ -155,11 +183,14 @@ d10 = {'-h2C(AmJe),t3d(eBCmiK)'};
 fun(d10,'D10')
 
 % check active build
-[T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
-[X3D,VT3D] = build_t3d(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
-[X3D_3] = update_t3d_proj3(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% [T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
+% [X3D,VT3D] = build_t3d(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+% [X3D_3] = update_t3d_proj3(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% fprintf('\nError in X3D_PPPhHH = %4.15f\n',get_error(X3D(PB,PB,PB,hB,HB,HB),X3D_3))
 
-fprintf('\nError in X3D_PPPhHH = %4.15f\n',get_error(X3D(PB,PB,PB,hB,HB,HB),X3D_3))
+[t3d_ex] = update_t3d(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+[t3d_3] = update_t3d_proj3_ccsdt2_v2(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,HBar_t,sys,0.0);
+fprintf('\nError in t3d_PPPhHH = %4.15f\n',get_error(t3d_ex(PB,PB,PB,hB,HB,HB),t3d_3))
 
 %% t3D - projection 4 (PPphHH) [DONE]
 clc
@@ -212,12 +243,14 @@ d16 = {'h2C(cmJe),t3d(eBAmiK)'};
 fun(d16,'D16')
 
 % check active build
-[T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
-[X3D,VT3D] = build_t3d(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
-[X3D_4] = update_t3d_proj4(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% [T3A,T3B,T3C,T3D] = make_t3_act_struct(cc_t,sys);
+% [X3D,VT3D] = build_t3d(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+% [X3D_4] = update_t3d_proj4(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,sys,0.0);
+% fprintf('\nError in X3D_PPphHH = %4.15f\n',get_error(X3D(PB,PB,pB,hB,HB,HB),X3D_4))
 
-fprintf('\nError in X3D_PPphHH = %4.15f\n',get_error(X3D(PB,PB,pB,hB,HB,HB),X3D_4))
-
+[t3d_ex] = update_t3d(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,cc_t.t3a,cc_t.t3b,cc_t.t3c,cc_t.t3d,sys,0.0);
+[t3d_4] = update_t3d_proj4_ccsdt2_v2(cc_t.t1a,cc_t.t1b,cc_t.t2a,cc_t.t2b,cc_t.t2c,T3A,T3B,T3C,T3D,HBar_t,sys,0.0);
+fprintf('\nError in t3d_PPphHH = %4.15f\n',get_error(t3d_ex(PB,PB,pB,hB,HB,HB),t3d_4))
 
 %%
 function [] = hbar_term_wrap(arr,out_proj,label)
