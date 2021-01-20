@@ -1,4 +1,4 @@
-function [Lvec,resid,cc_t] = leftcc_solver1(omega,Rvec,HBar_t,cc_t,sys,opts)
+function [Lvec,resid,cc_t,omega_left] = leftcc_solver1(omega,Rvec,HBar_t,cc_t,sys,opts)
 % we're using abij ordering for L1 and L2 now!
 
     fprintf('\n==================================++Entering Left-EOM-UCCSD Routine++===========================\n')
@@ -15,6 +15,7 @@ function [Lvec,resid,cc_t] = leftcc_solver1(omega,Rvec,HBar_t,cc_t,sys,opts)
 
     Lvec = zeros(sys.doubles_dim,nroot);
     resid = zeros(1,nroot); Imat = eye(nroot);
+    omega_left = zeros(nroot,1);
 
     for j = 1:nroot
 
@@ -52,7 +53,7 @@ function [Lvec,resid,cc_t] = leftcc_solver1(omega,Rvec,HBar_t,cc_t,sys,opts)
             X2C = build_LH_2C(l1a,l1b,l2a,l2b,l2c,HBar_t,cc_t,sys,flag_jacobi,flag_ground);
 
             % update L1 and L2 by Jacobi
-            [l1a, l1b, l2a, l2b, l2c] = update_L(X1A,X1B,X2A,X2B,X2C,HBar_t,sys,omega(j),shift);
+            [l1a, l1b, l2a, l2b, l2c] = update_L(l1a,l1b,l2a,l2b,l2c,X1A,X1B,X2A,X2B,X2C,HBar_t,sys,omega(j),shift);
             lambda = cat(1,l1a(:),l1b(:),l2a(:),l2b(:),l2c(:));
 
             % biorthogonalize to R
@@ -63,9 +64,6 @@ function [Lvec,resid,cc_t] = leftcc_solver1(omega,Rvec,HBar_t,cc_t,sys,opts)
             % MATCH UP WITH JUN'S (ON C1 H2O STRETECHED)...
             %lambda = lambda./(lambda'*Rvec(:,j));
             lambda = ortho_root_vec(lambda,Rvec(:,iid));
-
-            
-%             LAMBDA = LAMBDA./(LAMBDA'*Rvec(:,j));
 
 	
             % buid LH - omega*L residual measure (use full LH)
@@ -91,10 +89,10 @@ function [Lvec,resid,cc_t] = leftcc_solver1(omega,Rvec,HBar_t,cc_t,sys,opts)
             lambda_resid_list(:,mod(it_micro,diis_size)+1) = LAMBDA_resid;
 
             % diis extrapolate
-            %if mod(it_micro,diis_size) == 0 && it_micro > 1
-            if it_micro > diis_size
+            if mod(it_micro,diis_size) == 0 && it_micro > 1
+            %if it_micro > diis_size
                it_macro = it_macro + 1;
-               %fprintf('\nDIIS Cycle - %d',it_macro)
+               fprintf('\nDIIS Cycle - %d',it_macro)
                lambda = diis_xtrap(lambda_list,lambda_resid_list);
             end        
 
@@ -104,9 +102,11 @@ function [Lvec,resid,cc_t] = leftcc_solver1(omega,Rvec,HBar_t,cc_t,sys,opts)
 
         Lvec(:,j) = lambda;
         resid(j) = lccsd_resid;
-
+        
         biorthvec = Lvec(:,j)'*Rvec(:,1:nroot);
-        fprintf('\nBiorthogonality measure: |LR - 1| = %4.12f\n',norm(biorthvec-Imat(j,:)))
+        fprintf('\n\nDIAGONISTICS - ROOT %d:\n',j)
+        fprintf('Biorthogonality measure: |LR - 1| = %4.12f\n',norm(biorthvec-Imat(j,:)))
+        fprintf('Error in energy = %4.12f\n',omega(j)-E_lcc);
 
         if flag_conv
             fprintf('\nLeft-CC for root %d successfully converged in %d iterations (%4.4f seconds)\n',j,it_micro,toc(tic_Root))
@@ -119,6 +119,8 @@ function [Lvec,resid,cc_t] = leftcc_solver1(omega,Rvec,HBar_t,cc_t,sys,opts)
         cc_t.l2a{j+1} = reshape(Lvec(sys.posv{3},j),sys.size{3});
         cc_t.l2b{j+1} = reshape(Lvec(sys.posv{4},j),sys.size{4});
         cc_t.l2c{j+1} = reshape(Lvec(sys.posv{5},j),sys.size{5});
+        
+        omega_left(j) = E_lcc;
         
         fprintf('---------------------------------------------------------\n')
     end

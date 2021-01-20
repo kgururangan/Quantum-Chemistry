@@ -22,6 +22,8 @@ function [X_ai] = build_LH_1B(l1a,l1b,l2a,l2b,l2c,HBar_t,cc_t,sys,flag_jacobi,fl
     if flag_jacobi
         X_ia = X_ia + einsum_kg(H1B.vv.*Zunocc_b,l1b,'ea,ie->ia');
         X_ia = X_ia - einsum_kg(H1B.oo.*Zocc_b,l1b,'im,ma->ia');
+%         X_ia = X_ia + einsum_kg(H1B.vv,l1b,'ea,ie->ia');
+%         X_ia = X_ia - einsum_kg(H1B.oo,l1b,'im,ma->ia');
     else
         X_ia = X_ia + einsum_kg(H1B.vv,l1b,'ea,ie->ia');
         X_ia = X_ia - einsum_kg(H1B.oo,l1b,'im,ma->ia');

@@ -45,7 +45,7 @@ function [cc_t,lccsd_resid] = luccsd(cc_t,HBar_t,sys,opts)
         X2B = build_LH_2B(l1a,l1b,l2a,l2b,l2c,HBar_t,cc_t,sys,flag_jacobi,flag_ground);
         X2C = build_LH_2C(l1a,l1b,l2a,l2b,l2c,HBar_t,cc_t,sys,flag_jacobi,flag_ground);
         
-        [l1a, l1b, l2a, l2b, l2c] = update_L(X1A,X1B,X2A,X2B,X2C,HBar_t,sys,omega,shift);
+        [l1a, l1b, l2a, l2b, l2c] = update_L(l1a,l1b,l2a,l2b,l2c,X1A,X1B,X2A,X2B,X2C,HBar_t,sys,omega,shift);
        
         LAMBDA = cat(1,l1a(:),l1b(:),l2a(:),l2b(:),l2c(:));
         
@@ -68,12 +68,17 @@ function [cc_t,lccsd_resid] = luccsd(cc_t,HBar_t,sys,opts)
         LAMBDA_resid_list(:,mod(it_micro,diis_size)+1) = LAMBDA_resid;
  
         % diis extrapolate
-        if it_micro > diis_size %mod(it_micro,diis_size) == 0 && it_micro > 1
+%         if it_micro > diis_size 
+%            it_macro = it_macro + 1;
+%            LAMBDA = diis_xtrap(LAMBDA_list,LAMBDA_resid_list);
+%         end
+
+        if mod(it_micro,diis_size) == 0 && it_micro > 1
            it_macro = it_macro + 1;
-           %fprintf('\nDIIS Cycle - %d',it_macro)
+           fprintf('\nDIIS Cycle - %d',it_macro)
            LAMBDA = diis_xtrap(LAMBDA_list,LAMBDA_resid_list);
         end
-
+%         
         % Print status
         fprintf('\nIter-%d     Residuum = %4.12f      Ecorr = %4.12f      Elapsed Time = %4.2f s',it_micro,lccsd_resid,E_lcc,toc);
         

@@ -1,4 +1,4 @@
-function [LAMBDA,lccsd_resid,cc_t] = leftcc_solver2(omega,Rvec,HBar_t,cc_t,sys,opts)
+function [LAMBDA,lccsd_resid,cc_t,E_lcc] = leftcc_solver2(omega,Rvec,HBar_t,cc_t,sys,opts)
 % we're using abij ordering for L1 and L2 now!
 
     fprintf('\n==================================++Entering Left-EOM-UCCSD Routine++===========================\n')
@@ -62,7 +62,7 @@ function [LAMBDA,lccsd_resid,cc_t] = leftcc_solver2(omega,Rvec,HBar_t,cc_t,sys,o
             X2C = build_LH_2C(l1a,l1b,l2a,l2b,l2c,HBar_t,cc_t,sys,flag_jacobi,flag_ground);
 
             % update L1 and L2 by Jacobi
-            [l1a, l1b, l2a, l2b, l2c] = update_L(X1A,X1B,X2A,X2B,X2C,HBar_t,sys,omega(j),shift);
+            [l1a, l1b, l2a, l2b, l2c] = update_L(l1a,l1b,l2a,l2b,l2c,X1A,X1B,X2A,X2B,X2C,HBar_t,sys,omega(j),shift);
             LAMBDA(:,j) = cat(1,l1a(:),l1b(:),l2a(:),l2b(:),l2c(:));
 	
             % buid LH - omega*L residual measure (use full LH)

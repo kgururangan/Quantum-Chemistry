@@ -62,6 +62,11 @@ function [X_abij] = build_LH_2B(l1a,l1b,l2a,l2b,l2c,HBar_t,cc_t,sys,flag_jacobi,
 
         X_ijab = X_ijab - einsum_kg(H1A.oo.*Zocc_a,l2b,'im,mjab->ijab');
         X_ijab = X_ijab - einsum_kg(H1B.oo.*Zocc_b,l2b,'jm,imab->ijab');
+%         X_ijab = X_ijab + einsum_kg(H1A.vv,l2b,'ea,ijeb->ijab');
+%         X_ijab = X_ijab + einsum_kg(H1B.vv,l2b,'eb,ijae->ijab');
+% 
+%         X_ijab = X_ijab - einsum_kg(H1A.oo,l2b,'im,mjab->ijab');
+%         X_ijab = X_ijab - einsum_kg(H1B.oo,l2b,'jm,imab->ijab');
     else
         X_ijab = X_ijab + einsum_kg(H1A.vv,l2b,'ea,ijeb->ijab');
         X_ijab = X_ijab + einsum_kg(H1B.vv,l2b,'eb,ijae->ijab');
