@@ -17,7 +17,7 @@ function [f] = boys(n,T)
         if isnan(f) ||  f > 1/(2*n+1)
             
             % Analytical Boys function from 
-            fprintf('Using analytical Boys...\n')
+            %fprintf('Using analytical Boys...\n')
             f = boys_analytical(n,T);
             %f = hyp1F1(n+0.5,n+1.5,-T)/(2*n+1);
  

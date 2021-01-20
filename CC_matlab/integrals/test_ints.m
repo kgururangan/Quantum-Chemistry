@@ -5,21 +5,22 @@ close all
 % [TODO Wishlist]
 
 % Coupled-cluster
-% (1) Add t1b and t2c updates in UCCSD
-% (2) Spin-integrated HBar diagonal (S, D, and T diagonals for H1, H2, H3)
-% (3) Spin-integrated CR-CC(2,3) and CR-EOMCC(2,3)
-% (4) Spin-integrated CCSDt(II) and CCSDt(III)
-% (5) Spin-integrated CCSDt(II) HBar
-% (6) Spin-integrated left-CCSDt(II)
-% (7) Spin-integrated CC(t,3)(II) using loop over full triples space
+% (1) Add t1b and t2c updates in UCCSD [DONE]
+% (2) Spin-integrated HBar diagonal (S, D, and T diagonals for H1, H2, H3) [DONE]
+% (3) Spin-integrated CR-CC(2,3) and CR-EOMCC(2,3) [DONE]
+% (5) Spin-integrated UCCSDT [DONE]
+% (6) Spin-integrated CCSDt(II) and CCSDt(III)
+% (7) Spin-integrated CCSDt(II) HBar
+% (8) Spin-integrated left-CCSDt(II)
+% (9) Spin-integrated CC(t,3)(II) using loop over full triples space
 %     and just accumulating correction corresponding to amplitudes in
-%     Q-space
-% (8) Spin-integrated EOMCCSDt(II)
+%     Q space
+% (10) Spin-integrated EOMCCSDt(II)
 
 % SCF
 % (1) Implement CPHF equation solver - analytic gradients and hessians
 % (2) UHF and GHF solvers for spin-frustrated systems
-% (3) Relativistic Dirac-Hartree-FOck solver
+% (3) Relativistic Dirac-Hartree-Fock solver
 % (4) MCSCF and CASSCF solvers
 
 % Integrals and SCF
