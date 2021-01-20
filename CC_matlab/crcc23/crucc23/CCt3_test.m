@@ -3,10 +3,10 @@ clc
 close all
 
 addpath(genpath('/Users/karthik/Dropbox/Hartree Fock/hartree_fock/v4/CC_matlab'));
-addpath(genpath('/Users/karthik/Desktop/CC_matlab_tests/h2o-pvdz-CAD/cct3_tests/act-2-2'));
+addpath(genpath('/Users/karthik/Desktop/CC_matlab_tests/CAD_triples_correction/tests/cct3_tests/act-2-2'))
 
 load emiliano-h2o-1.0-test-ints.mat
-load cad-convert
+%load cad-convert
 
 %%
 
@@ -19,17 +19,15 @@ sys = build_system_ucc(e1int,e2int,Vnuc,Nocc_a,Nocc_b,nfzc,...
                            nact_h_alpha,nact_p_alpha,nact_h_beta,nact_p_beta,flag_act_scheme);
                        
 
-Ecorr_p = ucc_energy(t1a,t1b,t2a,t2b,t2c,sys);                       
-fprintf('CAD Energy = %4.8f\n',Ecorr_p+sys.Escf)
+%Ecorr_p = ucc_energy(t1a,t1b,t2a,t2b,t2c,sys);                       
+%fprintf('CAD Energy = %4.8f\n',Ecorr_p+sys.Escf)
+%cc_t.t1a = t1a; cc_t.t1b = t1b; cc_t.t2a = t2a; cc_t.t2b = t2b; cc_t.t2c = t2c;
 
-
-cc_t.t1a = t1a; cc_t.t1b = t1b; cc_t.t2a = t2a; cc_t.t2b = t2b; cc_t.t2c = t2c;
-
-% ccopts.diis_size = 5;
-% ccopts.maxit = 200;
-% ccopts.tol = 1e-11;
-% ccopts.shift = 0;
-% [cc_t,Ecorr_uccsd] = uccsd(sys,ccopts);
+ccopts.diis_size = 5;
+ccopts.maxit = 200;
+ccopts.tol = 1e-11;
+ccopts.shift = 0;
+[cc_t,Ecorr] = uccsdt1(sys,ccopts);
 
 [HBar_t] = build_ucc_HBar( cc_t, sys, false);
 

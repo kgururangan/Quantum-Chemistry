@@ -1,4 +1,4 @@
-function [deltaA,deltaB,deltaC,deltaD] = cct3_1(cc_t,HBar_t,Nact_h,Nact_p,sys)
+function [deltaA,deltaB,deltaC,deltaD] = cct3_2(cc_t,HBar_t,Nact_h,Nact_p,sys)
 
     fprintf('\n==================================++Entering CR-UCC(t,3) Routine++=============================\n')
     
@@ -81,7 +81,7 @@ function [deltaA,deltaB,deltaC,deltaD] = cct3_1(cc_t,HBar_t,Nact_h,Nact_p,sys)
                             num_act_h = num_active([i,j,k],act_h_alpha_range);
                             num_act_p = num_active([a,b,c],act_p_alpha_range);
 
-                            if num_act_h >=1 && num_act_p >= 1
+                            if num_act_h >=2 && num_act_p >= 2
 
                                 %fprintf('%d  %d  %d  %d  %d  %d\n',a+Nocc_a,b+Nocc_a,c+Nocc_a,i,j,k)
                                 ctP = ctP + 1;
@@ -144,7 +144,7 @@ function [deltaA,deltaB,deltaC,deltaD] = cct3_1(cc_t,HBar_t,Nact_h,Nact_p,sys)
     %clear MM23A L3A
     fprintf('\nMM23A correction completed in %4.4fs\n\n',toc(ticA))
     
-    corr_a
+    %corr_a
     
     % MM23B correction
     [MM23B] = build_MM23B(cc_t,HBar_t,sys);
@@ -164,7 +164,7 @@ function [deltaA,deltaB,deltaC,deltaD] = cct3_1(cc_t,HBar_t,Nact_h,Nact_p,sys)
                             num_act_h = num_active([i,j],act_h_alpha_range) + num_active([k],act_h_beta_range);
                             num_act_p = num_active([a,b],act_p_alpha_range) + num_active([c],act_p_beta_range);
 
-                            if num_act_h >=1 && num_act_p >= 1
+                            if num_act_h >=2 && num_act_p >= 2
                                 %fprintf('%d  %d  %d  %d  %d  %d\n',a+Nocc_a,b+Nocc_a,c+Nocc_b,i,j,k)
                                 ctP = ctP + 1;
                                 continue
@@ -227,7 +227,7 @@ function [deltaA,deltaB,deltaC,deltaD] = cct3_1(cc_t,HBar_t,Nact_h,Nact_p,sys)
     %clear MM23B L3B
     fprintf('MM23B correction completed in %4.4fs\n\n',toc(ticB))
     
-    corr_b
+    %corr_b
     
     % closed shell
 %     deltaA = 2*deltaA;
@@ -253,7 +253,7 @@ function [deltaA,deltaB,deltaC,deltaD] = cct3_1(cc_t,HBar_t,Nact_h,Nact_p,sys)
                             num_act_h = num_active([i],act_h_alpha_range) + num_active([j,k],act_h_beta_range);
                             num_act_p = num_active([a],act_p_alpha_range) + num_active([b,c],act_p_beta_range);
 
-                            if num_act_h >=1 && num_act_p >= 1
+                            if num_act_h >=2 && num_act_p >= 2
                                 %fprintf('%d  %d  %d  %d  %d  %d\n',a+Nocc_a,b+Nocc_b,c+Nocc_b,i,j,k)
                                 ctP = ctP + 1;
                                 continue
@@ -316,7 +316,7 @@ function [deltaA,deltaB,deltaC,deltaD] = cct3_1(cc_t,HBar_t,Nact_h,Nact_p,sys)
     %clear MM23C L3C
     fprintf('MM23C correction completed in %4.4fs\n\n',toc(ticC))
     
-    corr_c
+    %corr_c
     
     % MM23D correction
     [MM23D] = build_MM23D(cc_t,HBar_t,sys);
@@ -337,7 +337,7 @@ function [deltaA,deltaB,deltaC,deltaD] = cct3_1(cc_t,HBar_t,Nact_h,Nact_p,sys)
                             num_act_h = num_active([i,j,k],act_h_beta_range);
                             num_act_p = num_active([a,b,c],act_p_beta_range);
 
-                            if num_act_h >=1 && num_act_p >= 1
+                            if num_act_h >=2 && num_act_p >= 2
                                 %fprintf('%d  %d  %d  %d  %d  %d\n',a+Nocc_b,b+Nocc_b,c+Nocc_b,i,j,k)
                                 ctP = ctP + 1;
                                 continue
@@ -400,7 +400,7 @@ function [deltaA,deltaB,deltaC,deltaD] = cct3_1(cc_t,HBar_t,Nact_h,Nact_p,sys)
     %clear MM23D L3D
     fprintf('MM23D correction completed in %4.4fs\n\n',toc(ticD))
     
-    corr_d
+    %corr_d
     
     fprintf('CC(t;3) correction completed in %4.4f s\n',toc(tic_Start));
     fprintf('\n%d P space triples\n%d Q space triples\nSum = %d\n# Triples w/o symmetry = %d\n',ctP,ctQ,ctP+ctQ,ntot)
