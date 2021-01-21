@@ -10,7 +10,8 @@ CC_matlab - most up-to-date set of non-relativistic, spin-integrated coupled-clu
     - EOMCCSD + Left-EOMCCSD
     - CR-CC(2,3) + CR-EOMCC(2,3)
     - CCSDT
-    - CCSDT(III) active-space variant
+    - Active-space CCSDt variants II and III
+    - Moment-corrected CC(t;3) II and III
   
 Routines can be run using one- and two-body molecular orbital integrals inputs (along with system parameters like number of occupied and unoccupied alpha/beta electrons) which can be found in CC_matlab_tests. Run routines as shown in main.m
 
