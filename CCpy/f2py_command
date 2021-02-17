@@ -1,0 +1,10 @@
+
+python -m numpy.f2py -c -m MODULENAME SOURCE.f90
+
+for example:
+
+	python -m numpy.f2py -c -m f90_updates cc_loops.f90
+
+produce a python package f90_updates whose subroutine can be invoked as 
+
+f90_updates.cc_loops.SUBROUTINE(...args...)
