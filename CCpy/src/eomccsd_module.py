@@ -1,4 +1,158 @@
 import numpy as np
+from HBar_module import HBar_CCSD
+
+#from fortran_cis import cis_hamiltonian
+#print(cis_hamiltonian.__doc__)
+
+
+def eomccsd(cc_t,ints,sys):
+
+    # Number of roots
+    nroot = 1
+    # Number of guess vectors
+    guess_size = 4
+    # Convergence tolerance of the residual norm
+    ctol = 1.e-7
+    # Convergence tolerance of the energy
+    etol = 1.e-9
+
+    # Build the CCSD similarity-transformed Hamiltonian
+    H1A, H1B, H2A, H2B, H2C = HBar_CCSD(cc_t,ints,sys)
+    
+    # Obtain the vectors of a CIS calculation
+    gevecs, gevals = cis(nroot,ints,sys)
+
+    # Maximum number of vectors
+    max_guess = 200
+
+    # Current number of vectors
+    num_vecs = guess_size
+
+    # Copy gvec data into in ci_gvecs
+    arr_cvecs = np.asarray(cvecs)
+    for x in range(guess_size):
+        arr_cvecs[:] = gvecs[x]
+        cvecs.write(x, 0)
+        cvecs.symnormalize(1 / np.linalg.norm(gvecs[x]), x)
+
+    delta_c = np.zeros(nroot)
+
+    G = np.zeros((max_guess, max_guess))
+
+    # Begin Davidson iterations
+    for CI_ITER in range(max_guess - 1):
+
+        # Subspace Matrix, Gij = < bi | H | bj >
+        for i in range(0, num_vecs):
+            # Build sigma for each b
+            cvecs.read(i, 0)
+            svecs.read(i, 0)
+            ciwfn.sigma(cvecs, svecs, i, i)
+            for j in range(i, num_vecs):
+                # G_ij = (b_i, sigma_j)
+                cvecs.read(i, 0)
+                svecs.read(j, 0)
+                G[j, i] = G[i, j] = svecs.vdot(cvecs, i, j)
+
+        evals, evecs = np.linalg.eigh(G[:num_vecs, :num_vecs])
+        CI_E = evals
+
+        # Use average over roots as convergence criteria
+        avg_energy = 0.0
+        avg_dc = 0.0
+        for n in range(nroot):
+            avg_energy += evals[n]
+            avg_dc += delta_c[n]
+        avg_energy /= nroot
+        avg_dc /= nroot
+        avg_energy += mol.nuclear_repulsion_energy()
+
+        print('CI Iteration %3d: Energy = %4.16f   dE = % 1.5E   dC = %1.5E' % (CI_ITER, avg_energy, (avg_energy - Eold),
+                                                                                avg_dc))
+        if (abs(avg_energy - Eold) < etol) and (avg_dc < ctol) and (CI_ITER > 3):
+            print('CI has converged!\n')
+            break
+        Eold = avg_energy
+
+        # Build new vectors as linear combinations of the subspace matrix, H
+        for n in range(nroot):
+
+            # Build as linear combinations of previous vectors
+            dvecs.zero()
+            dvecs.write(dwork_vec, 0)
+            for c in range(len(evecs[:, n])):
+                dvecs.axpy(evecs[c, n], cvecs, dwork_vec, c)
+
+            # Build new vector new_vec = ((H * cvec) - evals[n] * cvec) / (evals[n] - Hd)
+            ciwfn.sigma(dvecs, svecs, dwork_vec, swork_vec)
+            svecs.axpy(-1 * evals[n], dvecs, swork_vec, dwork_vec)
+            norm = svecs.dcalc(evals[n], Hd, swork_vec)
+
+            if (norm < 1e-9):
+                continue
+
+            svecs.symnormalize(1 / norm, swork_vec)
+            delta_c[n] = norm
+
+            # Build a new vector that is orthornormal to all previous vectors
+            dvecs.copy(svecs, n, swork_vec)
+            norm = dvecs.norm(n)
+            dvecs.symnormalize(1 / norm, n)
+
+            total_proj = 0
+            for i in range(num_vecs):
+                proj = svecs.vdot(cvecs, swork_vec, i)
+                total_proj += proj
+                dvecs.axpy(-proj, cvecs, n, i)
+
+            norm = dvecs.norm(n)
+            dvecs.symnormalize(1 / norm, n)
+
+            # This *should* screen out contributions that are projected out by above
+            if True:
+                cvecs.write(num_vecs, 0)
+                cvecs.copy(dvecs, num_vecs, n)
+                num_vecs += 1
+
+    return 
+
+
+def flatten_R(r1a,r1b,r2a,r2b,r2c):
+    return np.concatenate((r1a.flatten(),r1b.flatten(),r2a.flatten(),r2b.flatten(),r2c.flatten()),axis=0)
+
+def unflatten_R(R,sys):
+
+    n1a = sys['Nocc_a'] * sys['Nunocc_a']
+    n1b = sys['Nocc_b'] * sys['Nunocc_b']
+    n2a = sys['Nocc_a'] ** 2 * sys['Nunocc_a'] ** 2
+    n2b = sys['Nocc_a'] * sys['Nocc_b'] * sys['Nunocc_a'] * sys['Nunocc_b']
+    n2c = sys['Nocc_b'] ** 2 * sys['Nunocc_b'] ** 2
+    idx_1a = slice(0,n1a)
+    idx_1b = slice(n1a,n1a+n1b)
+    idx_2a = slice(n1a+n1b,n1a+n1b+n2a)
+    idx_2b = slice(n1a+n1b+n2a,n1a+n1b+n2a+n2b)
+    idx_2c = slice(n1a+n1b+n2a+n2b,n1a+n1b+n2a+n2b+n2c)
+
+    r1a  = np.reshape(R[idx_1a],(sys['Nunocc_a'],sys['Nocc_a']))
+    r1b  = np.reshape(R[idx_1b],(sys['Nunocc_b'],sys['Nocc_b']))
+    r2a  = np.reshape(R[idx_2a],(sys['Nunocc_a'],sys['Nunocc_a'],sys['Nocc_a'],sys['Nocc_a']))
+    r2b  = np.reshape(R[idx_2b],(sys['Nunocc_a'],sys['Nunocc_b'],sys['Nocc_a'],sys['Nocc_b']))
+    r2c  = np.reshape(R[idx_2c],(sys['Nunocc_b'],sys['Nunocc_b'],sys['Nocc_b'],sys['Nocc_b']))
+
+    return r1a, r1b, r2a, r2b, r2c
+
+
+def HR(R,cc_t,H1A,H1B,H2A,H2B,H2C,ints,sys):
+
+    r1a, r1b, r2a, r2b, r2c = unflatten_R(R,sys)
+
+    X1A = build_HR_1A(r1a,r1b,r2a,r2b,r2c,cc_t,H1A,H1B,H2A,H2B,H2C,ints,sys)
+    X1B = build_HR_1B(r1a,r1b,r2a,r2b,r2c,cc_t,H1A,H1B,H2A,H2B,H2C,ints,sys)
+    X2A = build_HR_2A(r1a,r1b,r2a,r2b,r2c,cc_t,H1A,H1B,H2A,H2B,H2C,ints,sys)
+    X2B = build_HR_2B(r1a,r1b,r2a,r2b,r2c,cc_t,H1A,H1B,H2A,H2B,H2C,ints,sys)
+    X2C = build_HR_2C(r1a,r1b,r2a,r2b,r2c,cc_t,H1A,H1B,H2A,H2B,H2C,ints,sys)
+
+    return flatten_R(X1A, X1B, X2A, X2B, X2C)
 
 def build_HR_1A(r1a,r1b,r2a,r2b,r2c,cc_t,H1A,H1B,H2A,H2B,H2C,ints,sys):
 
@@ -197,6 +351,74 @@ def build_HR_2C(r1a,r1b,r2a,r2b,r2c,cc_t,H1A,H1B,H2A,H2B,H2C,ints,sys):
 
     return X2C
 
+def cis(nroot,ints,sys):
+
+    fA = ints['fA']
+    fB = ints['fB']
+    vA = ints['vA']
+    vB = ints['vB']
+    vC = ints['vC']
+
+    n1a = sys['Nocc_a'] * sys['Nunocc_a']
+    n1b = sys['Nocc_b'] * sys['Nunocc_b']
+
+    HAA = np.zeros((n1a,n1a))
+    HAB = np.zeros((n1a,n1b))
+    HBA = np.zeros((n1b,n1a))
+    HBB = np.zeros((n1b,n1b))
+
+    ct1 = 0 
+    for a in range(sys['Nunocc_a']):
+        for i in range(sys['Nocc_a']):
+            ct2 = 0 
+            for b in range(sys['Nunocc_a']):
+                for j in range(sys['Nocc_a']):
+                    HAA[ct1,ct2] += vA['voov'][a,j,i,b]
+                    HAA[ct1,ct2] += (i == j) * fA['vv'][a,b]
+                    HAA[ct1,ct2] -= (a == b) * fA['oo'][j,i]
+                    ct2 += 1
+            ct1 += 1
+    ct1 = 0
+    for a in range(sys['Nunocc_a']):
+        for i in range(sys['Nocc_a']):
+            ct2 = 0 
+            for b in range(sys['Nunocc_b']):
+                for j in range(sys['Nocc_b']):
+                    HAB[ct1,ct2] += vB['voov'][a,j,i,b]
+                    ct2 += 1
+            ct1 += 1
+    ct1 = 0
+    for a in range(sys['Nunocc_b']):
+        for i in range(sys['Nocc_b']):
+            ct2 = 0 
+            for b in range(sys['Nunocc_a']):
+                for j in range(sys['Nocc_a']):
+                    HBA[ct1,ct2] += vB['ovvo'][j,a,b,i]
+                    ct2 += 1
+            ct1 += 1
+    ct1 = 0 
+    for a in range(sys['Nunocc_b']):
+        for i in range(sys['Nocc_b']):
+            ct2 = 0 
+            for b in range(sys['Nunocc_b']):
+                for j in range(sys['Nocc_b']):
+                    HBB[ct1,ct2] += vC['voov'][a,j,i,b]
+                    HBB[ct1,ct2] += (i == j) * fB['vv'][a,b]
+                    HBB[ct1,ct2] -= (a == b) * fB['oo'][j,i]
+                    ct2 += 1
+            ct1 += 1
+
+    H = np.hstack( (np.vstack((HAA,HBA)), np.vstack((HAB,HBB))) )
+
+    E_cis, C = np.linalg.eig(H) 
+    idx = np.argsort(E_cis)
+    E_cis = E_cis[idx[:nroot]]
+    C = C[:,idx[:nroot]]
+
+    print(E_cis)
+
+    return C, E_cis
+
 def calc_cc_energy(cc_t,ints):
 
     vA = ints['vA']
@@ -226,6 +448,12 @@ def test_updates(matfile,ints,sys):
 
     from scipy.io import loadmat
     from HBar_module import HBar_CCSD
+    from fortran_cis import cis_hamiltonian
+
+    print('')
+    print('TEST SUBROUTINE:')
+    print('Loading Matlab .mat file from {}'.format(matfile))
+    print('')
 
     data_dict = loadmat(matfile)
     cc_t = data_dict['cc_t']
@@ -241,6 +469,12 @@ def test_updates(matfile,ints,sys):
     t2a = cc_t['t2a'][0,0]
     t2b = cc_t['t2b'][0,0]
     t2c = cc_t['t2c'][0,0]
+
+    fA = ints['fA']
+    fB = ints['fB']
+    vA = ints['vA']
+    vB = ints['vB']
+    vC = ints['vC']
 
     cc_t = {'t1a' : t1a, 't1b' : t1b, 't2a' : t2a, 't2b' : t2b, 't2c' : t2c}
     Ecorr = calc_cc_energy(cc_t,ints)
@@ -267,5 +501,15 @@ def test_updates(matfile,ints,sys):
     # test t2c update
     X2C = build_HR_2C(r1a,r1b,r2a,r2b,r2c,cc_t,H1A,H1B,H2A,H2B,H2C,ints,sys)
     print('|X2C| = {}'.format(np.linalg.norm(X2C)))
+
+    # test CIS 
+    nroot = 10
+    # H_cis = cis_hamiltonian.build_cis(fA['oo'],fA['vv'],fB['oo'],fB['vv'],\
+    #     vA['voov'],vB['voov'],vB['ovvo'],vC['voov'])
+    C, E_cis = cis(nroot,ints,sys)
+    print('CIS Guess')
+    for i in range(nroot):
+        print('E%d = %f'% (i+1, E_cis[i]))
+
 
     return

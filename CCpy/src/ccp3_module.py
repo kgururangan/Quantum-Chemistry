@@ -1,15 +1,11 @@
 import numpy as np 
-import time
-from f90_crcc import crcc_loops
+import time 
 
-def crcc23(cc_t,H1A,H1B,H2A,H2B,H2C,ints,sys,flag_RHF=False):
+def ccp3(cc_t,p_space,H1A,H1B,H2A,H2B,H2C,ints,sys):
 
-    print('\n==================================++Entering CR-CC(2,3) Routine++=============================')
+    print('\n==================================++Entering CC(P;3) Routine++=============================')
     
     t_start = time.time()
-
-    if flag_RHF:
-        print('Using RHF closed-shell symmetry...')
     
     # get fock matrices
     fA = ints['fA']; fB = ints['fB']
@@ -17,68 +13,220 @@ def crcc23(cc_t,H1A,H1B,H2A,H2B,H2C,ints,sys,flag_RHF=False):
     # get the 3-body HBar triples diagonal
     D3A, D3B, D3C, D3D = triples_3body_diagonal(cc_t,ints,sys)
 
+    # MM correction containers
+    deltaA = 0.0; # using MP denominator -(f_aa - f_ii + f_bb - f_jj + f_cc - f_kk)
+    deltaB = 0.0; # using EN denominator -<phi_{ijk}^{abc} | H_1(CCSD) | phi_{ijk}^{abc}>
+    deltaC = 0.0; # using EN denominator -<phi_{ijk}^{abc} | H_1(CCSD) + H_2(CCSD) | phi_{ijk}^{abc}>
+    deltaD = 0.0; # using EN denominator -<phi_{ijk}^{abc} | H_1(CCSD) + H_2(CCSD) + H_3(CCSD) | phi_{ijk}^{abc}>
+        
+    # MM23A correction
     MM23A = build_MM23A(cc_t,H1A,H2A,sys)
     L3A = build_L3A(cc_t,H1A,H2A,ints,sys)
-    dA_AAA, dB_AAA, dC_AAA, dD_AAA = crcc_loops.crcc23a(MM23A,L3A,fA['oo'],fA['vv'],\
-                    H1A['oo'],H1A['vv'],H2A['voov'],H2A['oooo'],H2A['vvvv'],D3A['O'],D3A['V'])
+    for a in range(sys['Nunocc_a']):
+        for b in range(a+1,sys['Nunocc_a']):
+            for c in range(b+1,sys['Nunocc_a']):
+                for i in range(sys['Nocc_a']):
+                    for j in range(i+1,sys['Nocc_a']):
+                        for k in range(j+1,sys['Nocc_a']):
 
-    MM23B = build_MM23B(cc_t,H1A,H1B,H2A,H2B,sys)
-    L3B = build_L3B(cc_t,H1A,H1B,H2A,H2B,ints,sys)
-    dA_AAB, dB_AAB, dC_AAB, dD_AAB = crcc_loops.crcc23b(MM23B,L3B,fA['oo'],fA['vv'],fB['oo'],fB['vv'],\
-                    H1A['oo'],H1A['vv'],H1B['oo'],H1B['vv'],H2A['voov'],H2A['oooo'],H2A['vvvv'],\
-                    H2B['ovov'],H2B['vovo'],H2B['oooo'],H2B['vvvv'],H2C['voov'],\
-                    D3A['O'],D3A['V'],D3B['O'],D3B['V'],D3C['O'],D3C['V'])
+                            if p_space[a,b,c,i,j,k] == 1:
+                                continue
+                            else:
+                                LM = L3A[a,b,c,i,j,k] * MM23A[a,b,c,i,j,k]
+                            
+                                DMP = fA['vv'][a,a] + fA['vv'][b,b] + fA['vv'][c,c]\
+                                -fA['oo'][i,i] - fA['oo'][j,j] - fA['oo'][k,k] 
+                                
+                                D1 = H1A['vv'][a,a] + H1A['vv'][b,b] + H1A['vv'][c,c]\
+                                -H1A['oo'][i,i] - H1A['oo'][j,j] - H1A['oo'][k,k]
 
+                                D2 = -H2A['voov'][a,i,i,a]-H2A['voov'][b,i,i,b]-H2A['voov'][c,i,i,c]\
+                                -H2A['voov'][a,j,j,a]-H2A['voov'][b,j,j,b]-H2A['voov'][c,j,j,c]\
+                                -H2A['voov'][a,k,k,a]-H2A['voov'][b,k,k,b]-H2A['voov'][c,k,k,c]\
+                                -H2A['oooo'][j,i,j,i]-H2A['oooo'][k,i,k,i]-H2A['oooo'][k,j,k,j]\
+                                -H2A['vvvv'][b,a,b,a]-H2A['vvvv'][c,a,c,a]-H2A['vvvv'][c,b,c,b]
+                                D2 *= -1.0
+                            
+                                D3 = -D3A['O'][a,i,j]-D3A['O'][a,i,k]-D3A['O'][a,j,k]\
+                                -D3A['O'][b,i,j]-D3A['O'][b,i,k]-D3A['O'][b,j,k]\
+                                -D3A['O'][c,i,j]-D3A['O'][c,i,k]-D3A['O'][c,j,k]\
+                                +D3A['V'][a,i,b]+D3A['V'][a,i,c]+D3A['V'][b,i,c]\
+                                +D3A['V'][a,j,b]+D3A['V'][a,j,c]+D3A['V'][b,j,c]\
+                                +D3A['V'][a,k,b]+D3A['V'][a,k,c]+D3A['V'][b,k,c]
+            
+                                D_A = -1.0 * DMP
+                                D_B = -1.0 * D1
+                                D_C = -1.0 * (D1+D2)
+                                D_D = -1.0 * (D1+D2+D3)
 
-    if flag_RHF:
-        deltaA = 2.0*dA_AAA + 2.0*dA_AAB
-        deltaB = 2.0*dB_AAA + 2.0*dB_AAB
-        deltaC = 2.0*dC_AAA + 2.0*dC_AAB
-        deltaD = 2.0*dD_AAA + 2.0*dD_AAB
-    else:
-        MM23C = build_MM23C(cc_t,H1A,H1B,H2B,H2C,sys)
-        L3C = build_L3C(cc_t,H1A,H1B,H2B,H2C,ints,sys)  
-        dA_ABB, dB_ABB, dC_ABB, dD_ABB = crcc_loops.crcc23c(MM23C,L3C,fA['oo'],fA['vv'],fB['oo'],fB['vv'],\
-                    H1A['oo'],H1A['vv'],H1B['oo'],H1B['vv'],H2A['voov'],\
-                    H2B['ovov'],H2B['vovo'],H2B['oooo'],H2B['vvvv'],H2C['voov'],H2C['oooo'],H2C['vvvv'],\
-                    D3B['O'],D3B['V'],D3C['O'],D3C['V'],D3D['O'],D3D['V'])
+                                deltaA += LM/D_A
+                                deltaB += LM/D_B
+                                deltaC += LM/D_C
+                                deltaD += LM/D_D
+    
+    # MM23B correction
+    MM23B = build_MM23B(cc_t,H1A,H1B,H2A,H2B,sys) 
+    L3B = build_L3B(cc_t,H1A,H1B,H2A,H2B,ints,sys)   
+    for a in range(sys['Nunocc_a']):
+        for b in range(a+1,sys['Nunocc_a']):
+            for c in range(sys['Nunocc_b']):
+                for i in range(sys['Nocc_a']):
+                    for j in range(i+1,sys['Nocc_a']):
+                        for k in range(sys['Nocc_b']):
 
-        MM23D = build_MM23D(cc_t,H1B,H2C,sys) 
-        L3D = build_L3D(cc_t,H1B,H2C,ints,sys) 
-        dA_BBB, dB_BBB, dC_BBB, dD_BBB = crcc_loops.crcc23d(MM23D,L3D,fB['oo'],fB['vv'],\
-                    H1B['oo'],H1B['vv'],H2C['voov'],H2C['oooo'],H2C['vvvv'],D3D['O'],D3D['V'])
+                            if p_space[a,b,c,i,j,k] == 1:
+                                continue
+                            else:
+                                LM = L3B[a,b,c,i,j,k] * MM23B[a,b,c,i,j,k]
+                            
+                                DMP = fA['vv'][a,a] + fA['vv'][b,b] + fB['vv'][c,c]\
+                                -fA['oo'][i,i] - fA['oo'][j,j] - fB['oo'][k,k] 
+                                
+                                D1 = H1A['vv'][a,a] + H1A['vv'][b,b] + H1B['vv'][c,c]\
+                                -H1A['oo'][i,i] - H1A['oo'][j,j] - H1B['oo'][k,k]
+                                
+                                D2 = -H2A['voov'][a,i,i,a]-H2A['voov'][b,i,i,b]+H2B['vovo'][c,i,c,i]\
+                                -H2A['voov'][a,j,j,a]-H2A['voov'][b,j,j,b]+H2B['vovo'][c,j,c,j]\
+                                +H2B['ovov'][k,a,k,a]+H2B['ovov'][k,b,k,b]-H2C['voov'][c,k,k,c]\
+                                -H2A['oooo'][j,i,j,i]-H2B['oooo'][k,i,k,i]-H2B['oooo'][k,j,k,j]\
+                                -H2A['vvvv'][b,a,b,a]-H2B['vvvv'][c,a,c,a]-H2B['vvvv'][c,b,c,b]
+                                D2 *= -1.0
+                            
+                                D3 = -D3A['O'][a,i,j]-D3B['O'][a,i,k]-D3B['O'][a,j,k]\
+                                -D3A['O'][b,i,j]-D3B['O'][b,i,k]-D3B['O'][b,j,k]\
+                                -D3C['O'][c,i,k]-D3C['O'][c,j,k]\
+                                +D3A['V'][a,i,b]+D3B['V'][a,i,c]+D3B['V'][b,i,c]\
+                                +D3A['V'][a,j,b]+D3B['V'][a,j,c]+D3B['V'][b,j,c]\
+                                +D3C['V'][a,k,c]+D3C['V'][b,k,c]
 
-        deltaA = dA_AAA + dA_AAB + dA_ABB + dA_BBB
-        deltaB = dB_AAA + dB_AAB + dB_ABB + dB_BBB
-        deltaC = dC_AAA + dC_AAB + dC_ABB + dC_BBB
-        deltaD = dD_AAA + dD_AAB + dD_ABB + dD_BBB
+                                D_A = -1.0 * DMP
+                                D_B = -1.0 * D1
+                                D_C = -1.0 * (D1+D2)
+                                D_D = -1.0 * (D1+D2+D3)
 
+                                deltaA += LM/D_A
+                                deltaB += LM/D_B
+                                deltaC += LM/D_C
+                                deltaD += LM/D_D
+    
+    # MM23C correction
+    MM23C = build_MM23C(cc_t,H1A,H1B,H2B,H2C,sys) 
+    L3C = build_L3C(cc_t,H1A,H1B,H2B,H2C,ints,sys)   
+    for a in range(sys['Nunocc_a']):
+        for b in range(sys['Nunocc_b']):
+            for c in range(b+1,sys['Nunocc_b']):
+                for i in range(sys['Nocc_a']):
+                    for j in range(sys['Nocc_b']):
+                        for k in range(j+1,sys['Nocc_b']):
+        
+                            if p_space[a,b,c,i,j,k] == 1:
+                                continue
+                            else:
+                                LM = L3C[a,b,c,i,j,k] * MM23C[a,b,c,i,j,k]
+                            
+                                DMP = fA['vv'][a,a] + fB['vv'][b,b] + fB['vv'][c,c]\
+                                -fA['oo'][i,i] - fB['oo'][j,j] - fB['oo'][k,k] 
+                                
+                                D1 = H1A['vv'][a,a] + H1B['vv'][b,b] + H1B['vv'][c,c]\
+                                -H1A['oo'][i,i] - H1B['oo'][j,j] - H1B['oo'][k,k]
+
+                                D2 = -H2A['voov'][a,i,i,a]+H2B['vovo'][b,i,b,i]+H2B['vovo'][c,i,c,i]\
+                                +H2B['ovov'][j,a,j,a]-H2C['voov'][b,j,j,b]-H2C['voov'][c,j,j,c]\
+                                +H2B['ovov'][k,a,k,a]-H2C['voov'][b,k,k,b]-H2C['voov'][c,k,k,c]\
+                                -H2B['oooo'][j,i,j,i]-H2B['oooo'][k,i,k,i]-H2C['oooo'][k,j,k,j]\
+                                -H2B['vvvv'][b,a,b,a]-H2B['vvvv'][c,a,c,a]-H2C['vvvv'][c,b,c,b]
+                                D2 *= -1.0
+                            
+                                D3 = -D3B['O'][a,i,j]-D3B['O'][a,i,k]\
+                                -D3C['O'][b,i,j]-D3C['O'][b,i,k]-D3D['O'][b,j,k]\
+                                -D3C['O'][c,i,j]-D3C['O'][c,i,k]-D3D['O'][c,j,k]\
+                                +D3B['V'][a,i,b]+D3B['V'][a,i,c]\
+                                +D3C['V'][a,j,b]+D3C['V'][a,j,c]+D3D['V'][b,j,c]\
+                                +D3C['V'][a,k,b]+D3C['V'][a,k,c]+D3D['V'][b,k,c]
+
+                                D_A = -1.0 * DMP
+                                D_B = -1.0 * D1
+                                D_C = -1.0 * (D1+D2)
+                                D_D = -1.0 * (D1+D2+D3)
+
+                                deltaA += LM/D_A
+                                deltaB += LM/D_B
+                                deltaC += LM/D_C
+                                deltaD += LM/D_D
+    
+    # MM23D correction
+    MM23D = build_MM23D(cc_t,H1B,H2C,sys) 
+    L3D = build_L3D(cc_t,H1B,H2C,ints,sys)
+    for a in range(sys['Nunocc_b']):
+        for b in range(a+1,sys['Nunocc_b']):
+            for c in range(b+1,sys['Nunocc_b']):
+                for i in range(sys['Nocc_b']):
+                    for j in range(i+1,sys['Nocc_b']):
+                        for k in range(j+1,sys['Nocc_b']):
+
+                            if p_space[a,b,c,i,j,k] == 1:
+                                continue
+                            else:
+                                LM = L3D[a,b,c,i,j,k] * MM23D[a,b,c,i,j,k]
+                            
+                                DMP = fB['vv'][a,a] + fB['vv'][b,b] + fB['vv'][c,c]\
+                                -fB['oo'][i,i] - fB['oo'][j,j] - fB['oo'][k,k] 
+                                
+                                D1 = H1B['vv'][a,a] + H1B['vv'][b,b] + H1B['vv'][c,c]\
+                                -H1B['oo'][i,i] - H1B['oo'][j,j] - H1B['oo'][k,k]
+
+                                D2 = -H2C['voov'][a,i,i,a]-H2C['voov'][b,i,i,b]-H2C['voov'][c,i,i,c]\
+                                -H2C['voov'][a,j,j,a]-H2C['voov'][b,j,j,b]-H2C['voov'][c,j,j,c]\
+                                -H2C['voov'][a,k,k,a]-H2C['voov'][b,k,k,b]-H2C['voov'][c,k,k,c]\
+                                -H2C['oooo'][j,i,j,i]-H2C['oooo'][k,i,k,i]-H2C['oooo'][k,j,k,j]\
+                                -H2C['vvvv'][b,a,b,a]-H2C['vvvv'][c,a,c,a]-H2C['vvvv'][c,b,c,b]
+                                D2 *= -1.0
+                            
+                                D3 = -D3D['O'][a,i,j]-D3D['O'][a,i,k]-D3D['O'][a,j,k]\
+                                -D3D['O'][b,i,j]-D3D['O'][b,i,k]-D3D['O'][b,j,k]\
+                                -D3D['O'][c,i,j]-D3D['O'][c,i,k]-D3D['O'][c,j,k]\
+                                +D3D['V'][a,i,b]+D3D['V'][a,i,c]+D3D['V'][b,i,c]\
+                                +D3D['V'][a,j,b]+D3D['V'][a,j,c]+D3D['V'][b,j,c]\
+                                +D3D['V'][a,k,b]+D3D['V'][a,k,c]+D3D['V'][b,k,c]
+
+                                D_A = -1.0 * DMP
+                                D_B = -1.0 * D1
+                                D_C = -1.0 * (D1+D2)
+                                D_D = -1.0 * (D1+D2+D3)
+
+                                deltaA += LM/D_A
+                                deltaB += LM/D_B
+                                deltaC += LM/D_C
+                                deltaD += LM/D_D
+    
     Ecorr = calc_cc_energy(cc_t,ints)
 
     EcorrA = Ecorr + deltaA; EcorrB = Ecorr + deltaB; EcorrC = Ecorr + deltaC; EcorrD = Ecorr + deltaD
 
-    E23A = ints['Escf'] + EcorrA
-    E23B = ints['Escf'] + EcorrB
-    E23C = ints['Escf'] + EcorrC
-    E23D = ints['Escf'] + EcorrD
+    EP3A = ints['Escf'] + EcorrA
+    EP3B = ints['Escf'] + EcorrB
+    EP3C = ints['Escf'] + EcorrC
+    EP3D = ints['Escf'] + EcorrD
  
-    print('CR-CC(2,3)_A = {} Eh     Ecorr_A = {} Eh     Delta_A = {} Eh'.format(E23A,EcorrA,deltaA))
-    print('CR-CC(2,3)_B = {} Eh     Ecorr_B = {} Eh     Delta_B = {} Eh'.format(E23B,EcorrB,deltaB))
-    print('CR-CC(2,3)_C = {} Eh     Ecorr_C = {} Eh     Delta_C = {} Eh'.format(E23C,EcorrC,deltaC))
-    print('CR-CC(2,3)_D = {} Eh     Ecorr_D = {} Eh     Delta_D = {} Eh'.format(E23D,EcorrD,deltaD))
+    print('CC(P,3)_A = {} Eh     Ecorr_A = {} Eh     Delta_A = {} Eh'.format(EP3A,EcorrA,deltaA))
+    print('CC(P,3)_B = {} Eh     Ecorr_B = {} Eh     Delta_B = {} Eh'.format(EP3B,EcorrB,deltaB))
+    print('CC(P,3)_C = {} Eh     Ecorr_C = {} Eh     Delta_C = {} Eh'.format(EP3C,EcorrC,deltaC))
+    print('CC(P,3)_D = {} Eh     Ecorr_D = {} Eh     Delta_D = {} Eh'.format(EP3D,EcorrD,deltaD))
 
-    Ecrcc23 = {'A' : E23A, 'B' : E23B, 'C' : E23C, 'D' : E23D}
+    EccP3 = {'A' : EP3A, 'B' : EP3B, 'C' : EP3C, 'D' : EP3D}
     delta23 = {'A' : deltaA, 'B' : deltaB, 'C' : deltaC, 'D' : deltaD}
 
     t_end = time.time()
     minutes, seconds = divmod(t_end-t_start, 60)
     print('finished in ({:0.2f}m  {:0.2f}s)'.format(minutes,seconds))
 
-    return Ecrcc23, delta23
+    return EccP3, delta23
 
 def build_MM23A(cc_t,H1A,H2A,sys):
 
+    print('MMCC(2,3)A construction... ')
     
+    t_start = time.time()
     t2a = cc_t['t2a']
     I2A_vvov = H2A['vvov']+np.einsum('me,abim->abie',H1A['ov'],t2a,optimize=True)
 
@@ -106,10 +254,17 @@ def build_MM23A(cc_t,H1A,H2A,sys):
     MM23A += np.einsum('cbke,eaji->abcijk',I2A_vvov,t2a,optimize=True) # (ac)(ik)
     MM23A += np.einsum('acke,ebji->abcijk',I2A_vvov,t2a,optimize=True) # (bc)(ik)
 
+    t_end = time.time()
+    minutes, seconds = divmod(t_end-t_start, 60)
+    print('finished in ({:0.2f}m  {:0.2f}s)'.format(minutes,seconds))
+
     return MM23A
 
 def build_MM23B(cc_t,H1A,H1B,H2A,H2B,sys):
 
+    print('MMCC(2,3)B construction... ')
+    
+    t_start = time.time()
     t2a = cc_t['t2a']
     t2b = cc_t['t2b']
 
@@ -137,12 +292,18 @@ def build_MM23B(cc_t,H1A,H1B,H2A,H2B,sys):
     MM23B -= np.einsum('abje,ecik->abcijk',H2A['vvov'],t2b,optimize=True)
     MM23B -= np.einsum('amij,bcmk->abcijk',I2A_vooo,t2b,optimize=True)
     MM23B += np.einsum('bmij,acmk->abcijk',I2A_vooo,t2b,optimize=True)
+        
+    t_end = time.time()
+    minutes, seconds = divmod(t_end-t_start, 60)
+    print('finished in ({:0.2f}m  {:0.2f}s)'.format(minutes,seconds))
 
     return MM23B
 
 def build_MM23C(cc_t,H1A,H1B,H2B,H2C,sys):
 
+    print('MMCC(2,3)C construction... ')
     
+    t_start = time.time()
     t2b = cc_t['t2b']
     t2c = cc_t['t2c']
 
@@ -170,13 +331,19 @@ def build_MM23C(cc_t,H1A,H1B,H2B,H2C,sys):
     MM23C += np.einsum('mcij,abmk->abcijk',I2B_ovoo,t2b,optimize=True)
     MM23C += np.einsum('mbik,acmj->abcijk',I2B_ovoo,t2b,optimize=True)
     MM23C -= np.einsum('mcik,abmj->abcijk',I2B_ovoo,t2b,optimize=True)
+    
+    t_end = time.time()
+    minutes, seconds = divmod(t_end-t_start, 60)
+    print('finished in ({:0.2f}m  {:0.2f}s)'.format(minutes,seconds))
 
     return MM23C
 
 
 def build_MM23D(cc_t,H1B,H2C,sys):
 
+    print('MMCC(2,3)D construction... ')
     
+    t_start = time.time()
     t2c = cc_t['t2c']
     I2C_vvov = H2C['vvov']+np.einsum('me,abim->abie',H1B['ov'],t2c,optimize=True)
 
@@ -204,10 +371,18 @@ def build_MM23D(cc_t,H1B,H2C,sys):
     MM23D += np.einsum('cbke,eaji->abcijk',I2C_vvov,t2c,optimize=True) # (ac)(ik)
     MM23D += np.einsum('acke,ebji->abcijk',I2C_vvov,t2c,optimize=True) # (bc)(ik)
 
+    t_end = time.time()
+    minutes, seconds = divmod(t_end-t_start, 60)
+    print('finished in ({:0.2f}m  {:0.2f}s)'.format(minutes,seconds))
+
     return MM23D
 
 
 def build_L3A(cc_t,H1A,H2A,ints,sys):
+
+    print('Approximate L3A construction... ')
+    
+    t_start = time.time()
 
     vA = ints['vA']
     l1a = cc_t['l1a']
@@ -255,9 +430,17 @@ def build_L3A(cc_t,H1A,H2A,ints,sys):
     L3A -= np.einsum('kimb,acmj->abcijk',H2A['ooov'],l2a,optimize=True) 
     L3A -= np.einsum('kimc,bamj->abcijk',H2A['ooov'],l2a,optimize=True)
 
+    t_end = time.time()
+    minutes, seconds = divmod(t_end-t_start, 60)
+    print('finished in ({:0.2f}m  {:0.2f}s)'.format(minutes,seconds))
+
     return L3A
 
 def build_L3B(cc_t,H1A,H1B,H2A,H2B,ints,sys):
+
+    print('Approximate L3B construction... ')
+    
+    t_start = time.time()
 
     vB = ints['vB']
     vA = ints['vA']
@@ -298,9 +481,17 @@ def build_L3B(cc_t,H1A,H1B,H2A,H2B,ints,sys):
     L3B += np.einsum('ikbm,acjm->abcijk',H2B['oovo'],l2b,optimize=True)
     L3B -= np.einsum('jkbm,acim->abcijk',H2B['oovo'],l2b,optimize=True)
 
+    t_end = time.time()
+    minutes, seconds = divmod(t_end-t_start, 60)
+    print('finished in ({:0.2f}m  {:0.2f}s)'.format(minutes,seconds))
+
     return L3B
 
 def build_L3C(cc_t,H1A,H1B,H2B,H2C,ints,sys):
+
+    print('Approximate L3C construction... ')
+
+    t_start = time.time()
 
     vB = ints['vB']
     vC = ints['vC']
@@ -341,10 +532,18 @@ def build_L3C(cc_t,H1A,H1B,H2B,H2C,ints,sys):
     L3C += np.einsum('ikmb,acmj->abcijk',H2B['ooov'],l2b,optimize=True)
     L3C += np.einsum('ijmc,abmk->abcijk',H2B['ooov'],l2b,optimize=True)
     L3C -= np.einsum('ikmc,abmj->abcijk',H2B['ooov'],l2b,optimize=True)
+    
+    t_end = time.time()
+    minutes, seconds = divmod(t_end-t_start, 60)
+    print('finished in ({:0.2f}m  {:0.2f}s)'.format(minutes,seconds))
 
     return L3C
 
 def build_L3D(cc_t,H1B,H2C,ints,sys):
+
+    print('Approximate L3D construction... ')
+    
+    t_start = time.time()
 
     vC = ints['vC']
     l1b = cc_t['l1b']
@@ -392,9 +591,16 @@ def build_L3D(cc_t,H1B,H2C,ints,sys):
     L3D -= np.einsum('kimb,acmj->abcijk',H2C['ooov'],l2c,optimize=True) 
     L3D -= np.einsum('kimc,bamj->abcijk',H2C['ooov'],l2c,optimize=True)
 
+    t_end = time.time()
+    minutes, seconds = divmod(t_end-t_start, 60)
+    print('finished in ({:0.2f}m  {:0.2f}s)'.format(minutes,seconds))
+
     return L3D
 
 def triples_3body_diagonal(cc_t,ints,sys):
+
+    print('\nCalculating 3-body triples diagonal... ')
+    t_start = time.time()
 
     vA = ints['vA']
     vB = ints['vB']
@@ -468,6 +674,10 @@ def triples_3body_diagonal(cc_t,ints,sys):
     D3B = {'O' : D3B_O, 'V' : D3B_V}
     D3C = {'O' : D3C_O, 'V' : D3C_V}
     D3D = {'O' : D3D_O, 'V' : D3D_V}
+    
+    t_end = time.time()
+    minutes, seconds = divmod(t_end-t_start, 60)
+    print('finished in ({:0.2f}m  {:0.2f}s)'.format(minutes,seconds))
     
     return D3A, D3B, D3C, D3D
 

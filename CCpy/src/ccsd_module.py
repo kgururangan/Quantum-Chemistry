@@ -99,6 +99,9 @@ def ccsd(sys,ints,maxit=100,tol=1e-08,diis_size=6,shift=0.0):
     minutes, seconds = divmod(t_end-t_start, 60)
     if flag_conv:
         print('CCSD successfully converged! ({:0.2f}m  {:0.2f}s)'.format(minutes,seconds))
+        print('')
+        print('CCSD Correlation Energy = {} Eh'.format(Ecorr))
+        print('CCSD Total Energy = {} Eh'.format(Ecorr+ints['Escf']))
     else:
         print('Failed to converge CCSD in {} iterations'.format(maxit))
 
@@ -659,6 +662,11 @@ def calc_cc_energy(cc_t,ints):
 def test_updates(matfile,ints,sys):
 
     from scipy.io import loadmat
+
+    print('')
+    print('TEST SUBROUTINE:')
+    print('Loading Matlab .mat file from {}'.format(matfile))
+    print('')
 
     data_dict = loadmat(matfile)
     cc_t = data_dict['cc_t']

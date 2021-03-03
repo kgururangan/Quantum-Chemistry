@@ -69,10 +69,11 @@ def left_ccsd(cc_t,H1A,H1B,H2A,H2B,H2C,ints,sys,maxit=100,tol=1e-08,diis_size=6,
 
         # get lcc energy - returns Ecorr + omega
         E_lcc = np.sqrt(np.sum(L_resid**2))/np.sqrt(np.sum(L**2)) + Ecorr
-        
+        err_energy = E_lcc - Ecorr
+
         # check for exit condition
         resid = np.linalg.norm(L_resid)
-        if resid < tol:
+        if resid < tol and abs(err_energy) < tol:
             flag_conv = True
             break
 
@@ -483,6 +484,11 @@ def test_updates(matfile,ints,sys):
 
     from scipy.io import loadmat
     from HBar_module import HBar_CCSD
+
+    print('')
+    print('TEST SUBROUTINE:')
+    print('Loading Matlab .mat file from {}'.format(matfile))
+    print('')
 
     data_dict = loadmat(matfile)
     cc_t = data_dict['cc_t']
