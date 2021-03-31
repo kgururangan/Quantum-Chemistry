@@ -21,6 +21,10 @@ Routines can be run using one- and two-body molecular orbital integrals inputs (
 
 A Python software suite of coupled-cluster codes, similar to the contents of CC_matlab. It is based on the optimized Numpy einsum routine as well as extremeley fast updates written in Fortran and called within Python using ```f2py```. Includes the methods in CC_matlab as well as CR-CC(2,4).
 
+**einsum_f90**
+
+A first attempt at writing an Einstein summation function in Modern Fortran.
+
 **Numerov**
 
 Matlab implementation of the Numerov-Cooley algorithm for numerically integrating the 1D Schrodinger equation. The main.m script applies this method to solve for the 1D vibrational eigenstates of the H2 stretching motion using a simple restricted Hartree-Fock (RHF) potential energy surface.
