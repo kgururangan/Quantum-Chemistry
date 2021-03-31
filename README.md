@@ -5,7 +5,7 @@ Contents of Repository:
 
 **CC_matlab**
 
-Spin-integrated coupled-cluster codes written in Matlab that implement coupled-cluster (CC), completely renormalized (CR) CC, equation-of-motion (EOM) CC, and active-space CC methods. All routines are vectorized and equations are highly factorized using intermediates derived from the similarity-transformed Hamiltonian. The code is meant to serve as a pedagogical template for coding coupled-cluster methods as well as a sandbox for testing out new ideas in a simple coding language.
+Spin-integrated coupled-cluster codes written in Matlab that implement coupled-cluster (CC), completely renormalized (CR) CC, equation-of-motion (EOM) CC, and active-space CC methods. All routines are vectorized and equations are highly factorized using intermediates derived from the similarity-transformed Hamiltonian. The code is meant to serve as a pedagogical template for implementing coupled-cluster methods as well as a sandbox for testing out new ideas.
 
 The codes are simply run using one-body and two-body molecular orbital integrals obtained from, for instance, a quantum chemistry software such as GAMESS or Quantum Package 2.0. It is compatible with RHF, UHF, and ROHF reference states. Also contains SCF solvers so that molecular orbital integrals can be generated in a self-contained manner, although there is currently no symmetry adaptation. Currently supported calculations include:
 
