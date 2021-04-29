@@ -162,7 +162,7 @@ module davidson_module
                                 if (resid <= tol) then
                                    write(*,fmt='(/a)') 'Davidson converged!'
                                    do i = 1,nroot
-                                      print*,'Root',i,'=',wR(i)
+                                      write(*,'(1x,a4,2x,i0,a4,f12.8)') 'Root',i,' = ',wR(i)
                                    end do
                                    exit
 

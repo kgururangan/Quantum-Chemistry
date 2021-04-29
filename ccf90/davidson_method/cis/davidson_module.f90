@@ -45,7 +45,7 @@ module davidson_module
                         real, intent(in) :: tol
                         integer, intent(in) :: nroot, maxit
                         real, intent(out) :: VR(N,nroot), wR(nroot)
-                        integer :: crsz, i, j, a, num_add, maxsz, it, cnt, idx(N), crsz0
+                        integer :: crsz, i, j, a, k, num_add, maxsz, it, cnt, idx(N), crsz0
                         real, allocatable :: sigma(:,:), aR(:,:), evR(:), evI(:), G(:,:),&
                                              rv(:), v(:), q(:), B(:,:), addB(:,:)
                         integer, allocatable :: id(:)
@@ -90,20 +90,18 @@ module davidson_module
                         maxsz = nvec * nroot
 
                         ! allocate the output right eigenvectors and eigenvalues
-                        allocate(rv(N),q(N),B(N,maxsz),addB(N,nroot),v(N))
+                        allocate(rv(N),q(N),B(N,maxsz),sigma(N,maxsz),addB(N,nroot),v(N))
 
                         ! populate the B matrix with the initial guess
-                        do i = 1,crsz
-                           B(:,i) = B0(:,i)
-                        end do
+                        B(:,1:crsz) = B0
 
-                        ! set up the residuals to be large upon entering the Davidson loop,
-                        ! for the sake of the first iteration
-                        do i = 1,nroot
-                           resv(i) = 100.0
-                        end do
+                        ! For the sake of the first iteration:
+                        ! (1) initialize residuals to be large upon entering the Davidson loop
+                        resv(1:nroot) = 100.0
+                        ! (2) set num_add equal to nroot
+                        num_add = nroot
 
-                        ! main davidson update loop
+                        ! main davidson loop
                         do it = 1,maxit
 
                                 write(*,fmt=*) ''
@@ -111,9 +109,7 @@ module davidson_module
                                 write(*,fmt=*) '-----------------------------------------------------------'
 
                                 ! allocate arrays
-                                allocate(sigma(N,crsz),&
-                                         aR(crsz,crsz),evR(crsz),evI(crsZ),G(crsz,crsz),&
-                                         id(crsz))
+                                allocate(aR(crsz,crsz),evR(crsz),evI(crsZ),G(crsz,crsz),id(crsz))
 
                                 ! check if subspace is stangated
                                 if (crsz0 == crsz) then
@@ -127,10 +123,11 @@ module davidson_module
                                 call gramschmidt(B(:,1:crsz))
 
                                 ! matrix-vector product
-                                call HC_matmat(sys,fA,fB,vA,vB,vC,B(:,1:crsz),N,crsz,sigma)
+                                k = max(crsz-num_add+1,1)
+                                call HC_matmat(sys,fA,fB,vA,vB,vC,B(:,k:crsz),N,crsz-k+1,sigma(:,k:crsz))
 
                                 ! create projected subspace interaction matrix
-                                call gemmt(B(:,1:crsz),sigma,G)
+                                call gemmt(B(:,1:crsz),sigma(:,1:crsz),G)
 
                                 ! diagonalize projected eigenvalue problem
                                 call eig(G,aR,evR,evI)
@@ -234,12 +231,12 @@ module davidson_module
                                 end if
 
                                 ! deallocate temporary arrays
-                                deallocate(sigma,aR,evR,evI,G,id)
+                                deallocate(aR,evR,evI,G,id)
 
                         end do
 
                         ! deallocate rest of the arrays
-                        deallocate(rv,q,B,addB,v)
+                        deallocate(rv,q,B,sigma,addB,v)
 
                 end subroutine davidson_cis
 
