@@ -6,7 +6,7 @@ program main
 
         implicit none
 
-        integer, parameter :: N = 1000, nroot = 5, maxit=3000
+        integer, parameter :: N = 10000, nroot = 5, maxit=3000
         real, parameter :: sparsity = 1e-01, herm = 1, tol=1e-06
         real :: A(N,N)
         real, allocatable :: B0(:,:), VR(:,:), wR(:)
