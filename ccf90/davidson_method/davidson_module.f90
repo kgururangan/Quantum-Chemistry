@@ -197,7 +197,7 @@ module davidson_module
                         integer, parameter :: ndiis = 6
                         integer :: N, nroot, it, it_macro, i, j
                         real, allocatable :: L(:), L_list(:,:), L_resid_list(:,:), rv(:), LA(:), wL(:)
-                        real :: denom, res, LR
+                        real :: denom, res, LR, tmp
 
                         N = size(A,1)
                         nroot = size(VR,2)
@@ -250,7 +250,27 @@ module davidson_module
 
                                 end do
 
+                                VL(:,i) = L
+
                            end do
+
+                           deallocate(L,L_list,L_resid_list,LA,rv,wL)
+
+                           ! check biorthogonality
+                           LR = 0.0
+                           do i = 1,nroot
+                              do j = j,nroot
+                                 tmp = dot(VL(:,i),VR(:,j))
+                                 if (i == j) then
+                                    LR = LR + abs(tmp - 1.0)
+                                 else
+                                    LR = LR + abs(tmp)
+                                 end if
+                              end do
+                           end do
+
+                           write(*,fmt=*) 'Biorthogonality measure = ',LR
+                                 
 
                    end subroutine calc_left
 
