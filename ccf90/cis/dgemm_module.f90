@@ -31,6 +31,20 @@ module dgemm_module
 
                 end subroutine gemmt
 
+                subroutine gemv(A,b,c)
+
+                        real, intent(in) :: A(:,:), b(:)
+                        real, intent(out) :: c(:)
+                        real :: alpha = 1.0, beta = 0.0
+                        integer :: m, n
+
+                        m = size(A,1)
+                        n = size(A,2)
+
+                        call dgemv('n',m,n,alpha,A,m,b,1,beta,c,1)
+
+                end subroutine gemv
+
                 function dot(a,b) result(x)
 
                         real, intent(in) :: a(:), b(:)

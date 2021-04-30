@@ -4,7 +4,7 @@ module davidson_module
         use system_types, only: sys_t
         use integral_types, only: e1int_t, e2int_t
         use dgeev_module, only: eig
-        use dgemm_module, only: gemm, gemmt, dot
+        use dgemm_module, only: gemm, gemmt, gemv, dot
         use sort_module, only: argsort
 
         contains
@@ -49,7 +49,7 @@ module davidson_module
                         real, allocatable :: sigma(:,:), aR(:,:), evR(:), evI(:), G(:,:),&
                                              rv(:), v(:), q(:), B(:,:), addB(:,:)
                         integer, allocatable :: id(:)
-                        real :: resid, s, resv(nroot), D1(N), B0(N,nroot)
+                        real :: resid, resv(nroot), D1(N), B0(N,nroot)
                         integer, parameter :: nvec = 10
                         real, parameter :: threshold = 1.0e-05, hatoev = 27.2114
 
@@ -147,12 +147,8 @@ module davidson_module
                                    else
 
                                       ! calculate ritz vector
-                                      v = 0.0
-                                      rv = 0.0
-                                      do i = 1,crsz
-                                         v = v + B(:,i)*aR(i,j)
-                                         rv = rv + sigma(:,i)*aR(i,j)
-                                      end do
+                                      call gemv(B(:,1:crsz),aR(:,j),v)
+                                      call gemv(sigma(:,1:crsz),aR(:,j),rv)
 
                                       ! store current eigenvector/value pair
                                       VR(:,j) = v
@@ -167,21 +163,12 @@ module davidson_module
 
                                       ! calculate DPR updated vector
                                       call update_C(rv,sys,fA,fB,vA,vB,vC,evR(j),q)
-
+                                      ! normalize update vector
                                       q = q/norm2(q)
-
                                       ! orthogonalize against all vectors in current search space
-                                      do i = 1,crsz
-                                         v = B(:,i)/norm2(B(:,i))
-                                         s = dot(v,q)
-                                         q = q - s*v
-                                      end do
+                                      call orth(q,B(:,1:crsz))
                                       ! and those that are to be added to the search space
-                                      do i = 1,num_add
-                                         v = addB(:,i)/norm2(addB(:,i))
-                                         s = dot(v,q)
-                                         q = q - s*v
-                                      end do
+                                      call orth(q,addB(:,1:num_add))
 
                                       ! add q to search space if its norm is large enough
                                       if (norm2(q) > threshold) then
@@ -211,20 +198,15 @@ module davidson_module
 
                                    ! collapse subspace    
                                    call gemm(B(:,1:crsz),aR(1:crsz,1:nroot),addB)
-                                   do i = 1,nroot
-                                      B(:,i) = addB(:,i)
-                                   end do
-
+                                   B(:,1:nroot) = addB
                                    ! update search subspace dimension
                                    crsz = nroot
 
-                                ! if crsz+addB <= maxsz, expand the subspace
+                                ! if not, expand the subspace
                                 else 
 
-                                    do i = 1,num_add
-                                       B(:,crsz+i) = addB(:,i)
-                                    end do
-
+                                    ! add vectors to subspace
+                                    B(:,crsz+1:crsz+num_add) = addB
                                     ! update search subspace dimension
                                     crsz = crsz + num_add
 
@@ -248,10 +230,13 @@ module davidson_module
                         real, intent(in) :: q(:), omega
                         real, intent(out) :: qout(sys%Nocc_a*sys%Nunocc_a+sys%Nocc_b*sys%Nunocc_b)
                         real :: c1a(sys%Nunocc_a,sys%Nocc_a), c1b(sys%Nunocc_b,sys%Nocc_b)
-                        integer :: a, i
+                        integer :: a, i, n1a, n1b
 
-                        c1a = reshape(q(1:sys%Nocc_a*sys%Nunocc_a),shape(c1a))
-                        c1b = reshape(q(sys%Nocc_a*sys%Nunocc_a+1:sys%Nocc_a*sys%Nunocc_a+sys%Nocc_b*sys%Nunocc_b),shape(c1b))
+                        n1a = sys%Nocc_a * sys%Nunocc_a
+                        n1b = sys%Nocc_b * sys%Nunocc_b
+
+                        c1a = reshape(q(1:n1a),shape(c1a))
+                        c1b = reshape(q(n1a+1:n1a+n1b),shape(c1b))
 
                         do i = 1,sys%Nocc_a
                            do a = 1,sys%Nunocc_a
@@ -267,12 +252,30 @@ module davidson_module
                            end do
                         end do
 
-                        qout(1:sys%Nocc_a*sys%Nunocc_a) = reshape(c1a,(/sys%Nocc_a*sys%Nunocc_a/))
-                        qout(sys%Nocc_a*sys%Nunocc_a+1:sys%Nocc_a*sys%Nunocc_a+sys%Nocc_b*sys%Nunocc_b) = &
-                        reshape(c1b,(/sys%Nocc_b*sys%Nunocc_b/))
-
+                        qout(1:n1a) = reshape(c1a,(/sys%Nocc_a*sys%Nunocc_a/))
+                        qout(n1a+1:n1a+n1b) = reshape(c1b,(/sys%Nocc_b*sys%Nunocc_b/))
 
                 end subroutine update_C
+
+                subroutine orth(q,B)
+
+                        real, intent(inout) :: q(:)
+                        real, intent(in) :: B(:,:)
+                        real, allocatable :: v(:)
+                        integer :: n
+                        real :: s
+
+                        n = size(B,2)
+
+                        allocate(v(n))
+                        do i = 1,n
+                           v = B(:,i)/norm2(B(:,i))
+                           s = dot(v,q)
+                           q = q - s*v
+                        end do
+                        deallocate(v)
+
+                end subroutine orth
 
 
 end module davidson_module
