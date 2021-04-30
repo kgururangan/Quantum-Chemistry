@@ -229,7 +229,7 @@ module davidson_module
                         type(e2int_t), intent(in) :: vA, vB, vC
                         real, intent(in) :: q(:), omega
                         real, intent(out) :: qout(sys%Nocc_a*sys%Nunocc_a+sys%Nocc_b*sys%Nunocc_b)
-                        real :: c1a(sys%Nunocc_a,sys%Nocc_a), c1b(sys%Nunocc_b,sys%Nocc_b)
+                        real :: c1a(sys%Nunocc_a,sys%Nocc_a), c1b(sys%Nunocc_b,sys%Nocc_b), denom
                         integer :: a, i, n1a, n1b
 
                         n1a = sys%Nocc_a * sys%Nunocc_a
