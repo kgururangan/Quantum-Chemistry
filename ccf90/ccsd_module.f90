@@ -20,6 +20,115 @@ module ccsd_module
                                             t2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b)
                         real, intent(in) :: shift
                         real, intent(inout) :: t1a(sys%Nunocc_a,sys%Nocc_a)
+                        real :: denom, val
+                        integer :: a, i
+                        real :: I1A_vv(sys%Nunocc_a,sys%Nunocc_a), I1A_oo(sys%Nocc_a,sys%Nocc_a), &
+                                h1A_ov(sys%Nocc_a,sys%Nunocc_a), h1B_ov(sys%Nocc_b,sys%Nunocc_b), &
+                                h1A_oo(sys%Nocc_a,sys%Nocc_a), &
+                                h2A_ooov(sys%Nocc_a,sys%Nocc_a,sys%Nocc_a,sys%Nunocc_a), &
+                                h2B_ooov(sys%Nocc_a,sys%Nocc_b,sys%Nocc_a,sys%Nunocc_b), &
+                                h2A_vovv(sys%Nunocc_a,sys%Nocc_a,sys%Nunocc_a,sys%Nunocc_a), &
+                                h2B_vovv(sys%Nunocc_a,sys%Nocc_b,sys%Nunocc_a,sys%Nunocc_b), &
+                                X1A(sys%Nunocc_a,sys%Nocc_a)
+                        real, allocatable :: Z1(:,:), Q1(:,:,:,:)
+
+                        associate(noa=>sys%Nocc_a,nob=>sys%Nocc_b,nua=>sys%Nunocc_a,nub=>sys%Nunocc_b)
+
+                                I1A_vv = fA%uu
+                                allocate(Z1(nua,nua))
+                                call einsum('anef,fn->ae',vA%uouu,t1a,Z1)
+                                I1A_vv = I1A_vv + Z1
+                                call einsum('anef,fn->ae',vB%uouu,t1b,Z1)
+                                I1A_vv = I1A_vv + Z1
+                                deallocate(Z1)
+
+                                I1A_oo = fA%oo
+                                allocate(Z1(noa,noa))
+                                call einsum('mnif,fn->mi',vA%ooou,t1a,Z1)
+                                I1A_oo = I1A_oo + Z1
+                                call einsum('mnif,fn->mi',vB%ooou,t1b,Z1)
+                                I1A_oo = I1A_oo + Z1
+                                deallocate(Z1)
+
+                                h1A_ov = fA%ou
+                                allocate(Z1(noa,nua))
+                                call einsum('mnef,fn->me',vA%oouu,t1a,Z1)
+                                h1A_ov = h1A_ov + Z1
+                                call einsum('mnef,fn->me',vB%oouu,t1b,Z1)
+                                h1A_ov = h1A_ov + Z1
+                                deallocate(Z1)
+
+                                h1B_ov = fB%ou
+                                allocate(Z1(nob,nub))
+                                call einsum('nmfe,fn->me',vB%oouu,t1a,Z1)
+                                h1B_ov = h1B_ov + Z1
+                                call einsum('mnef,fn->me',vC%oouu,t1b,Z1)
+                                h1B_ov = h1B_ov + Z1
+                                deallocate(Z1)
+
+                                h1A_oo = I1A_oo
+                                allocate(Z1(noa,noa))
+                                call einsum('me,ei->mi',h1A_ov,t1a,Z1)
+                                h1A_oo = h1A_oo + Z1
+                                deallocate(Z1)
+
+                                h2A_ooov = vA%ooou
+                                allocate(Q1(noa,noa,noa,nua))
+                                call einsum('mnfe,fi->mnie',vA%oouu,t1a,Q1)
+                                h2A_ooov = h2A_ooov + Q1
+                                deallocate(Q1)
+
+                                h2B_ooov = vB%ooou
+                                allocate(Q1(noa,nob,noa,nub))
+                                call einsum('mnfe,fi->mnie',vB%oouu,t1a,Q1)
+                                h2B_ooov = h2B_ooov + Q1
+                                deallocate(Q1)
+
+                                h2A_vovv = vA%uouu
+                                allocate(Q1(nua,noa,nua,nua))
+                                call einsum('mnfe,an->amef',vA%oouu,t1a,Q1)
+                                h2A_vovv = h2A_vovv - Q1
+                                deallocate(Q1)
+
+                                h2B_vovv = vB%uouu
+                                allocate(Q1(nua,nob,nua,nub))
+                                call einsum('nmef,an->amef',vB%oouu,t1a,Q1)
+                                h2B_vovv = h2B_vovv - Q1
+                                deallocate(Q1)
+
+                                X1A = fA%uo
+                                allocate(Z1(nua,noa))
+                                call einsum('mi,am->ai',h1A_oo,t1a,Z1)
+                                X1A = X1A - Z1
+                                call einsum('ae,ei->ai',I1A_vv,t1a,Z1)
+                                X1A = X1A + Z1
+                                call einsum('anif,fn->ai',vA%uoou,t1a,Z1)
+                                X1A = X1A + Z1
+                                call einsum('anif,fn->ai',vB%uoou,t1b,Z1)
+                                X1A = X1A + Z1
+                                call einsum('me,aeim->ai',h1A_ov,t2a,Z1)
+                                X1A = X1A + Z1
+                                call einsum('me,aeim->ai',h1B_ov,t2b,Z1)
+                                X1A = X1A + Z1
+                                call einsum('mnif,afmn->ai',h2A_ooov,t2a,Z1)
+                                X1A = X1A - 0.5*Z1
+                                call einsum('mnif,afmn->ai',h2B_ooov,t2b,Z1)
+                                X1A = X1A - Z1
+                                call einsum('anef,efin->ai',h2A_vovv,t2a,Z1)
+                                X1A = X1A + 0.5*Z1
+                                call einsum('anef,efin->ai',h2B_vovv,t2b,Z1)
+                                X1A = X1A + Z1
+                                deallocate(Z1)
+
+                        end associate
+
+                        do i = 1,sys%Nocc_a
+                           do a = 1,sys%Nunocc_a
+                              denom = fA%oo(i,i) - fA%uu(a,a)
+                              val = X1A(a,i)
+                              t1a(a,i) = t1a(a,i) + val/(denom-shift)
+                           end do
+                        end do
 
                 end subroutine update_t1a
 
@@ -35,7 +144,171 @@ module ccsd_module
                                             t2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b)
                         real, intent(in) :: shift
                         real, intent(inout) :: t1b(sys%Nunocc_b,sys%Nocc_a)
+                        real :: denom, val
+                        integer :: a, i
+                        real :: I1B_vv(sys%Nunocc_b,sys%Nunocc_b), I1B_oo(sys%Nocc_b,sys%Nocc_b), &
+                                h1A_ov(sys%Nocc_a,sys%Nunocc_a), h1B_ov(sys%Nocc_b,sys%Nunocc_b), &
+                                h1B_oo(sys%Nocc_b,sys%Nocc_b), &
+                                h2C_ooov(sys%Nocc_b,sys%Nocc_b,sys%Nocc_b,sys%Nunocc_b), &
+                                h2B_oovo(sys%Nocc_a,sys%Nocc_b,sys%Nunocc_a,sys%Nocc_b), &
+                                h2C_vovv(sys%Nunocc_b,sys%Nocc_b,sys%Nunocc_b,sys%Nunocc_b), &
+                                h2B_ovvv(sys%Nocc_a,sys%Nunocc_b,sys%Nunocc_a,sys%Nunocc_b), &
+                                X1B(sys%Nunocc_b,sys%Nocc_b)
+                        real, allocatable :: Z1(:,:), Q1(:,:,:,:)
 
+                        associate(noa=>sys%Nocc_a,nob=>sys%Nocc_b,nua=>sys%Nunocc_a,nub=>sys%Nunocc_b)
+                                
+                                I1B_vv = fB%uu
+                                allocate(Z1(nub,nub))
+                                call einsum('anef,fn->ae',vC%uouu,t1b,Z1)
+                                I1B_vv = I1B_vv + Z1
+                                call einsum('nafe,fn->ae',vB%ouuu,t1a,Z1)
+                                I1B_vv = I1B_vv + Z1
+                                deallocate(Z1)
+
+                                I1B_oo = fB%oo
+                                allocate(Z1(nob,nob))
+                                call einsum('mnif,fn->mi',vC%ooou,t1b,Z1)
+                                I1B_oo = I1B_oo + Z1
+                                call einsum('nmfi,fn->mi',vB%oouo,t1a,Z1)
+                                I1B_oo = I1B_oo + Z1
+                                deallocate(Z1)
+
+                                h1A_ov = fA%ou
+                                allocate(Z1(noa,nua))
+                                call einsum('mnef,fn->me',vA%oouu,t1a,Z1)
+                                h1A_ov = h1A_ov + Z1
+                                call einsum('mnef,fn->me',vB%oouu,t1b,Z1)
+                                h1A_ov = h1A_ov + Z1
+                                deallocate(Z1)
+
+                                h1B_ov = fB%ou
+                                allocate(Z1(nob,nub))
+                                call einsum('nmfe,fn->me',vB%oouu,t1a,Z1)
+                                h1B_ov = h1B_ov + Z1
+                                call einsum('mnef,fn->me',vC%oouu,t1b,Z1)
+                                h1B_ov = h1B_ov + Z1
+                                deallocate(Z1)
+
+                                h1B_oo = I1B_oo
+                                allocate(Z1(nob,nob))
+                                call einsum('me,ei->mi',h1B_ov,t1b,Z1)
+                                h1B_oo = h1B_oo + Z1
+                                deallocate(Z1)
+
+                                h2C_ooov = vC%ooou
+                                allocate(Q1(nob,nob,nob,nub))
+                                call einsum('mnfe,fi->mnie',vC%oouu,t1b,Q1)
+                                h2C_ooov = h2C_ooov + Q1
+                                deallocate(Q1)
+
+                                h2B_oovo = vB%oouo
+                                allocate(Q1(noa,nob,nua,nob))
+                                call einsum('nmef,fi->nmei',vB%oouu,t1b,Q1)
+                                h2B_oovo = h2B_oovo + Q1
+                                deallocate(Q1)
+
+                                h2C_vovv = vC%uouu
+                                allocate(Q1(nub,nob,nub,nub))
+                                call einsum('mnfe,an->amef',vC%oouu,t1b,Q1)
+                                h2C_vovv = h2C_vovv - Q1
+                                deallocate(Q1)
+
+                                h2B_ovvv = vB%ouuu
+                                allocate(Q1(noa,nub,nua,nub))
+                                call einsum('mnfe,an->mafe',vB%oouu,t1b,Q1)
+                                h2B_ovvv = h2B_ovvv - Q1
+                                deallocate(Q1)
+
+                                X1B = fB%uo
+                                allocate(Z1(nub,nob))
+                                call einsum('mi,am->ai',h1B_oo,t1b,Z1)
+                                X1B = X1B - Z1
+                                call einsum('ae,ei->ai',I1B_vv,t1b,Z1)
+                                X1B = X1B + Z1
+                                call einsum('anif,fn->ai',vC%uoou,t1b,Z1)
+                                X1B = X1B + Z1
+                                call einsum('nafi,fn->ai',vB%ouuo,t1a,Z1)
+                                X1B = X1B + Z1
+                                call einsum('me,eami->ai',h1A_ov,t2b,Z1)
+                                X1B = X1B + Z1
+                                call einsum('me,aeim->ai',h1B_ov,t2c,Z1)
+                                X1B = X1B + Z1
+                                call einsum('mnif,afmn->ai',h2C_ooov,t2c,Z1)
+                                X1B = X1B - 0.5*Z1
+                                call einsum('nmfi,fanm->ai',h2B_oovo,t2b,Z1)
+                                X1B = X1B - Z1
+                                call einsum('anef,efin->ai',h2C_vovv,t2c,Z1)
+                                X1B = X1B + 0.5*Z1
+                                call einsum('nafe,feni->ai',h2B_ovvv,t2b,Z1)
+                                X1B = X1B + Z1
+                                deallocate(Z1)
+
+                        end associate
+
+                        do i = 1,sys%Nocc_b
+                           do a = 1,sys%Nunocc_b
+                              denom = fB%oo(i,i) - fB%uu(a,a)
+                              val = X1B(a,i)
+                              t1b(a,i) = t1b(a,i) + val/(denom-shift)
+                           end do
+                        end do
+
+    !chi1B_vv = 0.0
+    !chi1B_vv += fB['vv']
+    !chi1B_vv += np.einsum('anef,fn->ae',vC['vovv'],t1b,optimize=True)
+    !chi1B_vv += np.einsum('nafe,fn->ae',vB['ovvv'],t1a,optimize=True)
+
+    !chi1B_oo = 0.0
+    !chi1B_oo += fB['oo']
+    !chi1B_oo += np.einsum('mnif,fn->mi',vC['ooov'],t1b,optimize=True)
+    !chi1B_oo += np.einsum('nmfi,fn->mi',vB['oovo'],t1b,optimize=True)
+
+    !h1A_ov = 0.0
+    !h1A_ov += fA['ov']
+    !h1A_ov += np.einsum('mnef,fn->me',vA['oovv'],t1a,optimize=True) 
+    !h1A_ov += np.einsum('mnef,fn->me',vB['oovv'],t1b,optimize=True) 
+
+    !h1B_ov = 0.0
+    !h1B_ov += fB['ov'] 
+    !h1B_ov += np.einsum('nmfe,fn->me',vB['oovv'],t1a,optimize=True) 
+    !h1B_ov += np.einsum('mnef,fn->me',vC['oovv'],t1b,optimize=True) 
+
+    !h1B_oo = 0.0
+    !h1B_oo += chi1B_oo + np.einsum('me,ei->mi',h1B_ov,t1b,optimize=True)
+    
+    !M11 = 0.0
+    !M11 += fB['vo']
+    !M11 -= np.einsum('mi,am->ai',h1B_oo,t1b,optimize=True)
+    !M11 += np.einsum('ae,ei->ai',chi1B_vv,t1b,optimize=True)
+    !M11 += np.einsum('anif,fn->ai',vC['voov'],t1b,optimize=True)
+    !M11 += np.einsum('nafi,fn->ai',vB['ovvo'],t1a,optimize=True)
+
+    !h2C_ooov = 0.0
+    !h2C_ooov += vC['ooov']
+    !h2C_ooov += np.einsum('mnfe,fi->mnie',vC['oovv'],t1b,optimize=True)
+
+    !h2B_oovo = 0.0
+    !h2B_oovo += vB['oovo']
+    !h2B_oovo += np.einsum('nmef,fi->nmei',vB['oovv'],t1b,optimize=True)
+    
+    !h2C_vovv = 0.0
+    !h2C_vovv += vC['vovv']
+    !h2C_vovv -= np.einsum('mnfe,an->amef',vC['oovv'],t1b,optimize=True)
+    
+    !h2B_ovvv = 0.0
+    !h2B_ovvv += vB['ovvv']
+    !h2B_ovvv -= np.einsum('mnfe,an->mafe',vB['oovv'],t1b,optimize=True)
+
+    !CCS_T2 = 0.0
+    !CCS_T2 += np.einsum('me,eami->ai',h1A_ov,t2b,optimize=True)
+    !CCS_T2 += np.einsum('me,aeim->ai',h1B_ov,t2c,optimize=True)
+    !CCS_T2 -= 0.5*np.einsum('mnif,afmn->ai',h2C_ooov,t2c,optimize=True)
+    !CCS_T2 -= np.einsum('nmfi,fanm->ai',h2B_oovo,t2b,optimize=True)
+    !CCS_T2 += 0.5*np.einsum('anef,efin->ai',h2C_vovv,t2c,optimize=True)
+    !CCS_T2 += np.einsum('nafe,feni->ai',h2B_ovvv,t2b,optimize=True)
+       
+    !X1B = M11 + CCS_T2; 
                 end subroutine update_t1b
 
 
@@ -48,7 +321,108 @@ module ccsd_module
                                             t2b(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b), &
                                             t2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b)
                         real, intent(in) :: shift
+                        integer :: a, b, i, j
                         real, intent(inout) :: t2a(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a)
+                        real :: I1A_oo(sys%Nocc_a,sys%Nocc_a), I1A_vv(sys%Nunocc_a,sys%Nunocc_a), &
+                                I2A_voov(sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a,sys%Nunocc_a), &
+                                I2A_oooo(sys%Nocc_a,sys%Nocc_a,sys%Nocc_a,sys%Nocc_a), &
+                                I2B_voov(sys%Nunocc_a,sys%Nocc_b,sys%Nocc_a,sys%Nunocc_b), &
+                                X2A(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a), &
+                                denom, val
+                        real, allocatable :: Z1(:,:), Q1(:,:,:,:), &
+                                             D1(:,:,:,:), D2(:,:,:,:), D3(:,:,:,:), D4(:,:,:,:), &
+                                             D5(:,:,:,:), D6(:,:,:,:)
+
+                        associate(noa=>sys%Nocc_a,nob=>sys%Nocc_b,nua=>sys%Nunocc_a,nub=>sys%Nunocc_b)
+
+
+                                I1A_oo = H1A%oo
+                                allocate(Z1(noa,noa))
+                                call einsum('mnef,efin->mi',vA%oouu,t2a,Z1)
+                                I1A_oo = I1A_oo + 0.5*Z1
+                                call einsum('mnef,efin->mi',vB%oouu,t2b,Z1)
+                                I1A_oo = I1A_oo + Z1
+                                deallocate(Z1)
+
+                                I1A_vv = H1A%uu
+                                allocate(Z1(nua,nua))
+                                call einsum('mnef,afmn->ae',vA%oouu,t2a,Z1)
+                                I1A_vv = I1A_vv - 0.5*Z1
+                                call einsum('mnef,afmn->ae',vB%oouu,t2b,Z1)
+                                I1A_vv = I1A_vv - Z1
+                                deallocate(Z1)
+
+                                I2A_voov = H2A%uoou
+                                allocate(Q1(nua,noa,noa,nua))
+                                call einsum('mnef,afin->amie',vA%oouu,t2a,Q1)
+                                I2A_voov = I2A_voov + 0.5*Q1
+                                call einsum('mnef,afin->amie',vB%oouu,t2b,Q1)
+                                I2A_voov = I2A_voov + Q1
+                                deallocate(Q1)
+
+                                I2A_oooo = H2A%oooo
+                                allocate(Q1(noa,noa,noa,noa))
+                                call einsum('mnef,efij->mnij',vA%oouu,t2a,Q1)
+                                I2A_oooo = I2A_oooo + 0.5*Q1
+                                deallocate(Q1)
+
+                                I2B_voov = H2B%uoou
+                                !I2B_voov = 0.0
+                                allocate(Q1(nua,nob,noa,nub))
+                                call einsum('mnef,afin->amie',vC%oouu,t2b,Q1)
+                                I2B_voov = I2B_voov + 0.5*Q1
+                                deallocate(Q1)
+
+                                X2A = vA%uuoo
+                                allocate(D1(nua,nua,noa,noa),D2(nua,nua,noa,noa),D3(nua,nua,noa,noa), &
+                                         D4(nua,nua,noa,noa),D5(nua,nua,noa,noa),D6(nua,nua,noa,noa))
+
+                                call einsum('amij,bm->abij',-1.0*H2A%uooo,t1a,D1)
+                                call einsum('abie,ej->abij',H2A%uuou,t1a,D2)
+                                call einsum('ae,ebij->abij',I1A_vv,t2a,D3)
+                                call einsum('mi,abmj->abij',-1.0*I1A_oo,t2a,D4)
+                                call einsum('amie,ebmj->abij',I2A_voov,t2a,D5)
+                                call einsum('amie,bejm->abij',I2B_voov,t2b,D6)
+
+                                allocate(Q1(nua,nua,noa,noa))
+                                call einsum('abef,efij->abij',H2A%uuuu,t2a,Q1)
+                                X2A = X2A + 0.5*Q1
+                                call einsum('mnij,abmn->abij',I2A_oooo,t2a,Q1)
+                                X2A = X2A + 0.5*Q1
+                                deallocate(Q1)
+
+                                ! these diagrams are A(ab)
+                                D1 = D1 + D3
+                                ! these diagrams are A(ij)
+                                D2 = D2 + D4
+                                ! these diagrams are A(ab)A(ij)
+                                D5 = D5 + D6
+
+                                deallocate(D3,D4,D6)
+
+                        end associate
+                
+                        do i = 1,sys%Nocc_a
+                           do j = i+1,sys%Nocc_a
+                              do a = 1,sys%Nunocc_a
+                                 do b = a+1,sys%Nunocc_a
+                                    
+                                    denom = fA%oo(i,i)+fA%oo(j,j)-fA%uu(a,a)-fA%uu(b,b)
+                                    val = X2A(b,a,j,i) &
+                                          + D1(b,a,j,i) - D1(a,b,j,i) & ! A(ab)
+                                          + D2(b,a,j,i) - D2(b,a,i,j) & ! A(ij)
+                                          + D5(b,a,j,i) - D5(a,b,j,i) - D5(b,a,i,j) + D5(a,b,i,j) ! A(ab)A(ij)
+                                    t2a(b,a,j,i) = t2a(b,a,j,i) + val/(denom-shift)
+                                    t2a(a,b,j,i) = -t2a(b,a,j,i)
+                                    t2a(b,a,i,j) = -t2a(b,a,j,i)
+                                    t2a(a,b,i,j) = t2a(b,a,j,i)
+
+                                 end do
+                              end do
+                           end do
+                        end do
+
+                        deallocate(D1,D2,D5)
 
                 end subroutine update_t2a
 
@@ -62,8 +436,130 @@ module ccsd_module
                                             t2a(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a), &
                                             t2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b)
                         real, intent(in) :: shift
+                        real :: denom, val
+                        integer :: a, b, i, j
                         real, intent(inout) :: t2b(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b)
+                        real :: I1A_vv(sys%Nunocc_a,sys%Nunocc_a), I1B_vv(sys%Nunocc_b,sys%Nunocc_b), &
+                                I1A_oo(sys%Nocc_a,sys%Nocc_a), I1B_oo(sys%Nocc_b,sys%Nocc_b), &
+                                I2A_voov(sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a,sys%Nunocc_a), &
+                                I2B_voov(sys%Nunocc_a,sys%Nocc_b,sys%Nocc_a,sys%Nunocc_b), &
+                                I2B_oooo(sys%Nocc_a,sys%Nocc_b,sys%Nocc_a,sys%Nocc_b), &
+                                I2B_vovo(sys%Nunocc_a,sys%Nocc_b,sys%Nunocc_a,sys%Nocc_b), &
+                                X2B(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b)
+                        real, allocatable :: Z1(:,:), Q1(:,:,:,:)
                
+                        associate(noa=>sys%Nocc_a,nob=>sys%Nocc_b,nua=>sys%Nunocc_a,nub=>sys%Nunocc_b)
+
+                                I1A_vv = H1A%uu
+                                allocate(Z1(nua,nua))
+                                call einsum('mnef,afmn->ae',vA%oouu,t2a,Z1)
+                                I1A_vv = I1A_vv - 0.5*Z1
+                                call einsum('mnef,afmn->ae',vB%oouu,t2b,Z1)
+                                I1A_vv = I1A_vv - Z1
+                                deallocate(Z1)
+
+                                I1B_vv = H1B%uu
+                                allocate(Z1(nub,nub))
+                                call einsum('nmfe,fbnm->be',vB%oouu,t2b,Z1)
+                                I1B_vv = I1B_vv - Z1
+                                call einsum('mnef,fbnm->be',vC%oouu,t2c,Z1)
+                                I1B_vv = I1B_vv - 0.5*Z1
+                                deallocate(Z1)
+
+                                I1A_oo = H1A%oo
+                                allocate(Z1(noa,noa))
+                                call einsum('mnef,efin->mi',vA%oouu,t2a,Z1)
+                                I1A_oo = I1A_oo + 0.5*Z1
+                                call einsum('mnef,efin->mi',vB%oouu,t2b,Z1)
+                                I1A_oo = I1A_oo + Z1
+                                deallocate(Z1)
+
+                                I1B_oo = H1B%oo
+                                allocate(Z1(nob,nob))
+                                call einsum('nmfe,fenj->mj',vB%oouu,t2b,Z1)
+                                I1B_oo = I1B_oo + Z1
+                                call einsum('mnef,efjn->mj',vC%oouu,t2c,Z1)
+                                I1B_oo = I1B_oo + 0.5*Z1
+                                deallocate(Z1)
+
+                                I2A_voov = H2A%uoou
+                                allocate(Q1(nua,noa,noa,nua))
+                                call einsum('mnef,aeim->anif',vA%oouu,t2a,Q1)
+                                I2A_voov = I2A_voov + Q1
+                                call einsum('nmfe,aeim->anif',vB%oouu,t2b,Q1)
+                                I2A_voov = I2A_voov + Q1
+                                deallocate(Q1)
+
+                                I2B_voov = H2B%uoou
+                                allocate(Q1(nua,nob,noa,nub))
+                                call einsum('mnef,aeim->anif',vB%oouu,t2a,Q1)
+                                I2B_voov = I2B_voov + Q1
+                                call einsum('mnef,aeim->anif',vC%oouu,t2b,Q1)
+                                I2B_voov = I2B_voov + Q1
+                                deallocate(Q1)
+   
+                                I2B_oooo = H2B%oooo
+                                allocate(Q1(noa,nob,noa,nob))
+                                call einsum('mnef,efij->mnij',vB%oouu,t2b,Q1)
+                                I2B_oooo = I2B_oooo + Q1
+                                deallocate(Q1)
+
+                                I2B_vovo = H2B%uouo
+                                allocate(Q1(nua,nob,nua,nob))
+                                call einsum('mnef,afmj->anej',vB%oouu,t2b,Q1)
+                                I2B_vovo = I2B_vovo - Q1
+                                deallocate(Q1) 
+
+                                X2B = vB%uuoo
+                                allocate(Q1(nua,nub,noa,nob))
+                                call einsum('mbij,am->abij',H2B%ouoo,t1a,Q1)
+                                X2B = X2B - Q1
+                                call einsum('amij,bm->abij',H2B%uooo,t1b,Q1)
+                                X2B = X2B - Q1
+                                call einsum('abej,ei->abij',H2B%uuuo,t1a,Q1)
+                                X2B = X2B + Q1
+                                call einsum('abie,ej->abij',H2B%uuou,t1b,Q1)
+                                X2B = X2B + Q1
+                                call einsum('ae,ebij->abij',I1A_vv,t2b,Q1)
+                                X2B = X2B + Q1
+                                call einsum('be,aeij->abij',I1B_vv,t2b,Q1)
+                                X2B = X2B + Q1 
+                                call einsum('mi,abmj->abij',I1A_oo,t2b,Q1)
+                                X2B = X2B - Q1                
+                                call einsum('mj,abim->abij',I1B_oo,t2b,Q1)
+                                X2B = X2B - Q1    
+                                call einsum('amie,ebmj->abij',I2A_voov,t2b,Q1)
+                                X2B = X2B + Q1
+                                call einsum('amie,ebmj->abij',I2B_voov,t2c,Q1)
+                                X2B = X2B + Q1
+                                call einsum('mbej,aeim->abij',H2B%ouuo,t2a,Q1)
+                                X2B = X2B + Q1
+                                call einsum('bmje,aeim->abij',H2C%uoou,t2b,Q1)
+                                X2B = X2B + Q1        
+                                call einsum('mbie,aemj->abij',H2B%ouou,t2b,Q1)
+                                X2B = X2B - Q1
+                                call einsum('amej,ebim->abij',I2B_vovo,t2b,Q1)
+                                X2B = X2B - Q1     
+                                call einsum('mnij,abmn->abij',I2B_oooo,t2b,Q1)
+                                X2B = X2B + Q1     
+                                call einsum('abef,efij->abij',H2B%uuuu,t2b,Q1)         
+                                X2B = X2B + Q1
+                                deallocate(Q1)
+
+                        end associate
+        
+                        do j = 1,sys%Nocc_b
+                           do i = 1,sys%Nocc_a
+                              do b = 1,sys%Nunocc_b
+                                 do a = 1,sys%Nunocc_a
+                                    denom = fA%oo(i,i)+fB%oo(j,j)-fA%uu(a,a)-fB%uu(b,b)
+                                    val = X2B(a,b,i,j)
+                                    t2b(a,b,i,j) = t2b(a,b,i,j) + val/(denom-shift)
+                                 end do
+                              end do
+                           end do
+                        end do
+
                 end subroutine update_t2b
 
 
@@ -77,6 +573,102 @@ module ccsd_module
                                             t2b(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b)
                         real, intent(in) :: shift
                         real, intent(inout) :: t2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b)
+                        real :: denom, val
+                        integer :: a, b, i, j
+                        real :: I1B_oo(sys%Nocc_b,sys%Nocc_b), I1B_vv(sys%Nunocc_b,sys%Nunocc_b), &
+                                I2C_voov(sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b,sys%Nunocc_b), &
+                                I2C_oooo(sys%Nocc_b,sys%Nocc_b,sys%Nocc_b,sys%Nocc_b), &
+                                I2B_ovvo(sys%Nocc_a,sys%Nunocc_b,sys%Nunocc_a,sys%Nocc_b), &
+                                X2C(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b)
+                        real, allocatable :: Z1(:,:), Q1(:,:,:,:), &
+                                             D1(:,:,:,:), D2(:,:,:,:), D3(:,:,:,:), D4(:,:,:,:), &
+                                             D5(:,:,:,:), D6(:,:,:,:)
+
+                        associate(noa=>sys%Nocc_a,nob=>sys%Nocc_b,nua=>sys%Nunocc_a,nub=>sys%Nunocc_b)
+
+                                I1B_oo = H1B%oo
+                                allocate(Z1(nob,nob))
+                                call einsum('mnef,efin->mi',vC%oouu,t2c,Z1)
+                                I1B_oo = I1B_oo + 0.5*Z1
+                                call einsum('nmfe,feni->mi',vB%oouu,t2b,Z1)
+                                I1B_oo = I1B_oo + Z1
+                                deallocate(Z1)
+
+                                I1B_vv = H1B%uu
+                                allocate(Z1(nub,nub))
+                                call einsum('mnef,afmn->ae',vC%oouu,t2c,Z1)
+                                I1B_vv = I1B_vv - 0.5*Z1
+                                call einsum('nmfe,fanm->ae',vB%oouu,t2b,Z1)
+                                I1B_vv = I1B_vv - Z1
+                                deallocate(Z1)
+
+                                I2C_oooo = H2C%oooo
+                                allocate(Q1(nob,nob,nob,nob))
+                                call einsum('mnef,efij->mnij',vC%oouu,t2c,Q1)
+                                I2C_oooo = I2C_oooo + 0.5*Q1
+                                deallocate(Q1)
+
+                                I2B_ovvo = H2B%ouuo
+                                allocate(Q1(noa,nub,nua,nob))
+                                call einsum('mnef,afin->maei',vB%oouu,t2c,Q1)
+                                I2B_ovvo = I2B_ovvo + Q1
+                                call einsum('mnef,fani->maei',vA%oouu,t2b,Q1)
+                                I2B_ovvo = I2B_ovvo + 0.5*Q1
+                                deallocate(Q1)
+
+                                I2C_voov = H2C%uoou
+                                allocate(Q1(nub,nob,nob,nub))
+                                call einsum('mnef,afin->amie',vC%oouu,t2c,Q1)
+                                I2C_voov = I2C_voov + 0.5*Q1
+                                deallocate(Q1) 
+
+                                X2C = vC%uuoo
+                                allocate(D1(nub,nub,nob,nob),D2(nub,nub,nob,nob),D3(nub,nub,nob,nob), &
+                                         D4(nub,nub,nob,nob),D5(nub,nub,nob,nob),D6(nub,nub,nob,nob))
+
+                                call einsum('bmji,am->abij',-1.0*H2C%uooo,t1b,D1)
+                                call einsum('abej,ei->abij',H2C%uuuo,t1b,D2)
+                                call einsum('ae,ebij->abij',I1B_vv,t2c,D3)
+                                call einsum('mi,abmj->abij',-1.0*I1B_oo,t2c,D4)
+                                call einsum('amie,ebmj->abij',I2C_voov,t2c,D5)
+                                call einsum('maei,ebmj->abij',I2B_ovvo,t2b,D6)
+
+                                allocate(Q1(nub,nub,nob,nob))
+                                call einsum('abef,efij->abij',H2C%uuuu,t2c,Q1)
+                                X2C = X2C + 0.5*Q1
+                                call einsum('mnij,abmn->abij',I2C_oooo,t2c,Q1)
+                                X2C = X2C + 0.5*Q1
+                                deallocate(Q1)
+
+                                D1 = D1 + D3 ! diagrams with A(ab)
+                                D2 = D2 + D4 ! diagrams with A(ij)
+                                D5 = D5 + D6 ! diagrams with A(ij)A(ab(
+
+                                deallocate(D3,D4,D6)
+
+                        end associate
+
+                        do i = 1,sys%Nocc_b
+                           do j = i+1,sys%Nocc_b
+                              do a = 1,sys%Nunocc_b
+                                 do b = a+1,sys%Nunocc_b
+                                    
+                                    denom = fB%oo(i,i)+fB%oo(j,j)-fB%uu(a,a)-fB%uu(b,b)
+                                    val = X2C(b,a,j,i) &
+                                          + D1(b,a,j,i) - D1(a,b,j,i) & ! A(ab)
+                                          + D2(b,a,j,i) - D2(b,a,i,j) & ! A(ij)
+                                          + D5(b,a,j,i) - D5(a,b,j,i) - D5(b,a,i,j) + D5(a,b,i,j) ! A(ab)A(ij)
+                                    t2c(b,a,j,i) = t2c(b,a,j,i) + val/(denom-shift)
+                                    t2c(a,b,j,i) = -t2c(b,a,j,i)
+                                    t2c(b,a,i,j) = -t2c(b,a,j,i)
+                                    t2c(a,b,i,j) = t2c(b,a,j,i)
+
+                                 end do
+                              end do
+                           end do
+                        end do
+
+                        deallocate(D1,D2,D5)
 
                 end subroutine update_t2c
 

@@ -16,7 +16,10 @@ module testing_module
                    real, parameter :: TOL = 1.0e-14
                    real :: val, xsum
                    integer :: i, j, a, b, m, n, e, f
-                   real, allocatable :: t1a(:,:), t1b(:,:), t2a(:,:,:,:), t2b(:,:,:,:), t2c(:,:,:,:)
+                   real :: t1a(sys%Nunocc_a, sys%Nocc_a), t1b(sys%Nunocc_b,sys%Nocc_a), &
+                           t2a(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a), &
+                           t2b(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b), &
+                           t2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b)
                    real, allocatable :: Z1(:,:), Z2(:,:,:,:) 
 
                    write(*,'(a/)') 'TESTING EINSTEIN SUMMATION ROUTINE'
@@ -109,15 +112,7 @@ module testing_module
                            deallocate(Z1)
                            call check_pass(xsum,TOL)
 
-
-
-
-
-
-
-
                    end associate
-                   deallocate(t1a,t1b,t2a,t2b,t2c)
 
                 end subroutine test_einsum
 
@@ -140,14 +135,13 @@ module testing_module
                         type(e1int_t), intent(in) :: fA, fB
                         type(e2int_t), intent(in) :: vA, vB, vC
                         type(sys_t), intent(in) :: sys
-                        real, allocatable, intent(out) :: t1a(:,:), t1b(:,:), t2a(:,:,:,:), t2b(:,:,:,:), t2c(:,:,:,:)
+                        real, intent(out) :: t1a(sys%Nunocc_a, sys%Nocc_a), t1b(sys%Nunocc_b,sys%Nocc_a), &
+                                t2a(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a), &
+                                t2b(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b), &
+                                t2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b)
                         real :: val, denom, denom2
                         integer :: i, j, a, b, m, n, e, f
 
-                        allocate(t1a(sys%Nunocc_a,sys%Nocc_a),t1b(sys%Nunocc_b,sys%Nocc_b))
-                        allocate(t2a(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a))
-                        allocate(t2b(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b))
-                        allocate(t2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b))
 
                         ! 2ND-ORDER APPROXIMATE t1a : <Phi_i^a|(R0 V_N R0 V_N)_C|Phi>
                         do i = 1,sys%Nocc_a
@@ -288,6 +282,165 @@ module testing_module
                         end do
                         
                 end subroutine get_t_approx
+
+                subroutine test_update_t1a(sys,fA,fB,vA,vB,vC)
+
+                        use ccsd_module, only: update_t1a
+
+                        type(sys_t), intent(in) :: sys
+                        type(e1int_t), intent(in) :: fA, fB
+                        type(e2int_t), intent(in) :: vA, vB, vC
+                        real :: t1a(sys%Nunocc_a, sys%Nocc_a), t1b(sys%Nunocc_b,sys%Nocc_a), &
+                                t2a(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a), &
+                                t2b(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b), &
+                                t2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b)
+                        real, parameter :: shift = 0.0
+                        integer :: a, i
+
+                        call get_t_approx(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c)
+                        call update_t1a(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c,shift)
+
+                        do a = 1,sys%Nunocc_a
+                           do i = 1,sys%Nocc_a
+                              if (abs(t1a(a,i)) >= 1.0e-07) then
+                                 print*,'t1a(',a,i,') = ',t1a(a,i)
+                              end if
+                           end do
+                        end do
+
+                end subroutine test_update_t1a
+
+                subroutine test_update_t1b(sys,fA,fB,vA,vB,vC)
+
+                        use ccsd_module, only: update_t1b
+
+                        type(sys_t), intent(in) :: sys
+                        type(e1int_t), intent(in) :: fA, fB
+                        type(e2int_t), intent(in) :: vA, vB, vC
+                        real :: t1a(sys%Nunocc_a, sys%Nocc_a), t1b(sys%Nunocc_b,sys%Nocc_a), &
+                                t2a(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a), &
+                                t2b(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b), &
+                                t2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b)
+                        real, parameter :: shift = 0.0
+                        integer :: a, i
+
+                        call get_t_approx(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c)
+                        call update_t1b(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c,shift)
+
+                        do a = 1,sys%Nunocc_b
+                           do i = 1,sys%Nocc_b
+                              if (abs(t1a(a,i)) >= 1.0e-07) then
+                                 print*,'t1b(',a,i,') = ',t1b(a,i)
+                              end if
+                           end do
+                        end do
+
+                end subroutine test_update_t1b
+
+                subroutine test_update_t2a(sys,fA,fB,vA,vB,vC)
+
+                        use ccsd_module, only: update_t2a
+                        use ccsd_module, only: hbar_ccs_intermediates
+
+                        type(sys_t), intent(in) :: sys
+                        type(e1int_t), intent(in) :: fA, fB
+                        type(e2int_t), intent(in) :: vA, vB, vC
+                        type(e1int_t) :: H1A, H1B
+                        type(e2int_t) :: H2A, H2B, H2C
+                        real :: t1a(sys%Nunocc_a, sys%Nocc_a), t1b(sys%Nunocc_b,sys%Nocc_a), &
+                                t2a(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a), &
+                                t2b(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b), &
+                                t2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b)
+                        real, parameter :: shift = 0.0
+                        integer :: a, b, i, j
+
+                        call get_t_approx(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c)
+                        call hbar_ccs_intermediates(sys,fA,fB,vA,vB,vC,t1a,t1b,H1A,H1B,H2A,H2B,H2C)
+                        call update_t2a(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,t1a,t1b,t2a,t2b,t2c,shift)
+
+                        do a = 1,sys%Nunocc_a
+                           do b = a+1,sys%Nunocc_a
+                              do i = 1,sys%Nocc_a
+                                 do j = i+1,sys%Nocc_a
+                                    if (abs(t2a(a,b,i,j)) >= 1e-07) then
+                                       write(*,'(1x,a5,i0,i0,i0,i0,a5,f12.8)') 't2a(',a,b,i,j,') = ',t2a(a,b,i,j)
+                                    end if
+                                 end do
+                              end do
+                           end do
+                        end do
+
+                end subroutine test_update_t2a
+
+                subroutine test_update_t2b(sys,fA,fB,vA,vB,vC)
+
+                        use ccsd_module, only: update_t2b
+                        use ccsd_module, only: hbar_ccs_intermediates
+
+                        type(sys_t), intent(in) :: sys
+                        type(e1int_t), intent(in) :: fA, fB
+                        type(e2int_t), intent(in) :: vA, vB, vC
+                        type(e1int_t) :: H1A, H1B
+                        type(e2int_t) :: H2A, H2B, H2C
+                        real :: t1a(sys%Nunocc_a, sys%Nocc_a), t1b(sys%Nunocc_b,sys%Nocc_a), &
+                                t2a(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a), &
+                                t2b(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b), &
+                                t2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b)
+                        real, parameter :: shift = 0.0
+                        integer :: a, b, i, j
+
+                        call get_t_approx(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c)
+                        call hbar_ccs_intermediates(sys,fA,fB,vA,vB,vC,t1a,t1b,H1A,H1B,H2A,H2B,H2C)
+                        call update_t2b(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,t1a,t1b,t2a,t2b,t2c,shift)
+
+                        do a = 1,sys%Nunocc_a
+                           do b = 1,sys%Nunocc_b
+                              do i = 1,sys%Nocc_a
+                                 do j = 1,sys%Nocc_b
+                                    if (abs(t2b(a,b,i,j)) >= 1e-07) then
+                                       write(*,'(1x,a5,i0,i0,i0,i0,a5,f12.8)') 't2b(',a,b,i,j,') = ',t2b(a,b,i,j)
+                                    end if
+                                 end do
+                              end do
+                           end do
+                        end do
+
+                end subroutine test_update_t2b
+
+                subroutine test_update_t2c(sys,fA,fB,vA,vB,vC)
+
+                        use ccsd_module, only: update_t2c
+                        use ccsd_module, only: hbar_ccs_intermediates
+
+                        type(sys_t), intent(in) :: sys
+                        type(e1int_t), intent(in) :: fA, fB
+                        type(e2int_t), intent(in) :: vA, vB, vC
+                        type(e1int_t) :: H1A, H1B
+                        type(e2int_t) :: H2A, H2B, H2C
+                        real :: t1a(sys%Nunocc_a, sys%Nocc_a), t1b(sys%Nunocc_b,sys%Nocc_a), &
+                                t2a(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a), &
+                                t2b(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b), &
+                                t2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b)
+                        real, parameter :: shift = 0.0
+                        integer :: a, b, i, j
+
+                        call get_t_approx(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c)
+                        call hbar_ccs_intermediates(sys,fA,fB,vA,vB,vC,t1a,t1b,H1A,H1B,H2A,H2B,H2C)
+                        call update_t2c(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,t1a,t1b,t2a,t2b,t2c,shift)
+
+                        do a = 1,sys%Nunocc_b
+                           do b = a+1,sys%Nunocc_b
+                              do i = 1,sys%Nocc_b
+                                 do j = i+1,sys%Nocc_b
+                                    if (abs(t2c(a,b,i,j)) >= 1e-07) then
+                                       write(*,'(1x,a5,i0,i0,i0,i0,a5,f12.8)') 't2c(',a,b,i,j,') = ',t2c(a,b,i,j)
+                                    end if
+                                 end do
+                              end do
+                           end do
+                        end do
+
+                end subroutine test_update_t2c
 
                 subroutine write_hbar_ccs(sys,fA,fB,vA,vB,vC)
 

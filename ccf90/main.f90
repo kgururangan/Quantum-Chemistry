@@ -6,7 +6,7 @@ program main
         use mp2, only: calculate_mp2
         use ccsd_module, only: hbar_ccs_intermediates 
         use printing, only: print_calc_params, print_header
-        use testing_module, only: test_einsum, write_hbar_ccs
+        use testing_module, only: test_einsum, write_hbar_ccs, test_update_t1b
 
         implicit none
 
@@ -32,7 +32,9 @@ program main
         !print*,'E(MP2) = ',Emp2
 
         ! Checking HBar CCS construction
-        call write_hbar_ccs(sys,fA,fB,vA,vB,vC)
+        !call write_hbar_ccs(sys,fA,fB,vA,vB,vC)
+
+        call test_update_t1b(sys,fA,fB,vA,vB,vC)
 
 end program main
 
