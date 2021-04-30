@@ -2,7 +2,7 @@ module davidson_module
 
 
         use dgeev_module, only: eig
-        use dgemm_module, only: gemm, gemmt, dot
+        use dgemm_module, only: gemm, gemmt, gemv, dot
         use sort_module, only: argsort
         use print_module, only: print_matrix
 
@@ -38,7 +38,7 @@ module davidson_module
                         real, intent(in) :: tol
                         integer, intent(in) :: nroot, maxit
                         real, allocatable, intent(out) :: VR(:,:), wR(:)
-                        integer :: crsz, i, j, N, num_add, maxsz, it
+                        integer :: crsz, i, j, k, N, num_add, maxsz, it
                         real, allocatable :: sigma(:,:), aR(:,:), evR(:), evI(:), G(:,:),&
                                              rv(:), v(:), q(:), B(:,:), addB(:,:)
                         integer, allocatable :: id(:)
@@ -56,18 +56,15 @@ module davidson_module
                         maxsz = nvec * nroot
 
                         ! allocate the output right eigenvectors and eigenvalues
-                        allocate(VR(N,nroot),wR(nroot),rv(N),q(N),B(N,maxsz),addB(N,nroot),v(N))
+                        allocate(VR(N,nroot),wR(nroot),rv(N),q(N),B(N,maxsz),addB(N,nroot),sigma(N,maxsz),v(N))
 
                         ! populate the B matrix with the initial guess
-                        do i = 1,crsz
-                           B(:,i) = B0(:,i)
-                        end do
+                        B(:,1:crsz) = B0
 
                         ! set up the residuals to be large upon entering the Davidson loop,
                         ! for the sake of the first iteration
-                        do i = 1,nroot
-                           resv(i) = 100.0
-                        end do
+                        resv(1:nroot) = 100.0
+                        num_add = nroot
 
                         ! main davidson update loop
                         do it = 1,maxit
@@ -77,18 +74,17 @@ module davidson_module
                                 write(*,fmt=*) '-----------------------------------------------------------'
                                 
                                 ! allocate arrays
-                                allocate(sigma(N,crsz),&
-                                         aR(crsz,crsz),evR(crsz),evI(crsZ),G(crsz,crsz),&
-                                         id(crsz))
+                                allocate(aR(crsz,crsz),evR(crsz),evI(crsZ),G(crsz,crsz),id(crsz))
 
                                 ! orthogonalize guess space
                                 call gramschmidt(B(:,1:crsz))
 
                                 ! matrix-vector product
-                                call gemm(A,B(:,1:crsz),sigma)
+                                k = max(crsz-num_add+1,1)
+                                call gemm(A,B(:,k:crsz),sigma(:,k:crsz))
 
                                 ! create projected subspace interaction matrix
-                                call gemmt(B(:,1:crsz),sigma,G)
+                                call gemmt(B(:,1:crsz),sigma(:,1:crsz),G)
 
                                 ! diagonalize projected eigenvalue problem
                                 call eig(G,aR,evR,evI)
@@ -108,12 +104,8 @@ module davidson_module
                                    else
 
                                       ! calculate ritz vector
-                                      v = 0.0
-                                      rv = 0.0
-                                      do i = 1,crsz
-                                         v = v + B(:,i)*aR(i,j)
-                                         rv = rv + sigma(:,i)*aR(i,j)
-                                      end do
+                                      call gemv(B(:,1:crsz),aR(:,j),v)
+                                      call gemv(sigma(:,1:crsz),aR(:,j),rv)
 
                                       ! store current eigenvector/value pair
                                       VR(:,j) = v
@@ -171,34 +163,96 @@ module davidson_module
 
                                    ! collapse subspace    
                                    call gemm(B(:,1:crsz),aR(1:crsz,1:nroot),addB)
-                                   do i = 1,nroot
-                                      B(:,i) = addB(:,i)
-                                   end do
-
+                                   B(:,1:nroot) = addB
                                    ! update search subspace dimension
                                    crsz = nroot
 
                                 ! if crsz+addB <= maxsz, expand the subspace
                                 else 
 
-                                    do i = 1,num_add
-                                       B(:,crsz+i) = addB(:,i)
-                                    end do
-
+                                    B(:,crsz+1:crsz+num_add) = addB(:,1:num_add)
                                     ! update search subspace dimension
                                     crsz = crsz + num_add
 
                                 end if
 
                                 ! deallocate temporary arrays
-                                deallocate(sigma,aR,evR,evI,G,id)
+                                deallocate(aR,evR,evI,G,id)
 
                         end do
 
                         ! deallocate rest of the arrays
-                        deallocate(rv,q,B,addB,v)
+                        deallocate(rv,q,B,sigma,addB,v)
 
                 end subroutine davidson
+
+
+                subroutine calc_left(A,VR,wR,tol,maxit,shift,VL)
+
+                        use diis, only: diis_xtrap
+
+                        real, intent(in) :: A(:,:), VR(:,:), wR(:), tol, shift
+                        integer, intent(in) :: maxit
+                        real, allocatable, intent(out) :: VL(:,:)
+                        integer, parameter :: ndiis = 6
+                        integer :: N, nroot, it, it_macro, i, j
+                        real, allocatable :: L(:), L_list(:,:), L_resid_list(:,:), rv(:), LA(:), wL(:)
+                        real :: denom, res, LR
+
+                        N = size(A,1)
+                        nroot = size(VR,2)
+
+                        allocate(VL(N,nroot),L(N),LA(N),L_list(N,ndiis),L_resid_list(N,ndiis),rv(N),wL(nroot))
+                        
+                        do i = 1,nroot
+                                
+                                write(*,fmt=*) ''
+                                write(*,fmt=*) 'Jacobi solve for root - ',i
+                        write(*,fmt=*) '               Iteration      E(left)                       Residuum'         
+                        write(*,fmt=*) '------------------------------------------------------------------------'
+                                L = vR(:,i)
+                                L_list = 0.0
+                                L_resid_list = 0.0
+                                it_macro = 0
+
+                                do it = 0,maxit
+                                   
+                                   call gemv(transpose(A),-1.0*L,rv)
+                                   do j = 1,N
+                                      denom = A(j,j)-wR(i)+shift
+                                      L(j) = (A(j,j)+shift)*L(j)/denom + rv(j)/denom
+                                   end do
+                                   call gemv(transpose(A),L,LA)
+
+                                   rv = LA - wR(i)*L
+                                   res = norm2(rV)
+
+                                   wL(i) = norm2(LA)/norm2(L)
+
+                                   L_list(:,mod(it,ndiis)+1) = L
+                                   L_resid_list(:,mod(it,ndiis)+1) = rv
+
+                                   if (mod(it+1,ndiis) == 0) then
+                                      it_macro = it_macro + 1
+                                      write(*,fmt='(1x,a15,1x,i0)') 'DIIS cycle - ',it_macro
+                                      call diis_xtrap(L,L_list,L_resid_list)
+                                   end if
+                                    
+                                   LR = dot(L,VR(:,i))
+                                   L = L/LR
+
+                                   write(*,fmt=*) it,' ',wL(i),' ',res
+
+                                   if (res < tol) then
+                                      write(*,fmt=*) 'Root',i,'converged!'
+                                      exit
+                                   end if
+
+                                end do
+
+                           end do
+
+                   end subroutine calc_left
 
 
 

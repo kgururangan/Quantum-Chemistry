@@ -1,25 +1,26 @@
 program main
 
-        use davidson_module, only: davidson
+        use davidson_module, only: davidson, calc_left
         use print_module, only: print_matrix
         use dgemm_module, only: gemm, gemmt
 
         implicit none
 
-        integer, parameter :: N = 10000, nroot = 5, maxit=3000
-        real, parameter :: sparsity = 1e-01, herm = 1, tol=1e-06
+        integer, parameter :: N = 1000, nroot = 5, maxit=3000
+        real, parameter :: sparsity = 1e-01, herm = 1, tol=1e-06, shift = 0.0
         real :: A(N,N)
-        real, allocatable :: B0(:,:), VR(:,:), wR(:)
+        real, allocatable :: B0(:,:), VR(:,:), wR(:), VL(:,:)
 
         call get_test_matrix(N,sparsity,herm,A)
 
         call get_diagonal_guess(A,nroot,B0)
 
         call davidson(A,nroot,VR,wR,B0,tol,maxit)
+        call calc_left(A,VR,wR,tol,maxit,shift,VL)
 
         ! Do this last since A changes upon output!
-        write(*,'(/a)') 'Exact answer : '
-        call dense_diag(A,nroot)
+        !write(*,'(/a)') 'Exact answer : '
+        !call dense_diag(A,nroot)
 
 
         contains
