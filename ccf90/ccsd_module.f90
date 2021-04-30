@@ -9,7 +9,7 @@ module ccsd_module
 
         contains
 
-                subroutine ccsd(sys,fA,fB,vA,vB,vC,ndiis,maxit,shift,tol,t1a,t1b,t2a,t2b,t2c)
+                subroutine ccsd(sys,fA,fB,vA,vB,vC,ndiis,maxit,shift,tol,t1a,t1b,t2a,t2b,t2c,Ecorr)
 
                         use cc_energy, only: calc_cc_energy
                         use diis, only: diis_xtrap
@@ -22,11 +22,12 @@ module ccsd_module
                         real, intent(out) :: t1a(sys%Nunocc_a,sys%Nocc_a), t1b(sys%Nunocc_b, sys%Nocc_b), &
                                              t2a(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a), &
                                              t2b(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b), &
-                                             t2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b)
+                                             t2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b), &
+                                             Ecorr
                         type(e1int_t) :: H1A, H1B
                         type(e2int_t) :: H2A, H2B, H2C
                         integer :: ndim, n1a, n1b, n2a, n2b, n2c, it_macro, it_micro
-                        real :: Ecorr, Ecorr_old, dEcorr, resid
+                        real :: Ecorr_old, dEcorr, resid
                         real, allocatable :: t(:), t_old(:), t_resid(:), t_list(:,:), t_resid_list(:,:)
 
                         n1a = sys%Nocc_a * sys%Nunocc_a
@@ -38,6 +39,7 @@ module ccsd_module
 
                         allocate(t(ndim),t_old(ndim),t_resid(ndim),t_list(ndim,ndiis),t_resid_list(ndim,ndiis))
 
+                        write(*,fmt=*) ''
                         write(*,fmt=*) 'CCSD ROUTINE'
                         write(*,fmt=*) ''
 

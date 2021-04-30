@@ -1,6 +1,6 @@
 module mp2
 
-        use integral_types, only: e1int_t, e2aint_t, e2bint_t
+        use integral_types, only: e1int_t, e2int_t
         use system_types, only: sys_t
 
         implicit none
@@ -12,11 +12,14 @@ module mp2
                         
                         type(sys_t), intent(in) :: sys
                         type(e1int_t), intent(in) :: fA, fB
-                        type(e2aint_t), intent(in) :: vA, vC
-                        type(e2bint_t), intent(in) :: vB
+                        type(e2int_t), intent(in) :: vA, vB, vC
                         real, intent(out) :: Emp2
                         real :: tmp
                         integer :: i, j, a, b
+
+                        write(*,fmt=*) ''
+                        write(*,fmt=*) 'MP2 ROUTINE'
+                        write(*,fmt=*) ''
 
                         do i = 1,sys%Nocc_a
                            do j = i+1,sys%Nocc_a
@@ -53,6 +56,9 @@ module mp2
                                end do
                             end do
                          end do
+
+                         write(*,fmt=*) 'MP2 CORRELATION ENERGY (HARTREE) = ',Emp2
+                         write(*,fmt=*) 'MP2 ENERGY (HARTREE) = ',Emp2+sys%Escf
 
                 end subroutine calculate_mp2
 
