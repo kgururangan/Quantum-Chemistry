@@ -9,6 +9,103 @@ module ccsd_module
 
         contains
 
+                subroutine ccsd(sys,fA,fB,vA,vB,vC,ndiis,maxit,shift,tol,t1a,t1b,t2a,t2b,t2c)
+
+                        use cc_energy, only: calc_cc_energy
+                        use diis, only: diis_xtrap
+
+                        type(sys_t), intent(in) :: sys
+                        type(e1int_t), intent(in) :: fA, fB
+                        type(e2int_t), intent(in) :: vA, vB, vC
+                        integer, intent(in) :: ndiis, maxit
+                        real, intent(in) :: shift, tol
+                        real, intent(out) :: t1a(sys%Nunocc_a,sys%Nocc_a), t1b(sys%Nunocc_b, sys%Nocc_b), &
+                                             t2a(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a), &
+                                             t2b(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b), &
+                                             t2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b)
+                        type(e1int_t) :: H1A, H1B
+                        type(e2int_t) :: H2A, H2B, H2C
+                        integer :: ndim, n1a, n1b, n2a, n2b, n2c, it_macro, it_micro
+                        real :: Ecorr, Ecorr_old, dEcorr, resid
+                        real, allocatable :: t(:), t_old(:), t_resid(:), t_list(:,:), t_resid_list(:,:)
+
+                        n1a = sys%Nocc_a * sys%Nunocc_a
+                        n1b = sys%Nocc_b * sys%Nunocc_b
+                        n2a = sys%Nocc_a**2 * sys%Nunocc_a**2
+                        n2b = sys%Nocc_a*sys%Nocc_b*sys%Nunocc_a*sys%Nunocc_b
+                        n2c = sys%Nocc_b**2 * sys%Nunocc_b**2
+                        ndim = n1a+n1b+n2a+n2b+n2c
+
+                        allocate(t(ndim),t_old(ndim),t_resid(ndim),t_list(ndim,ndiis),t_resid_list(ndim,ndiis))
+
+                        write(*,fmt=*) 'CCSD ROUTINE'
+                        write(*,fmt=*) ''
+
+                        t = 0.0
+                        Ecorr_old = 0.0
+                        it_macro = 0
+                        
+                        write(*,fmt=*) '               Iteration      Ecorr                       Residuum'         
+                        write(*,fmt=*) '------------------------------------------------------------------------'
+                        do it_micro = 0,maxit
+
+                                t_old = t
+                                
+                                t1a = reshape(t(1:n1a),(/sys%Nunocc_a,sys%Nocc_a/))
+                                t1b = reshape(t(n1a+1:n1a+n1b),(/sys%Nunocc_b,sys%Nocc_b/))
+                                t2a = reshape(t(n1a+n1b+1:n1a+n1b+n2a),(/sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a/))
+                                t2b = reshape(t(n1a+n1b+n2a+1:n1a+n1b+n2a+n2b),(/sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b/))
+                                t2c = reshape(t(n1a+n1b+n2a+n2b+1:n1a+n1b+n2a+n2b+n2c), &
+                                        (/sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b/))  
+
+                                call calc_cc_energy(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c,Ecorr)
+
+                                call update_t1a(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c,shift)
+                                call update_t1b(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c,shift)
+
+                                call hbar_ccs_intermediates(sys,fA,fB,vA,vB,vC,t1a,t1b,H1A,H1B,H2A,H2B,H2C)
+
+                                call update_t2a(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,t1a,t1b,t2a,t2b,t2c,shift)
+                                call update_t2b(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,t1a,t1b,t2a,t2b,t2c,shift)
+                                call update_t2c(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,t1a,t1b,t2a,t2b,t2c,shift)
+
+                                t(1:n1a) = reshape(t1a,(/n1a/))
+                                t(n1a+1:n1a+n1b) = reshape(t1b,(/n1b/))
+                                t(n1a+n1b+1:n1a+n1b+n2a) = reshape(t2a,(/n2a/))
+                                t(n1a+n1b+n2a+1:n1a+n1b+n2a+n2b) = reshape(t2b,(/n2b/))
+                                t(n1a+n1b+n2a+n2b+1:n1a+n1b+n2a+n2b+n2c) = reshape(t2c,(/n2c/))
+
+                                t_resid = t - t_old
+                                dEcorr = Ecorr - Ecorr_old
+                                resid = norm2(t_resid)
+
+                                if ( (resid <= tol) .AND. (abs(dEcorr) <= tol) ) then
+                                    write(*,fmt=*) 'CCSD converged!'
+                                    write(*,fmt=*) ''
+                                    write(*,fmt=*) 'CCSD CORRELATION ENERGY (HARTREE) = ',Ecorr
+                                    write(*,fmt=*) 'CCSD ENERGY (HARTREE) = ',Ecorr+sys%Escf
+                                    exit
+                                end if
+
+                                t_list(:,mod(it_micro,ndiis)+1) = t
+                                t_resid_list(:,mod(it_micro,ndiis)+1) = t_resid
+
+                                if (mod(it_micro+1,ndiis) == 0) then
+                                   it_macro = it_macro + 1
+                                   write(*,fmt='(1x,a15,1x,i0)') 'DIIS cycle - ',it_macro
+                                   call diis_xtrap(t,t_list,t_resid_list)
+                                end if
+                                    
+                                write(*,fmt=*) it_micro,' ',Ecorr,' ',resid
+
+                                Ecorr_old = Ecorr
+
+                        end do
+
+                        deallocate(t,t_old,t_resid,t_list,t_resid_list)
+
+                end subroutine ccsd
+
                 subroutine update_t1a(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c,shift)
 
                         type(sys_t), intent(in) :: sys
@@ -254,61 +351,6 @@ module ccsd_module
                            end do
                         end do
 
-    !chi1B_vv = 0.0
-    !chi1B_vv += fB['vv']
-    !chi1B_vv += np.einsum('anef,fn->ae',vC['vovv'],t1b,optimize=True)
-    !chi1B_vv += np.einsum('nafe,fn->ae',vB['ovvv'],t1a,optimize=True)
-
-    !chi1B_oo = 0.0
-    !chi1B_oo += fB['oo']
-    !chi1B_oo += np.einsum('mnif,fn->mi',vC['ooov'],t1b,optimize=True)
-    !chi1B_oo += np.einsum('nmfi,fn->mi',vB['oovo'],t1b,optimize=True)
-
-    !h1A_ov = 0.0
-    !h1A_ov += fA['ov']
-    !h1A_ov += np.einsum('mnef,fn->me',vA['oovv'],t1a,optimize=True) 
-    !h1A_ov += np.einsum('mnef,fn->me',vB['oovv'],t1b,optimize=True) 
-
-    !h1B_ov = 0.0
-    !h1B_ov += fB['ov'] 
-    !h1B_ov += np.einsum('nmfe,fn->me',vB['oovv'],t1a,optimize=True) 
-    !h1B_ov += np.einsum('mnef,fn->me',vC['oovv'],t1b,optimize=True) 
-
-    !h1B_oo = 0.0
-    !h1B_oo += chi1B_oo + np.einsum('me,ei->mi',h1B_ov,t1b,optimize=True)
-    
-    !M11 = 0.0
-    !M11 += fB['vo']
-    !M11 -= np.einsum('mi,am->ai',h1B_oo,t1b,optimize=True)
-    !M11 += np.einsum('ae,ei->ai',chi1B_vv,t1b,optimize=True)
-    !M11 += np.einsum('anif,fn->ai',vC['voov'],t1b,optimize=True)
-    !M11 += np.einsum('nafi,fn->ai',vB['ovvo'],t1a,optimize=True)
-
-    !h2C_ooov = 0.0
-    !h2C_ooov += vC['ooov']
-    !h2C_ooov += np.einsum('mnfe,fi->mnie',vC['oovv'],t1b,optimize=True)
-
-    !h2B_oovo = 0.0
-    !h2B_oovo += vB['oovo']
-    !h2B_oovo += np.einsum('nmef,fi->nmei',vB['oovv'],t1b,optimize=True)
-    
-    !h2C_vovv = 0.0
-    !h2C_vovv += vC['vovv']
-    !h2C_vovv -= np.einsum('mnfe,an->amef',vC['oovv'],t1b,optimize=True)
-    
-    !h2B_ovvv = 0.0
-    !h2B_ovvv += vB['ovvv']
-    !h2B_ovvv -= np.einsum('mnfe,an->mafe',vB['oovv'],t1b,optimize=True)
-
-    !CCS_T2 = 0.0
-    !CCS_T2 += np.einsum('me,eami->ai',h1A_ov,t2b,optimize=True)
-    !CCS_T2 += np.einsum('me,aeim->ai',h1B_ov,t2c,optimize=True)
-    !CCS_T2 -= 0.5*np.einsum('mnif,afmn->ai',h2C_ooov,t2c,optimize=True)
-    !CCS_T2 -= np.einsum('nmfi,fanm->ai',h2B_oovo,t2b,optimize=True)
-    !CCS_T2 += 0.5*np.einsum('anef,efin->ai',h2C_vovv,t2c,optimize=True)
-    !CCS_T2 += np.einsum('nafe,feni->ai',h2B_ovvv,t2b,optimize=True)
-       
-    !X1B = M11 + CCS_T2; 
                 end subroutine update_t1b
 
 
