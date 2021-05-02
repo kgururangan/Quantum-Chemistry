@@ -10,7 +10,7 @@ EXEFILE = run
 
 all: $(EXEFILE)
        
-$(EXEFILE): dgemm_module.o sort_module.o diis.o einsum_module.o permutils.o system_types.o integral_types.o integrals.o printing.o cc_energy.o testing_module.o mp2.o ccsd_module.o main.o 
+$(EXEFILE): dgemm_module.o sort_module.o diis.o einsum_module.o permutils.o system_types.o integral_types.o integrals.o printing.o cc_energy.o hbar.o testing_module.o mp2.o ccsd_module.o main.o 
 		 $(FC) $^ -o $@ $(LDFLAGS)
 
 %.o: %.f90

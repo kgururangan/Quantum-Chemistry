@@ -763,6 +763,44 @@ module testing_module
                         deallocate(t1a,t1b,t2a,t2b,t2c)
 
                 end subroutine write_hbar_ccs
+
+                subroutine test_hbar_ccsd(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c)
+                        use hbar, only: hbar_ccsd
+
+                        type(sys_t), intent(in) :: sys
+                        type(e1int_t), intent(in) :: fA, fB
+                        type(e2int_t), intent(in) :: vA, vB, vC
+                        real, intent(in) :: t1a(sys%Nunocc_a,sys%Nocc_a), t1b(sys%Nunocc_b,sys%Nocc_b), &
+                                            t2a(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a), &
+                                            t2b(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b), &
+                                            t2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b)
+                        type(e1int_t) :: H1A, H1B
+                        type(e2int_t) :: H2A, H2B, H2C
+                        integer :: a, b, i, j, m, n, e, f
+                        real, parameter :: tol = 1.0e-07
+
+                        call hbar_ccsd(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c,H1A,H1B,H2A,H2B,H2C)
+
+                        associate(noa=>sys%Nocc_a,nua=>sys%Nunocc_a,nob=>sys%Nocc_b,nub=>sys%Nunocc_b)
+
+
+                        print*,'TESTING H2B_ovov'
+                        do m = 1,noa
+                           do a = 1,nua
+                              do i = 1,noa
+                                 do e = 1,nua
+                                    if (abs(H2B%ouou(m,a,i,e)) >= tol) then
+                                            print*,'h2B_ovov(',m,a,i,e,') = ',H2B%ouou(m,a,i,e)
+                                    end if
+                                 end do
+                              end do
+                           end do
+                        end do
+
+
+                        end associate
+
+                end subroutine test_hbar_ccsd
                 
 
  end module testing_module

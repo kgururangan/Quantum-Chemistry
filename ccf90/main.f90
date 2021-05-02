@@ -6,14 +6,13 @@ program main
         use mp2, only: calculate_mp2
         use ccsd_module, only: ccsd 
         use printing, only: print_calc_params, print_header
-        use testing_module, only: test_einsum, write_hbar_ccs, test_update_t1b
-        use diis, only: solvegauss
+        use testing_module, only: test_hbar_ccsd
 
         implicit none
 
-        integer, parameter :: Norb = 76, Nfroz=4, Nelec=28
-        type(e1int_t) :: fA, fB
-        type(e2int_t) :: vA, vB, vC
+        integer, parameter :: Norb = 14, Nfroz=0, Nelec=10
+        type(e1int_t) :: fA, fB, H1A, H1B
+        type(e2int_t) :: vA, vB, vC, H2A, H2B, H2C
         type(sys_t) :: sys
         real :: Emp2, Ecorr
         integer, parameter :: ndiis = 6, maxit = 100
@@ -21,13 +20,13 @@ program main
         real, allocatable :: t1a(:,:), t1b(:,:), t2a(:,:,:,:), t2b(:,:,:,:), t2c(:,:,:,:)
 
         call print_header()
-        call get_integrals('/Users/karthik/Desktop/CC_matlab_tests/rectangle-d2h-pvdz/onebody.inp',&
-                           '/users/karthik/Desktop/CC_matlab_tests/rectangle-d2h-pvdz/twobody.inp',&
+        call get_integrals('/Users/karthik/Desktop/CC_matlab_tests/CCpy_tests/H2O-2Re-DZ/onebody.inp',&
+                           '/users/karthik/Desktop/CC_matlab_tests/CCpy_tests/H2O-2Re-DZ/twobody.inp',&
                            Norb,Nfroz,Nelec,sys,vA,vB,vC,fA,fB)
         call print_calc_params(sys)
 
 
-        call calculate_mp2(sys,fA,fB,vA,vB,vC,Emp2)
+        !call calculate_mp2(sys,fA,fB,vA,vB,vC,Emp2)
 
 
         allocate(t1a(sys%Nunocc_a,sys%Nocc_a),t1b(sys%Nunocc_b,sys%Nocc_b),&
@@ -37,6 +36,7 @@ program main
 
         call ccsd(sys,fA,fB,vA,vB,vC,ndiis,maxit,shift,tol,t1a,t1b,t2a,t2b,t2c,Ecorr)
 
+        call test_hbar_ccsd(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c)
 
         deallocate(t1a,t1b,t2a,t2b,t2c)
 end program main

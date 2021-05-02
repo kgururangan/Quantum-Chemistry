@@ -47,7 +47,7 @@ module ccsd_module
                         Ecorr_old = 0.0
                         it_macro = 0
                         
-                        write(*,fmt=*) '               Iteration      Ecorr                       Residuum'         
+                        write(*,fmt=*) '               Iteration      E(left)                       Residuum'         
                         write(*,fmt=*) '------------------------------------------------------------------------'
                         do it_micro = 0,maxit
 
