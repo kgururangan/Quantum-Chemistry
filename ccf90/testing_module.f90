@@ -802,5 +802,71 @@ module testing_module
 
                 end subroutine test_hbar_ccsd
                 
+                subroutine test_eomccsd(sys,fA,fB,vA,vB,vC)
+
+                        use ccsd_module, only: ccsd
+                        use hbar, only: hbar_ccsd
+                        use eomccsd, only: HR_1A, HR_1B, HR_2A, HR_2B, HR_2C
+
+                        type(sys_t), intent(in) :: sys
+                        type(e1int_t), intent(in) :: fA, fB
+                        type(e2int_t), intent(in) :: vA, vB, vC
+                        real :: t1a(sys%Nunocc_a,sys%Nocc_a), t1b(sys%Nunocc_b,sys%Nocc_b), &
+                                t2a(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a), &
+                                t2b(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b), &
+                                t2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b)
+                        real :: r1a(sys%Nunocc_a,sys%Nocc_a), r1b(sys%Nunocc_b,sys%Nocc_b), &
+                                r2a(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a), &
+                                r2b(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b), &
+                                r2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b)
+                        real :: HR1A(sys%Nunocc_a,sys%Nocc_a), HR1B(sys%Nunocc_b,sys%Nocc_b), &
+                                HR2A(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a), &
+                                HR2B(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b), &
+                                HR2C(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b)
+                        type(e1int_t) :: H1A, H1B
+                        type(e2int_t) :: H2A, H2B, H2C
+                        integer :: a, b, i, j
+                        real, parameter :: tol = 1.0e-07, shift = 0.0, tol_cc = 1.0e-08
+                        real :: Ecorr
+                        integer, parameter :: ndiis = 5, maxit = 100
+
+                        call ccsd(sys,fA,fB,vA,vB,vC,ndiis,maxit,shift,tol_cc,t1a,t1b,t2a,t2b,t2c,Ecorr)
+                        call hbar_ccsd(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c,H1A,H1B,H2A,H2B,H2C)
+
+                        call get_t_approx(sys,fA,fB,vA,vB,vC,r1a,r1b,r2a,r2b,r2c)
+
+                        call HR_1A(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C, &
+                                t1a,t1b,t2a,t2b,t2c,r1a,r1b,r2a,r2b,r2c,HR1A)
+                        call HR_1B(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C, &
+                                t1a,t1b,t2a,t2b,t2c,r1a,r1b,r2a,r2b,r2c,HR1B)
+                        call HR_2A(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C, &
+                                t1a,t1b,t2a,t2b,t2c,r1a,r1b,r2a,r2b,r2c,HR2A)
+                        call HR_2B(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C, &
+                                t1a,t1b,t2a,t2b,t2c,r1a,r1b,r2a,r2b,r2c,HR2B)
+                        call HR_2C(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C, &
+                                t1a,t1b,t2a,t2b,t2c,r1a,r1b,r2a,r2b,r2c,HR2C)
+
+
+                        associate(noa=>sys%Nocc_a,nua=>sys%Nunocc_a,nob=>sys%Nocc_b,nub=>sys%Nunocc_b)
+
+
+                                print*,'TESTING R2B UPDATE'
+                                do a =1,nua
+                                   do b = 1,nub
+                                      do i = 1,noa
+                                         do j = 1,nob
+                                            if (abs(HR2B(a,b,i,j)) >= tol) then
+                                                    print*,'X2B(',a,b,i,j,') = ',HR2B(a,b,i,j)
+                                            end if
+                                         end do
+                                      end do
+                                   end do
+                                end do
+
+
+
+                        end associate
+
+                end subroutine test_eomccsd
 
  end module testing_module

@@ -6,7 +6,8 @@ program main
         use mp2, only: calculate_mp2
         use ccsd_module, only: ccsd 
         use printing, only: print_calc_params, print_header
-        use testing_module, only: test_hbar_ccsd
+        use cis, only: cis_mat
+        use testing_module, only: test_eomccsd
 
         implicit none
 
@@ -17,13 +18,20 @@ program main
         real :: Emp2, Ecorr
         integer, parameter :: ndiis = 6, maxit = 100
         real, parameter :: shift = 0.0, tol = 1.0e-08
-        real, allocatable :: t1a(:,:), t1b(:,:), t2a(:,:,:,:), t2b(:,:,:,:), t2c(:,:,:,:)
+        real, allocatable :: t1a(:,:), t1b(:,:), t2a(:,:,:,:), t2b(:,:,:,:), t2c(:,:,:,:), &
+                             c1a(:,:), c1b(:,:), w_cis(:)
+
 
         call print_header()
         call get_integrals('/Users/karthik/Desktop/CC_matlab_tests/CCpy_tests/H2O-2Re-DZ/onebody.inp',&
                            '/users/karthik/Desktop/CC_matlab_tests/CCpy_tests/H2O-2Re-DZ/twobody.inp',&
                            Norb,Nfroz,Nelec,sys,vA,vB,vC,fA,fB)
         call print_calc_params(sys)
+
+        !allocate(c1a(sys%Nunocc_a*sys%Nocc_a,5),c1b(sys%Nunocc_b*sys%Nocc_b,5),w_cis(5))
+        !call cis_mat(sys,fA,fB,vA,vB,vC,5,c1a,c1b,w_cis)
+        !print*,w_cis
+        !deallocate(c1a,c1b,w_cis)
 
 
         !call calculate_mp2(sys,fA,fB,vA,vB,vC,Emp2)
@@ -34,9 +42,7 @@ program main
                  t2b(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b), &
                  t2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b))
 
-        call ccsd(sys,fA,fB,vA,vB,vC,ndiis,maxit,shift,tol,t1a,t1b,t2a,t2b,t2c,Ecorr)
-
-        call test_hbar_ccsd(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c)
+        call test_eomccsd(sys,fA,fB,vA,vB,vC)
 
         deallocate(t1a,t1b,t2a,t2b,t2c)
 end program main
