@@ -18,11 +18,15 @@ program main
         type(e2int_t) :: vA, vB, vC, H2A, H2B, H2C
         type(sys_t) :: sys
         real :: Emp2, Ecorr
-        integer, parameter :: ndiis = 6, maxit = 200, nroot = 15, init_guess = 1
-        real, parameter :: shift = 1.0, tol = 1.0e-08
+        integer, parameter :: ndiis = 6, nroot = 15, init_guess = 2
+        real, parameter :: shift = 0.8, tol = 1.0e-08
         real, allocatable :: t1a(:,:), t1b(:,:), t2a(:,:,:,:), t2b(:,:,:,:), t2c(:,:,:,:), &
                              c1a(:,:), c1b(:,:), w_cis(:), Rvec(:,:), omega(:), Lvec(:,:)
-        integer :: n1a, n1b, n2a, n2b, n2c, ndim, iroot
+        integer :: n1a, n1b, n2a, n2b, n2c, ndim, iroot, maxit_cc, maxit_eom, i, j
+        integer :: xchk(nroot,nroot)
+
+        maxit_cc = 500
+        maxit_eom = 50
 
 
         call print_header()
@@ -46,14 +50,17 @@ program main
                  t2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b), &
                  Rvec(ndim,nroot),Lvec(ndim,nroot+1),omega(nroot))
 
-        call ccsd(sys,fA,fB,vA,vB,vC,ndiis,maxit,shift,tol,t1a,t1b,t2a,t2b,t2c,Ecorr)
+        call ccsd(sys,fA,fB,vA,vB,vC,ndiis,maxit_cc,shift,tol,t1a,t1b,t2a,t2b,t2c,Ecorr)
         call hbar_ccsd(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c,H1A,H1B,H2A,H2B,H2C)
         call davidson_eomccsd(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,&
-                               t1a,t1b,t2a,t2b,t2c,ndim,nroot,Rvec,omega,tol,maxit,init_guess)
+                               t1a,t1b,t2a,t2b,t2c,ndim,nroot,Rvec,omega,tol,maxit_eom,init_guess)
+
+
+
 
         do iroot = 0,nroot
-           call left_ccsd(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c,Lvec(:,iroot+1),Rvec(:,iroot),&
-                   H1A,H1B,H2A,H2B,H2C,tol,ndiis,maxit,shift,iroot,omega)
+           call left_ccsd(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c,Lvec(:,iroot+1),Rvec,&
+                   H1A,H1B,H2A,H2B,H2C,tol,ndiis,maxit_cc,shift,iroot,omega)
         end do
         !deallocate(t1a,t1b,t2a,t2b,t2c)
 end program main

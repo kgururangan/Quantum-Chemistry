@@ -235,6 +235,8 @@ module eomccsd
 
                                 end do
 
+                                call gramschmidt(VR)
+
                                 ! print status of each root
                                 do j = 1,nroot
                                    write(*,'(1x,a8,i0,8x,a4,f12.8,8x,a6,f12.8)') 'Root - ',j,'e = ',wR(j),'|r| = ',resv(j)

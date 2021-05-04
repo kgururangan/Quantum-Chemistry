@@ -23,7 +23,7 @@ module leftccsd
                                             t2a(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a), &
                                             t2b(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b), &
                                             t2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b), &
-                                            tol, shift, omega(:), R(:)
+                                            tol, shift, omega(:), R(:,:)
                         integer, intent(in) :: maxit, ndiis, iroot
                         real :: l1a(sys%Nunocc_a,sys%Nocc_a), l1b(sys%Nunocc_b,sys%Nocc_b), &
                                 l2a(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a), &
@@ -32,10 +32,10 @@ module leftccsd
                         real, intent(out) :: L(sys%Nocc_a**2*sys%Nunocc_a**2+sys%Nocc_b**2*sys%Nunocc_b**2+&
                                                   sys%Nocc_a*sys%Nocc_b*sys%Nunocc_a*sys%Nunocc_b+&
                                                   sys%Nocc_a*sys%Nunocc_a+sys%Nocc_b*sys%Nunocc_b)
-                        integer :: n1a, n1b, n2a, n2b, n2c, ndim, it, it_diis, noa, nob, nua, nub
+                        integer :: n1a, n1b, n2a, n2b, n2c, ndim, it, it_diis, noa, nob, nua, nub, i, nroot
                         real, allocatable :: L_resid_list(:,:), L_list(:,:), X1A(:,:), X1B(:,:), &
                                              X2A(:,:,:,:), X2B(:,:,:,:), X2C(:,:,:,:), LH(:), L_resid(:)
-                        real :: resid, Ecorr, Elcc, e0, LR
+                        real :: resid, Ecorr, Elcc, e0, LR, val
 
                         write(*,fmt=*) ''
                         write(*,fmt=*) '++++++++++++++++++++ LEFT CCSD ROUTINE +++++++++++++++++++++'
@@ -53,6 +53,8 @@ module leftccsd
                         n2c = sys%Nunocc_b**2 * sys%Nocc_b**2
                         ndim = n1a + n1b + n2a + n2b + n2c
 
+                        nroot = size(R,2)
+
                         call calc_cc_energy(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c,Ecorr)
 
                         if (iroot == 0) then
@@ -64,7 +66,7 @@ module leftccsd
                                 L(n1a+n1b+n2a+n2b+1:n1a+n1b+n2a+n2b+n2c) = reshape(t2c,(/n2c/))
                         else
                                 e0 = omega(iroot)
-                                L = R
+                                L = R(:,iroot)
                         end if
 
                         allocate(L_list(ndim,ndiis),L_resid_list(ndim,ndiis),X1A(nua,noa),X1B(nub,nob),&
@@ -120,7 +122,7 @@ module leftccsd
                            resid = sqrt(resid)
 
                            if (iroot /= 0) then
-                                LR = dot(L,R)
+                                LR = dot(L,R(:,iroot))
                                 L = L/LR
                            end if
 
@@ -128,6 +130,14 @@ module leftccsd
 
                            if (resid < tol) then
                                    write(*,fmt=*) 'Left CC converged!'
+
+                                   LR = 0.0
+                                   do i = 1,nroot
+                                      val = dot(L,R(:,i))
+                                      LR = LR + val
+                                   end do
+                                   write(*,fmt=*) 'LR = ',LR
+
                                    exit
                            end if
 
@@ -142,7 +152,7 @@ module leftccsd
                                     
                            write(*,fmt=*) it,' ',Elcc,' ',resid
 
-                       end do
+                       end do                       
 
                        deallocate(L_list,L_resid_list,X1A,X1B,X2A,X2B,X2C,LH,L_resid)
        
@@ -750,5 +760,7 @@ module leftccsd
 
 
                 end subroutine LH_2C
+
+
 
 end module leftccsd
