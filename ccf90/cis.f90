@@ -9,24 +9,20 @@ module cis
 
         contains
 
-              subroutine cis_mat(sys,fA,fB,vA,vB,vC,nroot,Cvec1A,Cvec1B,w_cis)
+              subroutine cis_mat(sys,fA,fB,vA,vB,vC,C,omega)
                 
                       type(sys_t), intent(in) :: sys
                       type(e1int_t), intent(in) :: fA, fB
                       type(e2int_t), intent(in) :: vA, vB, vC
-                      integer, intent(in) :: nroot
-                      real, intent(out) :: Cvec1A(sys%Nunocc_a*sys%Nocc_a,nroot), &
-                                           Cvec1B(sys%Nunocc_b*sys%Nocc_b,nroot), &
-                                           w_cis(nroot)
+                      real, allocatable, intent(out) :: C(:,:), omega(:)
                       integer :: n1a, n1b, cnt1, cnt2, a, b, i, j
-                      real, allocatable :: Hcis(:,:), C(:,:), omega(:)
-                      integer, allocatable :: idx(:)
+                      real, allocatable :: Hcis(:,:)
                       real :: val
 
                       n1a = sys%Nunocc_a*sys%Nocc_a
                       n1b = sys%Nunocc_b*sys%Nocc_b
 
-                      allocate(Hcis(n1a+n1b,n1a+n1b),C(n1a+n1b,n1a+n1b),omega(n1a+n1b),idx(n1a+n1b))
+                      allocate(Hcis(n1a+n1b,n1a+n1b),C(n1a+n1b,n1a+n1b),omega(n1a+n1b))
 
                       cnt1 = 0
                       cnt2 = 0
@@ -103,16 +99,9 @@ module cis
 
 
                       call eigh(Hcis,C,omega)
-                      
-                      idx = argsort(omega)
-                      omega = omega(idx)
-                      C = C(:,idx)
-
-                      w_cis = omega(1:nroot)
-                      Cvec1A = C(1:n1a,1:nroot)
-                      Cvec1B = C(n1a+1:n1a+n1b,1:nroot)
-
-                      deallocate(Hcis,C,omega,idx)
+                      !Cvec1A = C(1:n1a,:)
+                      !Cvec1B = C(n1a+1:n1a+n1b,:)
+                      deallocate(Hcis)
 
               end subroutine cis_mat
 

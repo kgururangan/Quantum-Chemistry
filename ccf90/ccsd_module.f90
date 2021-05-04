@@ -26,7 +26,7 @@ module ccsd_module
                                              Ecorr
                         type(e1int_t) :: H1A, H1B
                         type(e2int_t) :: H2A, H2B, H2C
-                        integer :: ndim, n1a, n1b, n2a, n2b, n2c, it_macro, it_micro
+                        integer :: ndim, n1a, n1b, n2a, n2b, n2c, it, it_diis
                         real :: Ecorr_old, dEcorr, resid
                         real, allocatable :: t(:), t_old(:), t_resid(:), t_list(:,:), t_resid_list(:,:)
 
@@ -40,16 +40,16 @@ module ccsd_module
                         allocate(t(ndim),t_old(ndim),t_resid(ndim),t_list(ndim,ndiis),t_resid_list(ndim,ndiis))
 
                         write(*,fmt=*) ''
-                        write(*,fmt=*) 'CCSD ROUTINE'
+                        write(*,fmt=*) '++++++++++++++++++++ CCSD ROUTINE +++++++++++++++++++++'
                         write(*,fmt=*) ''
 
                         t = 0.0
                         Ecorr_old = 0.0
-                        it_macro = 0
+                        it_diis = 0
                         
-                        write(*,fmt=*) '               Iteration      E(left)                       Residuum'         
+                        write(*,fmt=*) '               Iteration      E(corr)                       Residuum'         
                         write(*,fmt=*) '------------------------------------------------------------------------'
-                        do it_micro = 0,maxit
+                        do it = 0,maxit
 
                                 t_old = t
                                 
@@ -89,16 +89,16 @@ module ccsd_module
                                     exit
                                 end if
 
-                                t_list(:,mod(it_micro,ndiis)+1) = t
-                                t_resid_list(:,mod(it_micro,ndiis)+1) = t_resid
+                                t_list(:,mod(it,ndiis)+1) = t
+                                t_resid_list(:,mod(it,ndiis)+1) = t_resid
 
-                                if (mod(it_micro+1,ndiis) == 0) then
-                                   it_macro = it_macro + 1
-                                   write(*,fmt='(1x,a15,1x,i0)') 'DIIS cycle - ',it_macro
+                                if ( (mod(it,ndiis) == 0) .AND. it > 1) then
+                                   it_diis = it_diis + 1
+                                   write(*,fmt='(1x,a15,1x,i0)') 'DIIS cycle - ',it_diis
                                    call diis_xtrap(t,t_list,t_resid_list)
                                 end if
                                     
-                                write(*,fmt=*) it_micro,' ',Ecorr,' ',resid
+                                write(*,fmt=*) it,' ',Ecorr,' ',resid
 
                                 Ecorr_old = Ecorr
 

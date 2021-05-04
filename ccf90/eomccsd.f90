@@ -1,14 +1,437 @@
 module eomccsd
 
+        ! PRO TIP: If the EOMCC solver seems to "collapse" resulting in eigenvalues
+        ! of 0, typically followed by a subsequent memory error, the culprit is 
+        ! typically the initial guess. There could be 0's in places where there
+        ! should not be, leading to trivial eigenvalue solution of the interaction
+        ! matrix.
+
         use system_types, only: sys_t
         use integral_types, only: e1int_t, e2int_t
         use permutils, only: reorder_stripe
         use einsum_module, only: einsum
-        use cis, only: cis_mat
+        use dgemm_module, only: gemm, gemmt, gemv, dot
 
         implicit none
 
         contains
+
+               subroutine initial_guess(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,N,nroot,guess_type,B0)
+
+                       use cis, only: cis_mat
+                       use sort_module, only: argsort
+
+                       type(sys_t), intent(in) :: sys
+                       type(e1int_t), intent(in) :: fA, fB, H1A, H1B
+                       type(e2int_t), intent(in) :: vA, vB, vC, H2A, H2B, H2C
+                       integer, intent(in) :: nroot, guess_type, N
+                       real, intent(out) :: B0(N,nroot)
+                       real, allocatable :: D1(:), C1(:,:), w_cis(:), c1a(:), c1b(:)
+                       integer, allocatable :: idx(:)
+                       integer :: n1a, n1b, n2a, n2b, n2c, cnt, i, a
+
+                       n1a = sys%Nunocc_a * sys%Nocc_a
+                       n1b = sys%Nunocc_b * sys%Nocc_b
+                       n2a = sys%Nunocc_a**2 * sys%Nocc_a
+                       n2b = sys%Nunocc_a*sys%Nunocc_b*sys%Nocc_a*sys%Nocc_b
+                       n2c = sys%Nunocc_b**2 * sys%Nocc_b
+
+                       ! set initial guess to 0
+                       B0 = 0.0
+
+                       if (guess_type == 1) then ! DIAGONAL (KOOPMAN'S) GUESS
+
+                          allocate(D1(n1a+n1b),idx(n1a+n1b))
+
+                          cnt = 1
+                          do i = 1,sys%Nocc_a
+                             do a = 1,sys%Nunocc_a
+                                D1(cnt) = H1A%uu(a,a)-H1A%oo(i,i)+H2A%uoou(a,i,i,a)
+                                cnt = cnt + 1
+                             end do
+                          end do
+                          do i = 1,sys%Nocc_b
+                             do a = 1,sys%Nunocc_b
+                                D1(cnt) = H1B%uu(a,a)-H1B%oo(i,i)+H2C%uoou(a,i,i,a)
+                                cnt = cnt + 1
+                             end do
+                          end do
+
+                        idx = argsort(D1)
+                        do i = 1,nroot
+                           B0(idx(i),i) = 1.0
+                        end do
+
+                        deallocate(D1,idx)
+
+                     end if
+
+                     if (guess_type == 2) then ! CIS GUESS
+
+                       allocate(C1(n1a+n1b,n1a+n1b),w_cis(n1a+n1b),idx(n1a+n1b),c1a(n1a),c1b(n1b))
+
+                       call cis_mat(sys,fA,fB,vA,vB,vC,C1,w_cis)
+                       idx = argsort(w_cis)
+                       w_cis = w_cis(idx)
+                       C1 = C1(:,idx)
+
+                       do i = 1,nroot
+                          print*,'Root',i,' = ',w_cis(i),'HARTREE'
+                          B0(1:n1a+n1b,i) = C1(:,i)
+                       end do
+
+
+                       deallocate(C1,w_cis,idx,c1a,c1b)
+
+                    end if
+
+                    !if (initial_guess == 3.0) then ! CISd guess
+
+                    !end if
+                       
+
+               end subroutine initial_guess
+                       
+               subroutine davidson_eomccsd(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,&
+                               t1a,t1b,t2a,t2b,t2c,N,nroot,VR,wR,tol,maxit,init_guess)
+
+                        use dgeev_module, only: eig
+                        use sort_module, only: argsort
+
+                        type(sys_t), intent(in) :: sys
+                        type(e1int_t), intent(in) :: fA, fB, H1A, H1B
+                        type(e2int_t), intent(in) :: vA, vB, vC, H2A, H2B, H2C
+                        integer, intent(in) :: N
+                        real, intent(in) :: tol
+                        integer, intent(in) :: nroot, maxit, init_guess
+                        real, intent(in) :: t1a(sys%Nunocc_a,sys%Nocc_a), t1b(sys%Nunocc_b,sys%Nocc_b), &
+                                            t2a(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a), &
+                                            t2b(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b), &
+                                            t2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b)
+                        real, intent(out) :: VR(N,nroot), wR(nroot)
+                        integer :: crsz, i, j, a, k, num_add, maxsz, it, cnt, idx(N), crsz0
+                        real, allocatable :: sigma(:,:), aR(:,:), evR(:), evI(:), G(:,:),&
+                                             rv(:), v(:), q(:), B(:,:), addB(:,:)
+                        integer, allocatable :: id(:)
+                        real :: resid, resv(nroot), B0(N,nroot)
+                        integer, parameter :: nvec = 10
+                        real, parameter :: threshold = 1.0e-04, hatoev = 27.2114
+
+                        ! print header
+                        write(*,fmt=*) ''
+                        write(*,fmt=*) '+++++++++++++++EOMCCSD ROUTINE - BLOCK DAVIDSON SOLVER++++++++++++++++'
+                        write(*,fmt=*) ''
+                        write(*,fmt=*) 'NUMBER OF ROOTS - ',nroot
+                        write(*,fmt=*) 'MAX SUBSPACE SZ - ',nroot*nvec
+                        write(*,fmt=*) 'CONVRG THRESH = ',tol
+                        write(*,fmt=*) 'SUBSPACE EXPAND THRESH = ',threshold
+                        if (init_guess == 1) then
+                                write(*,fmt=*) 'INITIAL GUESS TYPE - DIAGONAL'
+                        end if
+                        if (init_guess == 2) then
+                                write(*,fmt=*) 'INITIAL GUESS TYPE - CIS'
+                        end if
+
+                        ! Get the initial guess
+                        call initial_guess(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,N,nroot,init_guess,B0)
+
+                        ! get current subspace size
+                        crsz = size(B0,2)
+                        ! initialize previous subspace size =/ crsz at first iteration
+                        crsz0 = 0
+
+                        ! maximum subspace size dimension
+                        maxsz = nvec * nroot
+
+                        ! allocate the output right eigenvectors and eigenvalues
+                        allocate(rv(N),q(N),B(N,maxsz),sigma(N,maxsz),addB(N,nroot),v(N))
+
+                        ! populate the B matrix with the initial guess
+                        B(:,1:crsz) = B0
+
+                        ! For the sake of the first iteration:
+                        ! (1) initialize residuals to be large upon entering the Davidson loop
+                        resv(1:nroot) = 100.0
+                        ! (2) set num_add equal to nroot
+                        num_add = nroot
+
+                        ! main davidson loop
+                        do it = 1,maxit
+
+                                write(*,fmt=*) ''
+                                write(*,'(1x,a13,1x,i0,10x,a15,1x,i0)') 'Iteration - ',it,'Subspace dim - ',crsz
+                                write(*,fmt=*) '-----------------------------------------------------------'
+
+                                ! allocate arrays
+                                allocate(aR(crsz,crsz),evR(crsz),evI(crsZ),G(crsz,crsz),id(crsz))
+
+                                ! check if subspace is stangated
+                                if (crsz0 == crsz) then
+                                   write(*,fmt=*) 'Davidson stagnated!'
+                                   exit
+                                else
+                                   crsz0 = crsz
+                                end if
+
+                                ! orthogonalize guess space
+                                call gramschmidt(B(:,1:crsz))
+
+                                ! matrix-vector product
+                                k = max(crsz-num_add+1,1)
+                                call HR_matmat(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,t1a,t1b,t2a,t2b,t2c,&
+                                        B(:,k:crsz),N,crsz-k+1,sigma(:,k:crsz))
+
+                                ! create projected subspace interaction matrix
+                                call gemmt(B(:,1:crsz),sigma(:,1:crsz),G)
+
+                                ! diagonalize projected eigenvalue problem
+                                call eig(G,aR,evR,evI)
+
+                                ! sort eigenvalues
+                                id = argsort(evR)
+                                evR = evR(id)
+                                aR = aR(:,id)
+
+                                resid = 0.0
+                                num_add = 0
+                                do j = 1,nroot
+
+                                   ! if root j is already converged, don't touch it
+                                   if (resv(j) < tol) then
+                                      cycle
+                                   else
+
+                                      ! calculate ritz vector
+                                      call gemv(B(:,1:crsz),aR(:,j),v)
+                                      call gemv(sigma(:,1:crsz),aR(:,j),rv)
+
+                                      ! store current eigenvector/value pair
+                                      VR(:,j) = v
+                                      wR(j) = evR(j)
+
+                                      ! calculate residual vector
+                                      rv = rv - v*evR(j)
+
+                                      ! increment residuum
+                                      resv(j) = norm2(rv)
+                                      resid = resid + resv(j)
+
+                                      ! calculate DPR updated vector
+                                      call update_R(rv,sys,H1A,H1B,evR(j),q)
+                                      ! normalize update vector
+                                      q = q/norm2(q)
+                                      ! orthogonalize against all vectors in current search space
+                                      call orth(q,B(:,1:crsz))
+                                      ! and those that are to be added to the search space
+                                      call orth(q,addB(:,1:num_add))
+
+                                      ! add q to search space if its norm is large enough
+                                      if (norm2(q) > threshold) then
+                                          num_add = num_add + 1
+                                          addB(:,num_add) = q
+                                      end if
+
+                                   end if
+
+                                end do
+
+                                ! print status of each root
+                                do j = 1,nroot
+                                   write(*,'(1x,a8,i0,8x,a4,f12.8,8x,a6,f12.8)') 'Root - ',j,'e = ',wR(j),'|r| = ',resv(j)
+                                end do
+
+                                ! check exit condition
+                                if (resid <= tol) then
+                                   write(*,fmt='(/a)') 'EOMCCSD solver converged!'
+                                   do i = 1,nroot
+                                      write(*,'(1x,a4,2x,i0,a12,f12.8,2x,a10,a12,f12.8,2x,a2)') 'Root',i,'E = ',wR(i),'HARTREE',&
+                                              'VEE =',wR(i)*hatoev,'eV'
+                                   end do
+                                   exit
+
+                                ! otherwise, check if number of search vectors exceeds max size
+                                elseif (crsz+num_add > maxsz) then
+
+                                   ! collapse subspace    
+                                   call gemm(B(:,1:crsz),aR(1:crsz,1:nroot),addB)
+                                   B(:,1:nroot) = addB
+                                   ! update search subspace dimension
+                                   crsz = nroot
+
+                                ! if not, expand the subspace
+                                else
+
+                                    ! add vectors to subspace
+                                    B(:,crsz+1:crsz+num_add) = addB
+                                    ! update search subspace dimension
+                                    crsz = crsz + num_add
+
+                                end if
+
+                                ! deallocate temporary arrays
+                                deallocate(aR,evR,evI,G,id)
+
+                        end do
+
+                        ! deallocate rest of the arrays
+                        deallocate(rv,q,B,sigma,addB,v)
+
+               end subroutine davidson_eomccsd
+
+               subroutine update_R(q,sys,H1A,H1B,omega,qout)
+
+                        type(sys_t), intent(in) :: sys
+                        type(e1int_t), intent(in) :: H1A, H1B
+                        real, intent(in) :: q(:), omega
+                        real, intent(out) :: qout(sys%Nocc_a*sys%Nunocc_a+sys%Nocc_b*sys%Nunocc_b + &
+                                                  sys%Nunocc_a**2*sys%Nocc_a**2+sys%Nunocc_b**2*sys%Nocc_b**2 + &
+                                                  sys%Nunocc_a*sys%Nunocc_b*sys%Nocc_a*sys%Nocc_b)
+                        real :: r1a(sys%Nunocc_a,sys%Nocc_a), r1b(sys%Nunocc_b,sys%Nocc_b), &
+                                r2a(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a), &
+                                r2b(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b), &
+                                r2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b), &
+                                denom
+                        integer :: a, b, i, j, n1a, n1b, n2a, n2b, n2c
+
+                        n1a = sys%Nocc_a * sys%Nunocc_a
+                        n1b = sys%Nocc_b * sys%Nunocc_b
+                        n2a = sys%Nocc_a**2 * sys%Nunocc_a**2
+                        n2b = sys%Nocc_a*sys%Nocc_b*sys%Nunocc_a*sys%Nunocc_b
+                        n2c = sys%Nocc_b**2 * sys%Nunocc_b**2
+
+                        r1a = reshape(q(1:n1a),shape(r1a))
+                        r1b = reshape(q(n1a+1:n1a+n1b),shape(r1b))
+                        r2a = reshape(q(n1b+n1a+1:n1a+n1b+n2a),shape(r2a))
+                        r2b = reshape(q(n2a+n1b+n1a+1:n1a+n1b+n2a+n2b),shape(r2b))
+                        r2c = reshape(q(n2b+n2a+n1b+n1a+1:n1a+n1b+n2a+n2b+n2c),shape(r2c))
+
+                        do i = 1,sys%Nocc_a
+                           do a = 1,sys%Nunocc_a
+                              denom = H1A%uu(a,a)-H1A%oo(i,i)
+                              r1a(a,i) = r1a(a,i)/(omega-denom)
+                           end do
+                        end do
+
+                        do i = 1,sys%Nocc_b
+                           do a = 1,sys%Nunocc_b
+                              denom = H1B%uu(a,a)-H1B%oo(i,i)
+                              r1b(a,i) = r1b(a,i)/(omega-denom)
+                           end do
+                        end do
+
+                        do i = 1,sys%Nocc_a
+                           do j = 1,sys%Nocc_a
+                              do a = 1,sys%Nunocc_a
+                                 do b = 1,sys%Nunocc_a
+                                    denom = H1A%uu(a,a)+H1A%uu(b,b)-H1A%oo(i,i)-H1A%oo(j,j)
+                                    r2a(b,a,j,i) = r2a(b,a,j,i)/(omega-denom)
+                                    !r2a(a,b,j,i) = -r2a(b,a,j,i)
+                                    !r2a(b,a,i,j) = -r2a(b,a,j,i)
+                                    !r2a(a,b,i,j) = r2a(b,a,j,i)
+                                 end do
+                              end do
+                           end do
+                        end do
+
+                        do j = 1,sys%Nocc_b
+                           do i = 1,sys%Nocc_a
+                              do b = 1,sys%Nunocc_b
+                                 do a = 1,sys%Nunocc_a
+                                    denom = H1A%uu(a,a)+H1B%uu(b,b)-H1A%oo(i,i)-H1B%oo(j,j)
+                                    r2b(a,b,i,j) = r2b(a,b,i,j)/(omega-denom)
+                                 end do
+                              end do
+                           end do
+                        end do
+
+                        do i = 1,sys%Nocc_b
+                           do j = 1,sys%Nocc_b
+                              do a = 1,sys%Nunocc_b
+                                 do b = 1,sys%Nunocc_b
+                                    denom = H1B%uu(a,a)+H1B%uu(b,b)-H1B%oo(i,i)-H1B%oo(j,j)
+                                    r2c(b,a,j,i) = r2c(b,a,j,i)/(omega-denom)
+                                    !r2c(a,b,j,i) = -r2c(b,a,j,i)
+                                    !r2c(b,a,i,j) = -r2c(b,a,j,i)
+                                    !r2c(a,b,i,j) = r2c(b,a,j,i)
+                                 end do
+                              end do
+                           end do
+                        end do
+
+                        qout(1:n1a) = reshape(r1a,(/n1a/))
+                        qout(n1a+1:n1a+n1b) = reshape(r1b,(/n1b/))
+                        qout(n1b+n1a+1:n1a+n1b+n2a) = reshape(r2a,(/n2a/))
+                        qout(n2a+n1b+n1a+1:n1a+n1b+n2a+n2b) = reshape(r2b,(/n2b/))
+                        qout(n2b+n2a+n1b+n1a+1:n1a+n1b+n2a+n2b+n2c) = reshape(r2c,(/n2c/))
+
+
+               end subroutine update_R
+
+               subroutine HR_matmat(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,t1a,t1b,t2a,t2b,t2c,Rvec,ndim,crsz,sigma)
+
+                        type(sys_t), intent(in) :: sys
+                        type(e1int_t), intent(in) :: fA, fB, H1A, H1B
+                        type(e2int_t), intent(in) :: vA, vB, vC, H2A, H2B, H2C
+                        integer, intent(in) :: ndim, crsz
+                        real, intent(in) :: Rvec(ndim,crsz)
+                        real, intent(out) :: sigma(ndim,crsz)
+                        real, intent(in) :: t1a(sys%Nunocc_a,sys%Nocc_a), t1b(sys%Nunocc_b,sys%Nocc_b), &
+                                            t2a(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a), &
+                                            t2b(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b), &
+                                            t2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b)
+                        real :: r1a(sys%Nunocc_a,sys%Nocc_a), r1b(sys%Nunocc_b,sys%Nocc_b), &
+                                r2a(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a), &
+                                r2b(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b), &
+                                r2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b), &
+                                X1A(sys%Nunocc_a,sys%Nocc_a), X1B(sys%Nunocc_b,sys%Nocc_b), &
+                                X2A(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a), &
+                                X2B(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b), &
+                                X2C(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b), &
+                                sigma_1a(sys%Nunocc_a*sys%Nocc_a), sigma_1b(sys%Nunocc_b*sys%Nocc_b), &
+                                sigma_2a(sys%Nunocc_a**2*sys%Nocc_a**2), &
+                                sigma_2b(sys%Nunocc_a*sys%Nunocc_b*sys%Nocc_a*sys%Nocc_b), &
+                                sigma_2c(sys%Nunocc_b**2*sys%Nocc_b**2)
+                        integer :: j, n1a, n1b, n2a, n2b, n2c
+
+                        n1a = sys%Nunocc_a * sys%Nocc_a
+                        n1b = sys%Nunocc_b * sys%Nocc_b
+                        n2a = sys%Nunocc_a**2 * sys%Nocc_a**2
+                        n2b = sys%Nunocc_a * sys%Nunocc_b * sys%Nocc_a * sys%Nocc_b
+                        n2c = sys%Nunocc_b**2 * sys%Nocc_b**2
+
+                        do j = 1,crsz
+
+                                r1a = reshape(Rvec(1:n1a,j),shape(r1a))
+                                r1b = reshape(Rvec(n1a+1:n1a+n1b,j),shape(r1b))
+                                r2a = reshape(Rvec(n1b+n1a+1:n1a+n1b+n2a,j),shape(r2a))
+                                r2b = reshape(Rvec(n2a+n1b+n1a+1:n1a+n1b+n2a+n2b,j),shape(r2b))
+                                r2c = reshape(Rvec(n2b+n2a+n1b+n1a+1:n1a+n1b+n2a+n2b+n2c,j),shape(r2c))
+
+                                call HR_1A(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,t1a,t1b,t2a,t2b,t2c, &
+                                        r1a,r1b,r2a,r2b,r2c,X1A)
+                                sigma_1a = reshape(X1A,(/n1a/))
+                                call HR_1B(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,t1a,t1b,t2a,t2b,t2c, &
+                                        r1a,r1b,r2a,r2b,r2c,X1B)
+                                sigma_1b = reshape(X1B,(/n1b/))
+                                call HR_2A(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,t1a,t1b,t2a,t2b,t2c, &
+                                        r1a,r1b,r2a,r2b,r2c,X2A)
+                                sigma_2a = reshape(X2A,(/n2a/))
+                                call HR_2B(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,t1a,t1b,t2a,t2b,t2c, &
+                                        r1a,r1b,r2a,r2b,r2c,X2B)
+                                sigma_2b = reshape(X2B,(/n2b/))
+                                call HR_2C(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,t1a,t1b,t2a,t2b,t2c, &
+                                        r1a,r1b,r2a,r2b,r2c,X2C)
+                                sigma_2c = reshape(X2C,(/n2c/))
+
+                                sigma(1:n1a,j) = sigma_1a
+                                sigma(n1a+1:n1a+n1b,j) = sigma_1b
+                                sigma(n1a+n1b+1:n1a+n1b+n2a,j) = sigma_2a
+                                sigma(n1a+n1b+n2a+1:n1a+n1b+n2a+n2b,j) = sigma_2b
+                                sigma(n1a+n1b+n2a+n2b+1:n1a+n1b+n2a+n2b+n2c,j) = sigma_2c
+
+                        end do
+
+                end subroutine HR_matmat
 
                 subroutine HR_1A(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C, &
                                 t1a,t1b,t2a,t2b,t2c,r1a,r1b,r2a,r2b,r2c,HR)
@@ -415,5 +838,49 @@ module eomccsd
 
 
                 end subroutine HR_2C
+
+                subroutine gramschmidt(Q)
+
+                        real, intent(inout) :: Q(:,:)
+                        integer :: N, i, j
+                        real, allocatable :: v(:), R(:,:)
+
+                        N = size(Q,2)
+                        
+                        allocate(v(N),R(N,N))
+
+                        do j = 1,N
+                           v = Q(:,j)
+                           do i = 1,j-1
+                              R(i,j) = dot(Q(:,i),v)
+                              v = v - R(i,j)*Q(:,i)
+                           end do
+                           R(j,j) = norm2(v)
+                           Q(:,j) = v/R(j,j)
+                        end do
+
+                        deallocate(v,R)
+
+                end subroutine gramschmidt
+
+                subroutine orth(q,B)
+
+                        real, intent(inout) :: q(:)
+                        real, intent(in) :: B(:,:)
+                        real, allocatable :: v(:)
+                        integer :: i, n
+                        real :: s
+
+                        n = size(B,2)
+
+                        allocate(v(n))
+                        do i = 1,n
+                           v = B(:,i)/norm2(B(:,i))
+                           s = dot(v,q)
+                           q = q - s*v
+                        end do
+                        deallocate(v)
+
+                end subroutine orth
 
 end module eomccsd

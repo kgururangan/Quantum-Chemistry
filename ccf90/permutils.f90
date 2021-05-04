@@ -125,8 +125,76 @@ module permutils
 
     end subroutine permsign
 
-            
+    subroutine reorder_max_coincidence(D1,D2,sgn)
 
+        use sort_module, only: get_intersection_sorted
+        use sort_module, only: argsort_int
+
+        integer, intent(inout) :: D1(:), D2(:)
+        real, intent(out) :: sgn
+        integer, allocatable :: inter(:), idx1(:), idx2(:), idx3(:), idx4(:), &
+                                perm1(:), perm2(:)
+        integer :: m, n, k, i, cnt
+        real :: sgn1, sgn2
+
+        m = size(D1)
+        n = size(D2)
+
+        allocate(perm1(m),perm2(n))
+        
+        ! get the intersection of two sorted arrays D1 and D2
+        call get_intersection_sorted(D1,D2,inter,idx1,idx2)
+
+        ! length of intersection
+        k = size(inter)
+
+        allocate(idx3(m-k),idx4(n-k))
+
+        ! get indices not intersected in D1
+        cnt = 0
+        do i = 1,m
+           if (any(idx1==i)) then 
+                   cycle
+           else
+                   cnt = cnt + 1
+                   idx3(cnt) = i
+           end if
+        end do
+        ! assemble permutation of D1
+        perm1(1:k) = idx1
+        perm1(k+1:m) = idx3
+        ! get permuted D1 and sign of permutation
+        D1 = D1(perm1)
+        call permsign(sgn1,perm1)
+
+
+        ! get indices not intersected in D2
+        cnt = 0
+        do i = 1,n
+           if (any(idx2==i)) then
+                   cycle
+           else
+                   cnt = cnt + 1
+                   idx4(cnt) = i
+           end if
+        end do
+        ! assemble permutation of D2
+        perm2(1:k) = idx2
+        perm2(k+1:n) = idx4
+        ! get permuted D2 and sign of permutation
+        D2 = D2(perm2)
+        call permsign(sgn2,perm2)
+
+        ! overall sign of permutations
+        sgn = sgn1 * sgn2
+
+        deallocate(inter,idx1,idx2,idx3,idx4,perm1,perm2)
+
+   end subroutine reorder_max_coincidence
+        
+
+
+                
 
 
 end module permutils

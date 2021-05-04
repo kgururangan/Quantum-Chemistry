@@ -869,4 +869,71 @@ module testing_module
 
                 end subroutine test_eomccsd
 
+                subroutine test_leftccsd(sys,fA,fB,vA,vB,vC)
+
+                        use ccsd_module, only: ccsd
+                        use hbar, only: hbar_ccsd
+                        use leftccsd, only: LH_1A, LH_1B, LH_2A, LH_2B, LH_2C
+
+                        type(sys_t), intent(in) :: sys
+                        type(e1int_t), intent(in) :: fA, fB
+                        type(e2int_t), intent(in) :: vA, vB, vC
+                        real :: t1a(sys%Nunocc_a,sys%Nocc_a), t1b(sys%Nunocc_b,sys%Nocc_b), &
+                                t2a(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a), &
+                                t2b(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b), &
+                                t2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b)
+                        real :: l1a(sys%Nunocc_a,sys%Nocc_a), l1b(sys%Nunocc_b,sys%Nocc_b), &
+                                l2a(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a), &
+                                l2b(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b), &
+                                l2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b)
+                        real :: LH1A(sys%Nunocc_a,sys%Nocc_a), LH1B(sys%Nunocc_b,sys%Nocc_b), &
+                                LH2A(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a), &
+                                LH2B(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b), &
+                                LH2C(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b)
+                        type(e1int_t) :: H1A, H1B
+                        type(e2int_t) :: H2A, H2B, H2C
+                        integer :: a, b, i, j
+                        real, parameter :: tol = 1.0e-07, shift = 0.0, tol_cc = 1.0e-08
+                        real :: Ecorr
+                        integer, parameter :: ndiis = 5, maxit = 100, iroot = 0
+
+                        call ccsd(sys,fA,fB,vA,vB,vC,ndiis,maxit,shift,tol_cc,t1a,t1b,t2a,t2b,t2c,Ecorr)
+                        call hbar_ccsd(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c,H1A,H1B,H2A,H2B,H2C)
+
+                        call get_t_approx(sys,fA,fB,vA,vB,vC,l1a,l1b,l2a,l2b,l2c)
+
+                        call LH_1A(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C, &
+                                t1a,t1b,t2a,t2b,t2c,l1a,l1b,l2a,l2b,l2c,iroot,LH1A)
+                        call LH_1B(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C, &
+                                t1a,t1b,t2a,t2b,t2c,l1a,l1b,l2a,l2b,l2c,iroot,LH1B)
+                        call LH_2A(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C, &
+                                t1a,t1b,t2a,t2b,t2c,l1a,l1b,l2a,l2b,l2c,iroot,LH2A)
+                        call LH_2B(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C, &
+                                t1a,t1b,t2a,t2b,t2c,l1a,l1b,l2a,l2b,l2c,iroot,LH2B)
+                        call LH_2C(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C, &
+                                t1a,t1b,t2a,t2b,t2c,l1a,l1b,l2a,l2b,l2c,iroot,LH2C)
+
+
+                        associate(noa=>sys%Nocc_a,nua=>sys%Nunocc_a,nob=>sys%Nocc_b,nub=>sys%Nunocc_b)
+
+
+                                print*,'TESTING L2B UPDATE'
+                                do a =1,nua
+                                   do b =1,nub
+                                      do i = 1,noa
+                                         do j = 1,nob
+                                            if (abs(LH2B(a,b,i,j)) >= tol) then
+                                                    print*,'X2B(',a,b,i,j,') = ',LH2B(a,b,i,j)
+                                            end if
+                                         end do
+                                      end do
+                                   end do
+                                end do
+
+
+
+                        end associate
+
+                end subroutine test_leftccsd
+
  end module testing_module
