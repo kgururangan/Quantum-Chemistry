@@ -235,6 +235,7 @@ module eomccsd
 
                                 end do
 
+                                ! orthonormalize the R vectors
                                 call gramschmidt(VR)
 
                                 ! print status of each root

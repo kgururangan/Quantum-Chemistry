@@ -10,28 +10,34 @@ program main
         use eomccsd, only: davidson_eomccsd
         use hbar, only: hbar_ccsd
         use leftccsd, only: left_ccsd
+        use crcc23_module, only: crcc23
+
+        use einsum_module, only: einsum
+
 
         implicit none
 
-        integer, parameter :: Norb = 26, Nfroz=0, Nelec=6
+        integer, parameter :: Norb = 14, Nfroz=0, Nelec=10
         type(e1int_t) :: fA, fB, H1A, H1B
         type(e2int_t) :: vA, vB, vC, H2A, H2B, H2C
         type(sys_t) :: sys
         real :: Emp2, Ecorr
-        integer, parameter :: ndiis = 6, nroot = 15, init_guess = 2
+        integer, parameter :: ndiis = 6, nroot = 15, init_guess = 1 
         real, parameter :: shift = 0.8, tol = 1.0e-08
         real, allocatable :: t1a(:,:), t1b(:,:), t2a(:,:,:,:), t2b(:,:,:,:), t2c(:,:,:,:), &
                              c1a(:,:), c1b(:,:), w_cis(:), Rvec(:,:), omega(:), Lvec(:,:)
-        integer :: n1a, n1b, n2a, n2b, n2c, ndim, iroot, maxit_cc, maxit_eom, i, j
-        integer :: xchk(nroot,nroot)
+        integer :: n1a, n1b, n2a, n2b, n2c, ndim, iroot, maxit_cc, maxit_eom
+        real :: E23A, E23B, E23C, E23D, val, xsum
+        real, allocatable :: x1(:,:,:), y1(:,:,:), l2a(:,:,:,:), l2b(:,:,:,:), l2c(:,:,:,:)
+        integer :: i, j, k, m, e, a, b, c, io_1a, io_1b, io_2a, io_2b, io_2c
 
         maxit_cc = 500
         maxit_eom = 50
 
 
         call print_header()
-        call get_integrals('/Users/karthik/Desktop/CC_matlab_tests/chplus-1.0-olsen/onebody.inp',&
-                           '/users/karthik/Desktop/CC_matlab_tests/chplus-1.0-olsen/twobody.inp',&
+        call get_integrals('/Users/karthik/Desktop/CC_matlab_tests/CCpy_tests/H2O-2Re-DZ/onebody.inp',&
+                           '/users/karthik/Desktop/CC_matlab_tests/CCpy_tests/H2O-2Re-DZ/twobody.inp',&
                            Norb,Nfroz,Nelec,sys,vA,vB,vC,fA,fB)
         call print_calc_params(sys)
 
@@ -50,18 +56,23 @@ program main
                  t2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b), &
                  Rvec(ndim,nroot),Lvec(ndim,nroot+1),omega(nroot))
 
+        !call ccsd(sys,fA,fB,vA,vB,vC,ndiis,maxit_cc,shift,tol,t1a,t1b,t2a,t2b,t2c,Ecorr)
+        !call hbar_ccsd(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c,H1A,H1B,H2A,H2B,H2C)
+        !call davidson_eomccsd(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,&
+        !                       t1a,t1b,t2a,t2b,t2c,ndim,nroot,Rvec,omega,tol,maxit_eom,init_guess)
+        !do iroot = 0,nroot
+        !   call left_ccsd(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c,Lvec(:,iroot+1),Rvec,&
+        !           H1A,H1B,H2A,H2B,H2C,tol,ndiis,maxit_cc,shift,iroot,omega)
+        !end do
+
+
         call ccsd(sys,fA,fB,vA,vB,vC,ndiis,maxit_cc,shift,tol,t1a,t1b,t2a,t2b,t2c,Ecorr)
         call hbar_ccsd(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c,H1A,H1B,H2A,H2B,H2C)
-        call davidson_eomccsd(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,&
-                               t1a,t1b,t2a,t2b,t2c,ndim,nroot,Rvec,omega,tol,maxit_eom,init_guess)
 
+        call left_ccsd(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c,Lvec(:,1),Rvec,&
+                  H1A,H1B,H2A,H2B,H2C,tol,ndiis,maxit_cc,shift,0,omega)
+        call crcc23(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c,Lvec(:,1),H1A,H1B,H2A,H2B,H2C,E23A,E23B,E23C,E23D)
 
-
-
-        do iroot = 0,nroot
-           call left_ccsd(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c,Lvec(:,iroot+1),Rvec,&
-                   H1A,H1B,H2A,H2B,H2C,tol,ndiis,maxit_cc,shift,iroot,omega)
-        end do
-        !deallocate(t1a,t1b,t2a,t2b,t2c)
+        deallocate(t1a,t1b,t2a,t2b,t2c)
 end program main
 

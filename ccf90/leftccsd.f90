@@ -129,14 +129,17 @@ module leftccsd
                            Elcc = norm2(LH)/norm2(L)
 
                            if (resid < tol) then
+
                                    write(*,fmt=*) 'Left CC converged!'
 
-                                   LR = 0.0
-                                   do i = 1,nroot
-                                      val = dot(L,R(:,i))
-                                      LR = LR + val
-                                   end do
-                                   write(*,fmt=*) 'LR = ',LR
+                                   if (iroot /= 0) then
+                                        LR = 0.0
+                                        do i = 1,nroot
+                                           val = dot(L,R(:,i))
+                                           LR = LR + val
+                                        end do
+                                        write(*,fmt=*) 'LR = ',LR
+                                   end if
 
                                    exit
                            end if
