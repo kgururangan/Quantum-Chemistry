@@ -27,9 +27,7 @@ program main
         real, allocatable :: t1a(:,:), t1b(:,:), t2a(:,:,:,:), t2b(:,:,:,:), t2c(:,:,:,:), &
                              c1a(:,:), c1b(:,:), w_cis(:), Rvec(:,:), omega(:), Lvec(:,:)
         integer :: n1a, n1b, n2a, n2b, n2c, ndim, iroot, maxit_cc, maxit_eom
-        real :: E23A, E23B, E23C, E23D, val, xsum
-        real, allocatable :: x1(:,:,:), y1(:,:,:), l2a(:,:,:,:), l2b(:,:,:,:), l2c(:,:,:,:)
-        integer :: i, j, k, m, e, a, b, c, io_1a, io_1b, io_2a, io_2b, io_2c
+        real :: E23A, E23B, E23C, E23D
 
         maxit_cc = 500
         maxit_eom = 50
