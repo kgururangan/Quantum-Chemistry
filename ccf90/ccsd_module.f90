@@ -9,11 +9,12 @@ module ccsd_module
 
         contains
 
-                subroutine ccsd(sys,fA,fB,vA,vB,vC,ndiis,maxit,shift,tol,t1a,t1b,t2a,t2b,t2c,Ecorr)
+                subroutine ccsd(sys,fA,fB,vA,vB,vC,ndiis,maxit,shift,tol,t1a,t1b,t2a,t2b,t2c,Ecorr,io)
 
                         use cc_energy, only: calc_cc_energy
                         use diis, only: diis_xtrap
 
+                        integer, intent(in) :: io
                         type(sys_t), intent(in) :: sys
                         type(e1int_t), intent(in) :: fA, fB
                         type(e2int_t), intent(in) :: vA, vB, vC
@@ -39,16 +40,18 @@ module ccsd_module
 
                         allocate(t(ndim),t_old(ndim),t_resid(ndim),t_list(ndim,ndiis),t_resid_list(ndim,ndiis))
 
-                        write(*,fmt=*) ''
-                        write(*,fmt=*) '++++++++++++++++++++ CCSD ROUTINE +++++++++++++++++++++'
-                        write(*,fmt=*) ''
+                        write(io,fmt=*) ''
+                        write(io,fmt=*) '++++++++++++++++++++ CCSD ROUTINE +++++++++++++++++++++'
+                        write(io,fmt=*) ''
+                        write(io,fmt=*) 'DIIS SIZE - ',ndiis
+                        write(io,fmt=*) 'SHIFT = ',shift
 
                         t = 0.0
                         Ecorr_old = 0.0
                         it_diis = 0
                         
-                        write(*,fmt=*) '               Iteration      E(corr)                       Residuum'         
-                        write(*,fmt=*) '------------------------------------------------------------------------'
+                        write(io,fmt=*) '               Iteration      E(corr)                       Residuum'         
+                        write(io,fmt=*) '------------------------------------------------------------------------'
                         do it = 0,maxit
 
                                 t_old = t
@@ -82,10 +85,10 @@ module ccsd_module
                                 resid = norm2(t_resid)
 
                                 if ( (resid <= tol) .AND. (abs(dEcorr) <= tol) ) then
-                                    write(*,fmt=*) 'CCSD converged!'
-                                    write(*,fmt=*) ''
-                                    write(*,fmt=*) 'CCSD CORRELATION ENERGY (HARTREE) = ',Ecorr
-                                    write(*,fmt=*) 'CCSD ENERGY (HARTREE) = ',Ecorr+sys%Escf
+                                    write(io,fmt=*) 'CCSD converged!'
+                                    write(io,fmt=*) ''
+                                    write(io,fmt=*) 'CCSD CORRELATION ENERGY (HARTREE) = ',Ecorr
+                                    write(io,fmt=*) 'CCSD ENERGY (HARTREE) = ',Ecorr+sys%Escf
                                     exit
                                 end if
 
@@ -94,11 +97,11 @@ module ccsd_module
 
                                 if ( (mod(it,ndiis) == 0) .AND. it > 1) then
                                    it_diis = it_diis + 1
-                                   write(*,fmt='(1x,a15,1x,i0)') 'DIIS cycle - ',it_diis
+                                   write(io,fmt='(1x,a15,1x,i0)') 'DIIS cycle - ',it_diis
                                    call diis_xtrap(t,t_list,t_resid_list)
                                 end if
                                     
-                                write(*,fmt=*) it,' ',Ecorr,' ',resid
+                                write(io,fmt=*) it,' ',Ecorr,' ',resid
 
                                 Ecorr_old = Ecorr
 

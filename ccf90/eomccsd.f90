@@ -16,25 +16,26 @@ module eomccsd
 
         contains
 
-               subroutine initial_guess(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,N,nroot,guess_type,B0)
+               subroutine initial_guess(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,N,nroot,guess_type,B0,io)
 
                        use cis, only: cis_mat
                        use sort_module, only: argsort
 
+                       integer, intent(in) :: io
                        type(sys_t), intent(in) :: sys
                        type(e1int_t), intent(in) :: fA, fB, H1A, H1B
                        type(e2int_t), intent(in) :: vA, vB, vC, H2A, H2B, H2C
                        integer, intent(in) :: nroot, guess_type, N
                        real, intent(out) :: B0(N,nroot)
-                       real, allocatable :: D1(:), C1(:,:), w_cis(:), c1a(:), c1b(:)
-                       integer, allocatable :: idx(:)
-                       integer :: n1a, n1b, n2a, n2b, n2c, cnt, i, a
+                       real, allocatable :: D1(:), C1(:,:), D2(:), w_cis(:), c1a(:), c1b(:)
+                       integer, allocatable :: idx(:), idx2(:)
+                       integer :: n1a, n1b, n2a, n2b, n2c, cnt, i, j, a, b
 
                        n1a = sys%Nunocc_a * sys%Nocc_a
                        n1b = sys%Nunocc_b * sys%Nocc_b
-                       n2a = sys%Nunocc_a**2 * sys%Nocc_a
+                       n2a = sys%Nunocc_a**2 * sys%Nocc_a**2
                        n2b = sys%Nunocc_a*sys%Nunocc_b*sys%Nocc_a*sys%Nocc_b
-                       n2c = sys%Nunocc_b**2 * sys%Nocc_b
+                       n2c = sys%Nunocc_b**2 * sys%Nocc_b**2
 
                        ! set initial guess to 0
                        B0 = 0.0
@@ -76,12 +77,90 @@ module eomccsd
                        C1 = C1(:,idx)
 
                        do i = 1,nroot
-                          print*,'Root',i,' = ',w_cis(i),'HARTREE'
+                          write(io,fmt=*) 'Root',i,' = ',w_cis(i),'HARTREE'
                           B0(1:n1a+n1b,i) = C1(:,i)
                        end do
 
 
                        deallocate(C1,w_cis,idx,c1a,c1b)
+
+                    end if
+
+                    if (guess_type == 3) then ! ONE-BODY + TWO-BODY DIAGONAL (KOOPMAN'S) GUESS
+
+                          allocate(D1(n1a+n1b),idx(n1a+n1b))
+
+                          cnt = 1
+                          do i = 1,sys%Nocc_a
+                             do a = 1,sys%Nunocc_a
+                                D1(cnt) = H1A%uu(a,a)-H1A%oo(i,i)+H2A%uoou(a,i,i,a)
+                                cnt = cnt + 1
+                             end do
+                          end do
+
+                          do i = 1,sys%Nocc_b
+                             do a = 1,sys%Nunocc_b
+                                D1(cnt) = H1B%uu(a,a)-H1B%oo(i,i)+H2C%uoou(a,i,i,a)
+                                cnt = cnt + 1
+                             end do
+                          end do
+
+                        idx = argsort(D1)
+                        do i = 1,nroot
+                           B0(idx(i),i) = 1.0
+                        end do
+                        deallocate(D1,idx)
+
+                        allocate(D2(n2a+n2b+n2c),idx2(n2a+n2b+n2c))
+
+                        cnt = 1
+                          do i = 1,sys%Nocc_a
+                             do j = 1,sys%Nocc_a
+                                do a = 1,sys%Nunocc_a
+                                   do b = 1,sys%Nunocc_a
+                                      D2(cnt) = H1A%uu(a,a)+H1A%uu(b,b)-H1A%oo(i,i)-H1A%oo(j,j)&
+                                                +H2A%uoou(a,i,i,a)+H2A%uoou(a,j,j,a)+H2A%uoou(b,i,i,b)&
+                                                +H2A%uoou(b,j,j,b)+H2A%uuuu(a,b,a,b)+H2A%oooo(i,j,i,j)
+                                      cnt = cnt + 1
+                                   end do
+                                end do
+                             end do
+                          end do
+
+                          do i = 1,sys%Nocc_a
+                             do j = 1,sys%Nocc_b
+                                do a = 1,sys%Nunocc_a
+                                   do b = 1,sys%Nunocc_b
+                                      D2(cnt) = H1A%uu(a,a)+H1B%uu(b,b)-H1A%oo(i,i)-H1B%oo(j,j)&
+                                               +H2A%uoou(a,i,i,a)+H2C%uoou(b,j,j,b)-H2B%uouo(a,j,a,j)&
+                                               -H2B%ouou(i,b,i,b)+H2B%uuuu(a,b,a,b)+H2B%oooo(i,j,i,j)
+                                      cnt = cnt + 1
+                                   end do
+                                end do
+                             end do
+                          end do
+
+                          do i = 1,sys%Nocc_b
+                             do j = 1,sys%Nocc_b
+                                do a = 1,sys%Nunocc_b
+                                   do b = 1,sys%Nunocc_b
+                                      D2(cnt) = H1B%uu(a,a)+H1B%uu(b,b)-H1B%oo(i,i)-H1B%oo(j,j)&
+                                               +H2C%uoou(a,i,i,a)+H2C%uoou(a,j,j,a)+H2C%uoou(b,i,i,b)&
+                                               +H2C%uoou(b,j,j,b)+H2C%oooo(i,j,i,j)+H2C%uuuu(a,b,a,b)
+                                      cnt = cnt + 1
+                                   end do
+                                end do
+                             end do
+                          end do
+
+                        idx2 = argsort(D2)
+                        do i = 1,nroot
+                           B0(n1a+n1b+idx2(i),i) = 1.0
+                        end do
+
+                        deallocate(D2,idx2)
+
+                        call gramschmidt(B0)
 
                     end if
 
@@ -92,12 +171,14 @@ module eomccsd
 
                end subroutine initial_guess
                        
+
                subroutine davidson_eomccsd(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,&
-                               t1a,t1b,t2a,t2b,t2c,N,nroot,VR,wR,tol,maxit,init_guess)
+                               t1a,t1b,t2a,t2b,t2c,N,nroot,VR,wR,tol,maxit,init_guess,io)
 
                         use dgeev_module, only: eig
                         use sort_module, only: argsort
 
+                        integer, intent(in) :: io
                         type(sys_t), intent(in) :: sys
                         type(e1int_t), intent(in) :: fA, fB, H1A, H1B
                         type(e2int_t), intent(in) :: vA, vB, vC, H2A, H2B, H2C
@@ -111,29 +192,29 @@ module eomccsd
                         real, intent(out) :: VR(N,nroot), wR(nroot)
                         integer :: crsz, i, j, a, k, num_add, maxsz, it, cnt, idx(N), crsz0
                         real, allocatable :: sigma(:,:), aR(:,:), evR(:), evI(:), G(:,:),&
-                                             rv(:), v(:), q(:), B(:,:), addB(:,:)
-                        integer, allocatable :: id(:)
+                                             rv(:), v(:), q(:), B(:,:), addB(:,:), overlaps(:) 
+                        integer, allocatable :: id(:), id2(:)
                         real :: resid, resv(nroot), B0(N,nroot)
                         integer, parameter :: nvec = 10
                         real, parameter :: threshold = 1.0e-04, hatoev = 27.2114
 
                         ! print header
-                        write(*,fmt=*) ''
-                        write(*,fmt=*) '+++++++++++++++EOMCCSD ROUTINE - BLOCK DAVIDSON SOLVER++++++++++++++++'
-                        write(*,fmt=*) ''
-                        write(*,fmt=*) 'NUMBER OF ROOTS - ',nroot
-                        write(*,fmt=*) 'MAX SUBSPACE SZ - ',nroot*nvec
-                        write(*,fmt=*) 'CONVRG THRESH = ',tol
-                        write(*,fmt=*) 'SUBSPACE EXPAND THRESH = ',threshold
+                        write(io,fmt=*) ''
+                        write(io,fmt=*) '+++++++++++++++EOMCCSD ROUTINE - BLOCK DAVIDSON SOLVER++++++++++++++++'
+                        write(io,fmt=*) ''
+                        write(io,fmt=*) 'NUMBER OF ROOTS - ',nroot
+                        write(io,fmt=*) 'MAX SUBSPACE SZ - ',nroot*nvec
+                        write(io,fmt=*) 'CONVRG THRESH = ',tol
+                        write(io,fmt=*) 'SUBSPACE EXPAND THRESH = ',threshold
                         if (init_guess == 1) then
-                                write(*,fmt=*) 'INITIAL GUESS TYPE - DIAGONAL'
+                                write(io,fmt=*) 'INITIAL GUESS TYPE - DIAGONAL'
                         end if
                         if (init_guess == 2) then
-                                write(*,fmt=*) 'INITIAL GUESS TYPE - CIS'
+                                write(io,fmt=*) 'INITIAL GUESS TYPE - CIS'
                         end if
 
                         ! Get the initial guess
-                        call initial_guess(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,N,nroot,init_guess,B0)
+                        call initial_guess(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,N,nroot,init_guess,B0,io)
 
                         ! get current subspace size
                         crsz = size(B0,2)
@@ -149,6 +230,10 @@ module eomccsd
                         ! populate the B matrix with the initial guess
                         B(:,1:crsz) = B0
 
+                        ! find the projected subspace eigenvectors that correspond
+                        ! to the initial guess
+                        VR = B0
+
                         ! For the sake of the first iteration:
                         ! (1) initialize residuals to be large upon entering the Davidson loop
                         resv(1:nroot) = 100.0
@@ -158,16 +243,16 @@ module eomccsd
                         ! main davidson loop
                         do it = 1,maxit
 
-                                write(*,fmt=*) ''
-                                write(*,'(1x,a13,1x,i0,10x,a15,1x,i0)') 'Iteration - ',it,'Subspace dim - ',crsz
-                                write(*,fmt=*) '-----------------------------------------------------------'
+                                write(io,fmt=*) ''
+                                write(io,'(1x,a13,1x,i0,10x,a15,1x,i0)') 'Iteration - ',it,'Subspace dim - ',crsz
+                                write(io,fmt=*) '-----------------------------------------------------------'
 
                                 ! allocate arrays
-                                allocate(aR(crsz,crsz),evR(crsz),evI(crsZ),G(crsz,crsz),id(crsz))
+                                allocate(aR(crsz,crsz),evR(crsz),evI(crsZ),G(crsz,crsz),id(crsz),overlaps(crsz),id2(crsz))
 
                                 ! check if subspace is stangated
                                 if (crsz0 == crsz) then
-                                   write(*,fmt=*) 'Davidson stagnated!'
+                                   write(io,fmt=*) 'Davidson stagnated!'
                                    exit
                                 else
                                    crsz0 = crsz
@@ -235,19 +320,20 @@ module eomccsd
 
                                 end do
 
-                                ! orthonormalize the R vectors
+                                ! orthonormalize the R vectors - important to enforce
+                                ! biorthonormality in the left EOM solver
                                 call gramschmidt(VR)
 
                                 ! print status of each root
                                 do j = 1,nroot
-                                   write(*,'(1x,a8,i0,8x,a4,f12.8,8x,a6,f12.8)') 'Root - ',j,'e = ',wR(j),'|r| = ',resv(j)
+                                   write(io,'(1x,a8,i0,8x,a4,f12.8,8x,a6,f12.8)') 'Root - ',j,'e = ',wR(j),'|r| = ',resv(j)
                                 end do
 
                                 ! check exit condition
                                 if (resid <= tol) then
-                                   write(*,fmt='(/a)') 'EOMCCSD solver converged!'
+                                   write(io,fmt='(/a)') 'EOMCCSD solver converged!'
                                    do i = 1,nroot
-                                      write(*,'(1x,a4,2x,i0,a12,f12.8,2x,a10,a12,f12.8,2x,a2)') 'Root',i,'E = ',wR(i),'HARTREE',&
+                                      write(io,'(1x,a4,2x,i0,a12,f12.8,2x,a10,a12,f12.8,2x,a2)') 'Root',i,'E = ',wR(i),'HARTREE',&
                                               'VEE =',wR(i)*hatoev,'eV'
                                    end do
                                    exit
@@ -272,7 +358,7 @@ module eomccsd
                                 end if
 
                                 ! deallocate temporary arrays
-                                deallocate(aR,evR,evI,G,id)
+                                deallocate(aR,evR,evI,G,id,overlaps,id2)
 
                         end do
 
@@ -369,6 +455,69 @@ module eomccsd
 
 
                end subroutine update_R
+
+               subroutine HR_matvec(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,t1a,t1b,t2a,t2b,t2c,Rvec,ndim,sigma)
+
+                        type(sys_t), intent(in) :: sys
+                        type(e1int_t), intent(in) :: fA, fB, H1A, H1B
+                        type(e2int_t), intent(in) :: vA, vB, vC, H2A, H2B, H2C
+                        integer, intent(in) :: ndim
+                        real, intent(in) :: Rvec(ndim)
+                        real, intent(out) :: sigma(ndim)
+                        real, intent(in) :: t1a(sys%Nunocc_a,sys%Nocc_a), t1b(sys%Nunocc_b,sys%Nocc_b), &
+                                            t2a(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a), &
+                                            t2b(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b), &
+                                            t2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b)
+                        real :: r1a(sys%Nunocc_a,sys%Nocc_a), r1b(sys%Nunocc_b,sys%Nocc_b), &
+                                r2a(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a), &
+                                r2b(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b), &
+                                r2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b), &
+                                X1A(sys%Nunocc_a,sys%Nocc_a), X1B(sys%Nunocc_b,sys%Nocc_b), &
+                                X2A(sys%Nunocc_a,sys%Nunocc_a,sys%Nocc_a,sys%Nocc_a), &
+                                X2B(sys%Nunocc_a,sys%Nunocc_b,sys%Nocc_a,sys%Nocc_b), &
+                                X2C(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b), &
+                                sigma_1a(sys%Nunocc_a*sys%Nocc_a), sigma_1b(sys%Nunocc_b*sys%Nocc_b), &
+                                sigma_2a(sys%Nunocc_a**2*sys%Nocc_a**2), &
+                                sigma_2b(sys%Nunocc_a*sys%Nunocc_b*sys%Nocc_a*sys%Nocc_b), &
+                                sigma_2c(sys%Nunocc_b**2*sys%Nocc_b**2)
+                        integer :: n1a, n1b, n2a, n2b, n2c
+
+                        n1a = sys%Nunocc_a * sys%Nocc_a
+                        n1b = sys%Nunocc_b * sys%Nocc_b
+                        n2a = sys%Nunocc_a**2 * sys%Nocc_a**2
+                        n2b = sys%Nunocc_a * sys%Nunocc_b * sys%Nocc_a * sys%Nocc_b
+                        n2c = sys%Nunocc_b**2 * sys%Nocc_b**2
+
+                        r1a = reshape(Rvec(1:n1a),shape(r1a))
+                        r1b = reshape(Rvec(n1a+1:n1a+n1b),shape(r1b))
+                        r2a = reshape(Rvec(n1b+n1a+1:n1a+n1b+n2a),shape(r2a))
+                        r2b = reshape(Rvec(n2a+n1b+n1a+1:n1a+n1b+n2a+n2b),shape(r2b))
+                        r2c = reshape(Rvec(n2b+n2a+n1b+n1a+1:n1a+n1b+n2a+n2b+n2c),shape(r2c))
+
+                        call HR_1A(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,t1a,t1b,t2a,t2b,t2c, &
+                                r1a,r1b,r2a,r2b,r2c,X1A)
+                        sigma_1a = reshape(X1A,(/n1a/))
+                        call HR_1B(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,t1a,t1b,t2a,t2b,t2c, &
+                                r1a,r1b,r2a,r2b,r2c,X1B)
+                        sigma_1b = reshape(X1B,(/n1b/))
+                        call HR_2A(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,t1a,t1b,t2a,t2b,t2c, &
+                                r1a,r1b,r2a,r2b,r2c,X2A)
+                        sigma_2a = reshape(X2A,(/n2a/))
+                        call HR_2B(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,t1a,t1b,t2a,t2b,t2c, &
+                                r1a,r1b,r2a,r2b,r2c,X2B)
+                        sigma_2b = reshape(X2B,(/n2b/))
+                        call HR_2C(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,t1a,t1b,t2a,t2b,t2c, &
+                                r1a,r1b,r2a,r2b,r2c,X2C)
+                        sigma_2c = reshape(X2C,(/n2c/))
+
+                        sigma(1:n1a) = sigma_1a
+                        sigma(n1a+1:n1a+n1b) = sigma_1b
+                        sigma(n1a+n1b+1:n1a+n1b+n2a) = sigma_2a
+                        sigma(n1a+n1b+n2a+1:n1a+n1b+n2a+n2b) = sigma_2b
+                        sigma(n1a+n1b+n2a+n2b+1:n1a+n1b+n2a+n2b+n2c) = sigma_2c
+
+
+                end subroutine HR_matvec
 
                subroutine HR_matmat(sys,fA,fB,vA,vB,vC,H1A,H1B,H2A,H2B,H2C,t1a,t1b,t2a,t2b,t2c,Rvec,ndim,crsz,sigma)
 

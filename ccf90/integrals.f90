@@ -7,8 +7,9 @@ module integrals
 
         contains
 
-                subroutine get_integrals(onebody_fid,twobody_fid,Norb,Nfroz,Nelec,sys,ERI_a,ERI_b,ERI_c,Fock_a,Fock_b)
+                subroutine get_integrals(onebody_fid,twobody_fid,Norb,Nfroz,Nelec,sys,ERI_a,ERI_b,ERI_c,Fock_a,Fock_b,io)
 
+                        integer, intent(in) :: io
                         character(*), intent(in) :: onebody_fid, twobody_fid
                         integer, intent(in) :: Norb, Nfroz, Nelec
                         type(e1int_t), intent(out) :: Fock_a, Fock_b
@@ -20,11 +21,11 @@ module integrals
                         integer, allocatable :: ioa(:), iua(:), iob(:), iub(:)
 
 
-                        write(*,'(/a)') 'Integral Files'
-                        write(*,'(a)') '--------------'
-                        write(*,'(2x,a)') onebody_fid 
+                        write(io,'(/a)') 'Integral Files'
+                        write(io,'(a)') '--------------'
+                        write(io,'(2x,a)') onebody_fid 
                         call load_onebody(onebody_fid, Norb, e1int)
-                        write(*,'(2x,a)') twobody_fid 
+                        write(io,'(2x,a)') twobody_fid 
                         call load_twobody(twobody_fid, Norb, e2int, Vnuc)
 
                         if (mod(Nelec,2) == 0) then
@@ -259,7 +260,163 @@ module integrals
 
                   end subroutine get_V
 
+                 subroutine get_V_spinorbital(Norb,e2int,V)
+
+                         integer, intent(in) :: Norb
+                         real, intent(in) :: e2int(Norb,Norb,Norb,Norb)
+                         real, intent(out) :: V(2*Norb,2*Norb,2*Norb,2*Norb)
+                         integer :: p, q, r, s, p2, q2, r2, s2
+                         
+                         do p = 1,2*Norb
+                           do q = 1,2*Norb
+                             do r = 1,2*Norb
+                               do s = 1,2*Norb
+                                 if ( (mod(p,2) == mod(r,2)) .and. (mod(q,2) == mod(s,2)) ) then
+                                    p2 = spidx(p)
+                                    q2 = spidx(q)
+                                    r2 = spidx(r)
+                                    s2 = spidx(s)
+                                    V(p,q,r,s) = e2int(p2,q2,r2,s2)
+                                 end if 
+                               end do
+                             end do
+                           end do 
+                         end do
+
+                         do p = 1,2*Norb
+                           do q = 1,2*Norb
+                             do r = 1,2*Norb
+                               do s = 1,2*Norb
+                                    V(p,q,r,s) = V(p,q,r,s) - V(p,q,s,r)
+                               end do
+                             end do
+                           end do 
+                         end do
+
+                  end subroutine get_V_spinorbital
                   
+                  subroutine get_integrals_spinorbital(onebody_fid,twobody_fid,Norb,Nfroz,Nelec,sys,ERI,Fock,io)
+
+                        integer, intent(in) :: io
+                        character(*), intent(in) :: onebody_fid, twobody_fid
+                        integer, intent(in) :: Norb, Nfroz, Nelec
+                        type(e1int_t), intent(out) :: Fock
+                        type(e2int_t), intent(out) :: ERI
+                        type(sys_t), intent(out) :: sys
+                        real :: e1int(Norb,Norb), e2int(Norb,Norb,Norb,Norb), Vnuc, f(2*Norb,2*Norb), &
+                                V(2*Norb,2*Norb,2*Norb,2*Norb), Escf
+                        integer :: p, q, i, j, Nocc_a, Nocc_b, Nu, No
+                        integer, allocatable :: ioa(:), iua(:)
+
+
+                        write(io,'(/a)') 'Integral Files'
+                        write(io,'(a)') '--------------'
+                        write(io,'(2x,a)') onebody_fid 
+                        call load_onebody(onebody_fid, Norb, e1int)
+                        write(io,'(2x,a)') twobody_fid 
+                        call load_twobody(twobody_fid, Norb, e2int, Vnuc)
+
+                        if (mod(Nelec,2) == 0) then
+                            Nocc_a = Nelec/2
+                            Nocc_b = Nelec/2
+                        else
+                            Nocc_a = (Nelec+1)/2
+                            Nocc_b = (Nelec-1)/2
+                        end if
+
+                        ! calculate HF energy
+                        Escf = Vnuc
+                        do i = 1,Nocc_a
+                           Escf = Escf + e1int(i,i)
+                        end do
+                        do i = 1,Nocc_b
+                           Escf = Escf + e1int(i,i)
+                        end do
+                        do i = 1,Nocc_a
+                           do j = 1,Nocc_b
+                              Escf = Escf + e2int(i,j,i,j)
+                           end do
+                        end do
+                        do i = 1,Nocc_a
+                           do j = 1,Nocc_a
+                              Escf = Escf + 0.5*(e2int(i,j,i,j) - e2int(i,j,j,i))
+                           end do
+                        end do
+                        do i = 1,Nocc_b
+                           do j = 1,Nocc_b
+                              Escf = Escf + 0.5*(e2int(i,j,i,j) - e2int(i,j,j,i))
+                           end do
+                        end do
+
+                        ! get antisymmetrized V matrices
+                        call get_V_spinorbital(Norb,e2int,V)
+
+                        ! calculate fock matrices
+                        do p = 1,2*Norb
+                          do q = 1,2*Norb
+                             f(p,q) = e1int( spidx(p), spidx(q) )
+                             do i = 1,Nocc_a+Nocc_b
+                                f(p,q) = f(p,q) + V(p,i,q,i)
+                             end do
+                           end do
+                         end do
+
+                         ! integral slicing arrays
+                         No = Nocc_a + Nocc_b - 2*Nfroz
+                         Nu = Norb - Nocc_a - Nocc_b
+                         allocate(ioa(No),iua(Nu))
+
+                         ioa = (/(i, i=2*Nfroz+1,No, 1)/)
+                         iua = (/(i, i=No+1,2*Norb, 1)/)
+
+                         ! slice fA
+                         Fock%oo = f(ioa,ioa)  
+                         Fock%ou = f(ioa,iua)
+                         Fock%uo = f(iua,ioa)
+                         Fock%uu = f(iua,iua)
+
+                         ! slice V
+                         ERI%oooo = V(ioa,ioa,ioa,ioa)
+                         ERI%ooou = V(ioa,ioa,ioa,iua)
+                         ERI%oouo = V(ioa,ioa,iua,ioa)
+                         ERI%uooo = V(iua,ioa,ioa,ioa)
+                         ERI%ouoo = V(ioa,iua,ioa,ioa)
+                         ERI%uoou = V(iua,ioa,ioa,iua)
+                         ERI%ouou = V(ioa,iua,ioa,iua)
+                         ERI%uouo = V(iua,ioa,iua,ioa)
+                         ERI%ouuo = V(ioa,iua,iua,ioa)
+                         ERI%uuoo = V(iua,iua,ioa,ioa)
+                         ERI%oouu = V(ioa,ioa,iua,iua)
+                         ERI%uuou = V(iua,iua,ioa,iua)
+                         ERI%uuuo = V(iua,iua,iua,ioa)
+                         ERI%uouu = V(iua,ioa,iua,iua)
+                         ERI%ouuu = V(ioa,iua,iua,iua)
+                         ERI%uuuu = V(iua,iua,iua,iua)
+
+                         deallocate(ioa,iua)
+
+                         ! populate correlated system information struct
+                         sys%Norb = 2*Norb - 2*Nfroz
+                         sys%Nelec = Nelec - 2*Nfroz
+                         sys%Nfroz = 2*Nfroz
+                         sys%Nocc_a = No
+                         sys%Nocc_b = 0
+                         sys%Nunocc_a = Nu
+                         sys%Nunocc_b = 0
+                         sys%Vnuc = Vnuc
+                         sys%Escf = Escf
+
+                end subroutine get_integrals_spinorbital
+
+                function spidx(x) result(y)
+                        integer :: x, y
+                        if (mod(x,2) == 1) then
+                                y = (x+1)/2
+                        else
+                                y = x/2
+                        end if
+                end function spidx
+
 
                         
 

@@ -10,10 +10,11 @@ module crcc23_module
 
         contains
 
-                subroutine crcc23(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c,L,H1A,H1B,H2A,H2B,H2C,E23A,E23B,E23C,E23D)
+                subroutine crcc23(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c,L,H1A,H1B,H2A,H2B,H2C,E23A,E23B,E23C,E23D,io)
 
                         use cc_energy, only: calc_cc_energy
 
+                        integer, intent(in) :: io
                         type(sys_t), intent(in) :: sys
                         type(e1int_t), intent(in) :: fA, fB, H1A, H1B
                         type(e2int_t), intent(in) :: vA, vB, vC, H2A, H2B, H2C
@@ -28,9 +29,9 @@ module crcc23_module
                         integer :: a, b, c, i, j, k, n1a, n1b, n2a, n2b, n2c
                         real :: MM23, L3, denom, val, z, Ecorr
 
-                        write(*,fmt=*) ''
-                        write(*,fmt=*) '++++++++++++++++++++ CR-CC(2,3) ROUTINE +++++++++++++++++++++'
-                        write(*,fmt=*) ''
+                        write(io,fmt=*) ''
+                        write(io,fmt=*) '++++++++++++++++++++ CR-CC(2,3) ROUTINE +++++++++++++++++++++'
+                        write(io,fmt=*) ''
                         
                         ! initialize
                         E23A = 0.0
@@ -58,7 +59,10 @@ module crcc23_module
                                 call triples_3body_diagonal(sys,vA,vB,vC,t2a,t2b,t2c,&
                                         D3A_V,D3A_O,D3B_V,D3B_O,D3C_V,D3C_O,D3D_V,D3D_O)
 
+                                !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                                 !!!!! MM(2,3)A CORRECTION !!!!!
+                                !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
                                 allocate(I1(nua,nua,noa,nua),&
                                          x1(nua,nua,nua),x2(nua,nua,nua),x3(nua,nua,nua),&
                                          y1(nua,nua,nua),y2(nua,nua,nua),y3(nua,nua,nua))
@@ -150,7 +154,10 @@ module crcc23_module
                                 deallocate(x1,x2,x3,y1,y2,y3)
 
 
+                                !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                                 !!!!! MM(2,3)B CORRECTION !!!!!
+                                !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
                                 allocate(I2(nua,nub,nua,nob),I3(nua,nub,noa,nub),&
                                          x1(nua,nua,nub),x2(nua,nua,nub),x3(nua,nua,nub),x4(nua,nua,nub),&
                                          y1(nua,nua,nub),y2(nua,nua,nub),y3(nua,nua,nub),y4(nua,nua,nub))
@@ -264,7 +271,10 @@ module crcc23_module
                                 deallocate(I1,I2,I3,x1,x2,x3,x4,y1,y2,y3,y4)
 
 
+                                !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                                 !!!!! MM(2,3)D CORRECTION !!!!!
+                                !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
                                 allocate(I1(nub,nub,nob,nub),&
                                          x1(nub,nub,nub),x2(nub,nub,nub),x3(nub,nub,nub),&
                                          y1(nub,nub,nub),y2(nub,nub,nub),y3(nub,nub,nub))
@@ -355,7 +365,10 @@ module crcc23_module
 
                                 deallocate(x1,x2,x3,y1,y2,y3)
 
+                                !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                                 !!!!! MM(2,3)C CORRECTION !!!!!
+                                !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
                                 allocate(I2(nua,nub,noa,nub),I3(nua,nub,nua,nob),&
                                          x1(nua,nub,nub),x2(nua,nub,nub),x3(nua,nub,nub),x4(nua,nub,nub),&
                                          y1(nua,nub,nub),y2(nua,nub,nub),y3(nua,nub,nub),y4(nua,nub,nub))
@@ -472,10 +485,10 @@ module crcc23_module
 
                         call calc_cc_energy(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c,Ecorr)
 
-                        write(*,fmt=*) 'CR-CC(2,3)A = ',E23A+Ecorr+sys%Escf,'EcorrA = ',E23A+Ecorr,'deltaA = ',E23A
-                        write(*,fmt=*) 'CR-CC(2,3)B = ',E23B+Ecorr+sys%Escf,'EcorrB = ',E23B+Ecorr,'deltaB = ',E23B
-                        write(*,fmt=*) 'CR-CC(2,3)C = ',E23C+Ecorr+sys%Escf,'EcorrC = ',E23C+Ecorr,'deltaC = ',E23C
-                        write(*,fmt=*) 'CR-CC(2,3)D = ',E23D+Ecorr+sys%Escf,'EcorrD = ',E23D+Ecorr,'deltaD = ',E23D
+                        write(io,fmt=*) 'CR-CC(2,3)A = ',E23A+Ecorr+sys%Escf,'EcorrA = ',E23A+Ecorr,'deltaA = ',E23A
+                        write(io,fmt=*) 'CR-CC(2,3)B = ',E23B+Ecorr+sys%Escf,'EcorrB = ',E23B+Ecorr,'deltaB = ',E23B
+                        write(io,fmt=*) 'CR-CC(2,3)C = ',E23C+Ecorr+sys%Escf,'EcorrC = ',E23C+Ecorr,'deltaC = ',E23C
+                        write(io,fmt=*) 'CR-CC(2,3)D = ',E23D+Ecorr+sys%Escf,'EcorrD = ',E23D+Ecorr,'deltaD = ',E23D
 
                 end subroutine crcc23
 

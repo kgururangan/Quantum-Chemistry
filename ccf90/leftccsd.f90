@@ -11,11 +11,12 @@ module leftccsd
         contains
 
                 subroutine left_ccsd(sys,fA,fB,vA,vB,vC,t1a,t1b,t2a,t2b,t2c,L,R,&
-                                H1A,H1B,H2A,H2B,H2C,tol,ndiis,maxit,shift,iroot,omega)
+                                H1A,H1B,H2A,H2B,H2C,tol,ndiis,maxit,shift,iroot,omega,resid,io)
 
                         use diis, only: diis_xtrap
                         use cc_energy, only: calc_cc_energy
                 
+                        integer, intent(in) :: io
                         type(sys_t), intent(in) :: sys
                         type(e1int_t), intent(in) :: fA, fB, H1A, H1B
                         type(e2int_t), intent(in) :: vA, vB, vC, H2A, H2B, H2C
@@ -31,15 +32,18 @@ module leftccsd
                                 l2c(sys%Nunocc_b,sys%Nunocc_b,sys%Nocc_b,sys%Nocc_b)
                         real, intent(out) :: L(sys%Nocc_a**2*sys%Nunocc_a**2+sys%Nocc_b**2*sys%Nunocc_b**2+&
                                                   sys%Nocc_a*sys%Nocc_b*sys%Nunocc_a*sys%Nunocc_b+&
-                                                  sys%Nocc_a*sys%Nunocc_a+sys%Nocc_b*sys%Nunocc_b)
+                                                  sys%Nocc_a*sys%Nunocc_a+sys%Nocc_b*sys%Nunocc_b), resid
                         integer :: n1a, n1b, n2a, n2b, n2c, ndim, it, it_diis, noa, nob, nua, nub, i, nroot
                         real, allocatable :: L_resid_list(:,:), L_list(:,:), X1A(:,:), X1B(:,:), &
                                              X2A(:,:,:,:), X2B(:,:,:,:), X2C(:,:,:,:), LH(:), L_resid(:)
-                        real :: resid, Ecorr, Elcc, e0, LR, val
+                        real :: Ecorr, Elcc, e0, LR, val
 
-                        write(*,fmt=*) ''
-                        write(*,fmt=*) '++++++++++++++++++++ LEFT CCSD ROUTINE +++++++++++++++++++++'
-                        write(*,fmt=*) ''
+                        write(io,fmt=*) ''
+                        write(io,fmt=*) '++++++++++++++++++++ LEFT CCSD ROUTINE +++++++++++++++++++++'
+                        write(io,fmt=*) ''
+                        write(io,fmt=*) 'ROOT - ',iroot
+                        write(io,fmt=*) 'DIIS SIZE - ',ndiis
+                        write(io,fmt=*) 'SHIFT = ',shift
 
                         noa = sys%Nocc_a
                         nob = sys%Nocc_b
@@ -73,8 +77,8 @@ module leftccsd
                                 X2A(nua,nua,noa,noa),X2B(nua,nub,noa,nob),X2C(nub,nub,nob,nob),LH(ndim),&
                                 L_resid(ndim))
 
-                        write(*,fmt=*) '               Iteration      E(corr)                       Residuum'         
-                        write(*,fmt=*) '------------------------------------------------------------------------'
+                        write(io,fmt=*) '               Iteration      E(corr)                       Residuum'         
+                        write(io,fmt=*) '------------------------------------------------------------------------'
 
                         it_diis = 0
 
@@ -130,7 +134,7 @@ module leftccsd
 
                            if (resid < tol) then
 
-                                   write(*,fmt=*) 'Left CC converged!'
+                                   write(io,fmt=*) 'Left CC converged!'
 
                                    if (iroot /= 0) then
                                         LR = 0.0
@@ -138,7 +142,7 @@ module leftccsd
                                            val = dot(L,R(:,i))
                                            LR = LR + val
                                         end do
-                                        write(*,fmt=*) 'LR = ',LR
+                                        write(io,fmt=*) 'LR = ',LR
                                    end if
 
                                    exit
@@ -149,11 +153,11 @@ module leftccsd
 
                            if ( (mod(it,ndiis) == 0) .AND. it > 1) then
                               it_diis = it_diis + 1
-                              write(*,fmt='(1x,a15,1x,i0)') 'DIIS cycle - ',it_diis
+                              write(io,fmt='(1x,a15,1x,i0)') 'DIIS cycle - ',it_diis
                               call diis_xtrap(L,L_list,L_resid_list)
                            end if
                                     
-                           write(*,fmt=*) it,' ',Elcc,' ',resid
+                           write(io,fmt=*) it,' ',Elcc,' ',resid
 
                        end do                       
 

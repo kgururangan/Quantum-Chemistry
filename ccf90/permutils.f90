@@ -125,16 +125,17 @@ module permutils
 
     end subroutine permsign
 
-    subroutine reorder_max_coincidence(D1,D2,sgn)
+    subroutine reorder_max_coincidence(D1,D2,sgn,k)
 
         use sort_module, only: get_intersection_sorted
         use sort_module, only: argsort_int
 
         integer, intent(inout) :: D1(:), D2(:)
         real, intent(out) :: sgn
+        integer, intent(out) :: k
         integer, allocatable :: inter(:), idx1(:), idx2(:), idx3(:), idx4(:), &
                                 perm1(:), perm2(:)
-        integer :: m, n, k, i, cnt
+        integer :: m, n, i, cnt
         real :: sgn1, sgn2
 
         m = size(D1)
